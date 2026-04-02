@@ -8,6 +8,7 @@ const TABS = [
   { href: '/admin/articles',       label: 'Articles',      icon: '📄' },
   { href: '/admin/etablissements', label: 'Établissements',icon: '🏪' },
   { href: '/admin/annonces',       label: 'Annonces',      icon: '🔍' },
+  { href: '/admin/bateau',         label: 'Bateaux',       icon: '⛵' },
 ]
 
 export default function AdminNav({ displayName }: { displayName: string }) {

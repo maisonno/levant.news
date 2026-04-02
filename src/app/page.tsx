@@ -1,4 +1,5 @@
 import Hero from '@/components/home/Hero'
+import InfoBateauBanner from '@/components/home/InfoBateauBanner'
 import MisEnAvant from '@/components/home/MisEnAvant'
 import MagCarousel from '@/components/home/MagCarousel'
 import QuickTiles from '@/components/home/QuickTiles'
@@ -155,6 +156,7 @@ export default async function HomePage() {
   return (
     <main className="pb-safe">
       <Hero />
+      <InfoBateauBanner />
       <MisEnAvant posts={misEnAvant} />
       <MagCarousel articles={articles} />
       <QuickTiles />

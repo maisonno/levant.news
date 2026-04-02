@@ -1,21 +1,8 @@
 import Link from 'next/link'
+import MeteoTile from './MeteoTile'
+import BateauTile from './BateauTile'
 
 const TILES = [
-  {
-    href: '/meteo',
-    icon: '☀️',
-    label: 'Météo',
-    sub: 'Levant',
-    color: 'from-amber-400 to-orange-400',
-  },
-  {
-    href: '/bateau',
-    icon: '⛵',
-    label: 'Bateau',
-    sub: 'Horaires',
-    color: 'from-blue-500 to-cyan-500',
-    dot: true,   // indicateur de statut
-  },
   {
     href: '/perdu',
     icon: '🔍',
@@ -29,7 +16,7 @@ const TILES = [
     label: 'Webcam',
     sub: 'Live',
     color: 'from-emerald-500 to-teal-500',
-    live: true,  // badge LIVE
+    live: true,
   },
 ]
 
@@ -38,7 +25,12 @@ export default function QuickTiles() {
     <div className="mt-6 px-4">
       <h2 className="text-lg font-extrabold text-gray-900 tracking-tight mb-3">Accès rapide</h2>
       <div className="grid grid-cols-2 gap-3">
-        {TILES.map(({ href, icon, label, sub, color, dot, live }) => (
+
+        {/* Tuiles dynamiques */}
+        <MeteoTile />
+        <BateauTile />
+
+        {TILES.map(({ href, icon, label, sub, color, live }) => (
           <Link
             key={href}
             href={href}
@@ -49,13 +41,6 @@ export default function QuickTiles() {
               <div className="absolute top-3 right-3 flex items-center gap-1 bg-white/20 rounded-full px-2 py-0.5">
                 <span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse" />
                 <span className="text-[10px] font-bold">LIVE</span>
-              </div>
-            )}
-
-            {/* Dot statut bateau */}
-            {dot && (
-              <div className="absolute top-3 right-3">
-                <span className="w-2.5 h-2.5 bg-green-400 rounded-full block animate-pulse" />
               </div>
             )}
 
