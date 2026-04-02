@@ -362,33 +362,31 @@ export default function MeteoPage() {
           {/* Carrousel — une seule ligne scrollable */}
           <div className="mt-4" ref={scrollRef}>
             <div
-              className="flex gap-2 overflow-x-auto px-4 pb-3 items-stretch"
+              className="flex gap-0 overflow-x-auto px-4 pb-3 items-end"
               style={{ scrollbarWidth: 'none' }}
             >
               {days.map(({ label, key, slots: daySlots }, di) => (
-                <div key={key} className="flex gap-2 items-stretch flex-shrink-0">
-                  {/* Séparateur vertical entre jours */}
+                <div key={key} className="flex items-end flex-shrink-0">
+                  {/* Séparateur vertical entre jours (juste une ligne) */}
                   {di > 0 && (
-                    <div className="flex flex-col items-center gap-1 flex-shrink-0 py-1">
-                      <div className="flex-1 w-px bg-gray-200" />
-                      <p
-                        className="text-[8px] font-bold text-gray-300 uppercase tracking-wider flex-shrink-0 px-0.5"
-                        style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
-                      >
-                        {label}
-                      </p>
-                      <div className="flex-1 w-px bg-gray-200" />
-                    </div>
+                    <div className="self-stretch w-px bg-gray-200 mx-2 flex-shrink-0" />
                   )}
-                  {/* Cartes du jour */}
-                  {daySlots.map(({ slot, idx }) => (
-                    <HourCard
-                      key={slot.time}
-                      slot={slot}
-                      selected={selected === idx}
-                      onClick={() => setSelected(idx)}
-                    />
-                  ))}
+                  {/* Groupe jour : label + cartes */}
+                  <div className="flex flex-col gap-1.5 flex-shrink-0">
+                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest px-0.5 capitalize">
+                      {label}
+                    </p>
+                    <div className="flex gap-2">
+                      {daySlots.map(({ slot, idx }) => (
+                        <HourCard
+                          key={slot.time}
+                          slot={slot}
+                          selected={selected === idx}
+                          onClick={() => setSelected(idx)}
+                        />
+                      ))}
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
