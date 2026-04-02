@@ -71,12 +71,12 @@ export default function Hero() {
 
       {/* Logo centré */}
       <div className="absolute inset-0 flex items-center justify-center">
-        <div className="text-center drop-shadow-lg">
-          <div className="text-white font-black text-3xl tracking-tight">
+        <div className="text-center" style={{ textShadow: '0 2px 12px rgba(0,0,0,0.55)' }}>
+          <div className="text-white font-black text-3xl tracking-tight drop-shadow-lg">
             Levant<span className="opacity-60">.news</span>
           </div>
-          <div className="text-white/70 text-[10px] font-medium uppercase tracking-[0.15em] mt-1">
-            L'Île du Levant
+          <div className="text-white/80 text-[11px] font-semibold tracking-[0.12em] mt-1 italic">
+            l'actu toute nue
           </div>
         </div>
       </div>

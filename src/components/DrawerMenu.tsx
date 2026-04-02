@@ -48,8 +48,8 @@ export default function DrawerMenu() {
           <div className="text-[22px] font-extrabold text-white tracking-tight mb-1">
             Levant<span className="opacity-50">.news</span>
           </div>
-          <div className="text-[11px] font-medium text-white/55 uppercase tracking-widest mb-4">
-            L'Île du Levant
+          <div className="text-[11px] font-semibold text-white/55 tracking-widest mb-4 italic">
+            l'actu toute nue
           </div>
 
           {/* Auth block */}

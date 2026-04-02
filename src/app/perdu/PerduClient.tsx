@@ -1,7 +1,10 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import Link from 'next/link'
+import { useState, useEffect, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import { useAuth } from '@/contexts/AuthContext'
+import { useDrawer } from '@/contexts/DrawerContext'
 import { ObjetPerdu } from '@/types/database'
 import { useObjetPerduSheet } from '@/contexts/ObjetPerduSheetContext'
 
@@ -24,6 +27,42 @@ function isExpired(objet: ObjetPerdu): boolean {
   return new Date() > limit
 }
 
+// ─── Modal connexion requise ──────────────────────────────────────────────────
+
+function AuthRequiredModal({ onClose }: { onClose: () => void }) {
+  return (
+    <>
+      <div className="fixed inset-0 z-40 bg-black/40" onClick={onClose} />
+      <div className="fixed bottom-0 left-0 right-0 z-50 mx-auto max-w-[430px]"
+           style={{ transform: 'translateY(0)', transition: 'transform 350ms cubic-bezier(0.32,0.72,0,1)' }}>
+        <div className="bg-white rounded-t-3xl shadow-2xl px-5 pt-6 pb-10 space-y-5">
+          {/* Handle */}
+          <div className="flex justify-center mb-2">
+            <div className="w-10 h-1 bg-gray-200 rounded-full" />
+          </div>
+          <div className="text-center space-y-2">
+            <p className="text-3xl">🔐</p>
+            <h2 className="text-lg font-extrabold text-gray-900">Connexion requise</h2>
+            <p className="text-sm text-gray-500 leading-relaxed">
+              Pour déclarer un objet perdu ou trouvé, tu dois avoir un compte Levant.news.
+            </p>
+          </div>
+          <div className="space-y-3">
+            <a href="/compte/connexion?redirect=/perdu/nouveau"
+              className="block w-full py-3.5 rounded-2xl bg-blue-600 text-white text-sm font-bold text-center">
+              J'ai déjà un compte
+            </a>
+            <a href="/compte/inscription"
+              className="block w-full py-3.5 rounded-2xl bg-gray-100 text-gray-800 text-sm font-bold text-center">
+              Créer un compte
+            </a>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
 // ─── Carte annonce ────────────────────────────────────────────────────────────
 
 function AnnonceCard({ annonce, onClick }: { annonce: ObjetPerdu; onClick: () => void }) {
@@ -35,15 +74,12 @@ function AnnonceCard({ annonce, onClick }: { annonce: ObjetPerdu; onClick: () =>
       className="block w-full text-left bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden active:scale-[0.98] transition-transform"
     >
       <div className="flex items-stretch gap-0">
-        {/* Vignette photo ou placeholder */}
         <div className="w-20 h-20 flex-shrink-0 bg-gray-100 flex items-center justify-center overflow-hidden">
           {annonce.photo_url
             ? <img src={annonce.photo_url} alt={annonce.objet} className="w-full h-full object-cover" />
             : <span className="text-3xl">{annonce.type === 'PERDU' ? '🔍' : '📦'}</span>
           }
         </div>
-
-        {/* Contenu */}
         <div className="flex-1 px-3 py-3 min-w-0">
           <div className="flex items-center gap-1.5 mb-1">
             <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${
@@ -53,12 +89,8 @@ function AnnonceCard({ annonce, onClick }: { annonce: ObjetPerdu; onClick: () =>
             </span>
           </div>
           <p className="font-bold text-gray-900 text-sm leading-snug truncate">{annonce.objet}</p>
-          {firstLine && (
-            <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{firstLine}</p>
-          )}
-          {annonce.lieu && (
-            <p className="text-xs text-gray-400 mt-0.5">📍 {annonce.lieu}</p>
-          )}
+          {firstLine && <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{firstLine}</p>}
+          {annonce.lieu && <p className="text-xs text-gray-400 mt-0.5">📍 {annonce.lieu}</p>}
         </div>
       </div>
     </button>
@@ -67,29 +99,36 @@ function AnnonceCard({ annonce, onClick }: { annonce: ObjetPerdu; onClick: () =>
 
 // ─── Composant principal ──────────────────────────────────────────────────────
 
-interface PerduClientProps {
-  annonces: ObjetPerdu[]
-}
+export default function PerduClient() {
+  const supabase = createClient()
+  const { user } = useAuth()
+  const { toggle } = useDrawer()
+  const { open, refreshKey } = useObjetPerduSheet()
 
-export default function PerduClient({ annonces }: PerduClientProps) {
-  const { open } = useObjetPerduSheet()
-  const [search, setSearch] = useState('')
+  const [annonces, setAnnonces] = useState<ObjetPerdu[]>([])
+  const [loading,  setLoading]  = useState(true)
+  const [search,   setSearch]   = useState('')
+  const [showAuthModal, setShowAuthModal] = useState(false)
 
-  // Séparer actives (non expirées, non retrouvées) et fermées
-  const actives = useMemo(() =>
-    annonces.filter(a => !a.retrouve && !isExpired(a)),
-    [annonces]
-  )
-  const fermees = useMemo(() =>
-    annonces.filter(a => a.retrouve),
-    [annonces]
-  )
+  async function load() {
+    const { data } = await supabase
+      .from('objets_perdus')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(200)
+    setAnnonces(data ?? [])
+    setLoading(false)
+  }
 
-  // Filtrage recherche
+  // Charge à l'init + re-charge quand le sheet signale un changement
+  useEffect(() => { load() }, [refreshKey]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const actives = useMemo(() => annonces.filter(a => !a.retrouve && !isExpired(a)), [annonces])
+  const fermees = useMemo(() => annonces.filter(a => a.retrouve), [annonces])
+
   const q = search.toLowerCase().trim()
   const filterFn = (a: ObjetPerdu) =>
-    !q ||
-    a.objet.toLowerCase().includes(q) ||
+    !q || a.objet.toLowerCase().includes(q) ||
     (a.description ?? '').toLowerCase().includes(q) ||
     (a.lieu ?? '').toLowerCase().includes(q) ||
     a.nom_declarant.toLowerCase().includes(q)
@@ -97,19 +136,25 @@ export default function PerduClient({ annonces }: PerduClientProps) {
   const activesFiltered = actives.filter(filterFn)
   const fermeesFiltered = fermees.filter(filterFn)
 
-  // Grouper les actives par date_evenement
   const grouped = useMemo(() => {
     const map = new Map<string, ObjetPerdu[]>()
     activesFiltered
       .slice()
       .sort((a, b) => b.date_evenement.localeCompare(a.date_evenement))
       .forEach(a => {
-        const key = a.date_evenement
-        if (!map.has(key)) map.set(key, [])
-        map.get(key)!.push(a)
+        if (!map.has(a.date_evenement)) map.set(a.date_evenement, [])
+        map.get(a.date_evenement)!.push(a)
       })
     return Array.from(map.entries())
   }, [activesFiltered])
+
+  function handleCTA() {
+    if (user) {
+      window.location.href = '/perdu/nouveau'
+    } else {
+      setShowAuthModal(true)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -119,6 +164,21 @@ export default function PerduClient({ annonces }: PerduClientProps) {
         className="px-4 pt-14 pb-5"
         style={{ background: 'linear-gradient(180deg,#0a1f4e 0%, #1A56DB 100%)' }}
       >
+        {/* Nav */}
+        <div className="flex items-center justify-between mb-3">
+          <button onClick={toggle} aria-label="Menu"
+            className="w-10 h-10 flex flex-col items-center justify-center gap-[5px] rounded-xl">
+            <span className="w-5 h-0.5 bg-white rounded-full" />
+            <span className="w-5 h-0.5 bg-white rounded-full" />
+            <span className="w-5 h-0.5 bg-white rounded-full" />
+          </button>
+          <a href="/" className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center" aria-label="Accueil">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/>
+              <path d="M9 21V12h6v9"/>
+            </svg>
+          </a>
+        </div>
         <h1 className="text-2xl font-extrabold text-white tracking-tight mb-1">
           Objets perdus et trouvés
         </h1>
@@ -127,14 +187,14 @@ export default function PerduClient({ annonces }: PerduClientProps) {
         </p>
       </div>
 
-      {/* CTA + Recherche */}
+      {/* CTA + Recherche — sticky */}
       <div className="px-4 py-4 space-y-3 bg-white border-b border-gray-100 sticky top-0 z-20">
-        <Link
-          href="/perdu/nouveau"
+        <button
+          onClick={handleCTA}
           className="block w-full py-3.5 rounded-2xl bg-blue-600 text-white text-sm font-bold text-center active:bg-blue-700 transition-colors"
         >
           🏖️ J'ai perdu ou trouvé un objet
-        </Link>
+        </button>
         <div className="relative">
           <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -142,9 +202,7 @@ export default function PerduClient({ annonces }: PerduClientProps) {
             </svg>
           </div>
           <input
-            type="search"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
+            type="search" value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Rechercher une annonce…"
             className="w-full bg-gray-100 rounded-2xl pl-10 pr-4 py-2.5 text-sm text-gray-800 outline-none focus:bg-white focus:ring-2 focus:ring-blue-200"
           />
@@ -153,16 +211,19 @@ export default function PerduClient({ annonces }: PerduClientProps) {
 
       {/* Liste */}
       <div className="px-4 pb-10">
+        {loading && (
+          <div className="flex justify-center py-16">
+            <div className="w-7 h-7 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+          </div>
+        )}
 
-        {/* Annonces actives groupées par date */}
-        {grouped.length === 0 && !q && (
+        {!loading && grouped.length === 0 && !q && (
           <div className="text-center py-16">
             <p className="text-4xl mb-3">🌴</p>
             <p className="text-gray-400 text-sm">Aucune annonce active pour l'instant.</p>
           </div>
         )}
-
-        {grouped.length === 0 && q && (
+        {!loading && grouped.length === 0 && q && (
           <div className="text-center py-16">
             <p className="text-4xl mb-3">🔍</p>
             <p className="text-gray-400 text-sm">Aucun résultat pour « {q} ».</p>
@@ -175,27 +236,23 @@ export default function PerduClient({ annonces }: PerduClientProps) {
               {formatDateLabel(dateIso)}
             </p>
             <div className="space-y-2">
-              {items.map(a => (
-                <AnnonceCard key={a.id} annonce={a} onClick={() => open(a)} />
-              ))}
+              {items.map(a => <AnnonceCard key={a.id} annonce={a} onClick={() => open(a)} />)}
             </div>
           </div>
         ))}
 
-        {/* Section annonces fermées */}
         {fermeesFiltered.length > 0 && (
           <div className="mt-8">
-            <p className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-2 px-1">
-              Annonces fermées
-            </p>
+            <p className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-2 px-1">Annonces fermées</p>
             <div className="space-y-2 opacity-60">
-              {fermeesFiltered.map(a => (
-                <AnnonceCard key={a.id} annonce={a} onClick={() => open(a)} />
-              ))}
+              {fermeesFiltered.map(a => <AnnonceCard key={a.id} annonce={a} onClick={() => open(a)} />)}
             </div>
           </div>
         )}
       </div>
+
+      {/* Modal auth */}
+      {showAuthModal && <AuthRequiredModal onClose={() => setShowAuthModal(false)} />}
     </div>
   )
 }

@@ -12,7 +12,7 @@ export default function FloatingBurger() {
   const { toggle } = useDrawer()
   const pathname   = usePathname()
 
-  if (pathname === '/' || pathname.startsWith('/agenda')) return null
+  if (pathname === '/' || pathname.startsWith('/agenda') || pathname.startsWith('/perdu')) return null
 
   return (
     <button
