@@ -5,6 +5,7 @@ import { PostWithRelations } from '@/types/database'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import PostCard from '@/components/PostCard'
+import PostCardList from '@/components/PostCardList'
 import { useEventSheet } from '@/contexts/EventSheetContext'
 
 // ─── Utilitaires ──────────────────────────────────────────────────────────────
@@ -281,21 +282,56 @@ interface Props {
 
 export default function AgendaClient({ posts, aLaffiche, expos, today }: Props) {
   const router = useRouter()
-  const [search, setSearch] = useState('')
+  const [search,      setSearch]      = useState('')
+  const [filterDate,  setFilterDate]  = useState('')
+  const [filterCats,  setFilterCats]  = useState<Set<string>>(new Set())
+  const [showFilters, setShowFilters] = useState(false)
 
-  // Filtrage par recherche
+  // Catégories disponibles (extraites des posts)
+  const availableCats = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const p of posts) {
+      if (p.categorie && !map.has(p.categorie.code)) {
+        map.set(p.categorie.code, p.categorie.nom)
+      }
+    }
+    return Array.from(map.entries()).sort(([, a], [, b]) => a.localeCompare(b))
+  }, [posts])
+
+  const hasActiveFilters = filterDate !== '' || filterCats.size > 0
+
+  const resetFilters = () => { setFilterDate(''); setFilterCats(new Set()) }
+
+  const toggleCat = (code: string) => {
+    setFilterCats(prev => {
+      const next = new Set(prev)
+      next.has(code) ? next.delete(code) : next.add(code)
+      return next
+    })
+  }
+
+  // Filtrage : recherche + date + catégories
   const filtered = useMemo(() => {
-    if (!search.trim()) return posts
-    const q = search.toLowerCase()
-    return posts.filter(p =>
-      p.titre.toLowerCase().includes(q) ||
-      p.organisateur?.nom.toLowerCase().includes(q) ||
-      p.lieu?.nom.toLowerCase().includes(q) ||
-      p.categorie?.nom.toLowerCase().includes(q)
-    )
-  }, [posts, search])
+    let result = posts
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      result = result.filter(p =>
+        p.titre.toLowerCase().includes(q) ||
+        p.organisateur?.nom.toLowerCase().includes(q) ||
+        p.lieu?.nom.toLowerCase().includes(q) ||
+        p.categorie?.nom.toLowerCase().includes(q)
+      )
+    }
+    if (filterDate) {
+      result = result.filter(p => p.date_debut >= filterDate)
+    }
+    if (filterCats.size > 0) {
+      result = result.filter(p => p.categorie && filterCats.has(p.categorie.code))
+    }
+    return result
+  }, [posts, search, filterDate, filterCats])
 
-  // Grouper par date (utilise date_debut comme clé de regroupement)
+  // Grouper par date
   const grouped = useMemo(() => {
     const map = new Map<string, PostWithRelations[]>()
     for (const post of filtered) {
@@ -306,18 +342,18 @@ export default function AgendaClient({ posts, aLaffiche, expos, today }: Props) 
     return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b))
   }, [filtered])
 
-  // Séparer aujourd'hui des jours suivants
+  const isFiltering = search.trim() !== '' || hasActiveFilters
   const todayPosts = filtered.filter(p => p.date_debut <= today && (!p.date_fin || p.date_fin >= today))
   const todayKey = today
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
+      {/* Header sticky */}
       <div
-        className="sticky top-0 z-30 px-4 pt-14 pb-4"
+        className="sticky top-0 z-30 px-4 pt-14 pb-3"
         style={{ background: 'linear-gradient(180deg,#0a1f4e 0%, #1A56DB 100%)' }}
       >
-        <div className="flex items-center gap-3 mb-4">
+        <div className="flex items-center gap-3 mb-3">
           <button
             onClick={() => router.back()}
             className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center text-white"
@@ -328,41 +364,124 @@ export default function AgendaClient({ posts, aLaffiche, expos, today }: Props) 
           <h1 className="text-xl font-extrabold text-white tracking-tight flex-1">Agenda</h1>
         </div>
 
-        {/* Barre de recherche */}
-        <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
-          <input
-            type="text"
-            placeholder="Rechercher un événement…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="w-full bg-white rounded-xl py-3 pl-9 pr-4 text-sm text-gray-800 placeholder-gray-400 outline-none shadow-sm"
-          />
-          {search && (
-            <button
-              onClick={() => setSearch('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"
-            >
-              ×
-            </button>
-          )}
+        {/* Barre de recherche + bouton Filtrer */}
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
+            <input
+              type="text"
+              placeholder="Chercher un événement…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full bg-white rounded-xl py-3 pl-9 pr-8 text-sm text-gray-800 placeholder-gray-400 outline-none shadow-sm"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"
+              >×</button>
+            )}
+          </div>
+          <button
+            onClick={() => setShowFilters(v => !v)}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold shadow-sm flex-shrink-0 transition-colors ${
+              hasActiveFilters
+                ? 'bg-amber-400 text-amber-900'
+                : 'bg-white text-gray-700'
+            }`}
+          >
+            <span>⊞</span>
+            <span>Filtrer</span>
+            {hasActiveFilters && (
+              <span className="bg-amber-900/20 text-amber-900 text-[10px] font-black px-1.5 py-0.5 rounded-full">
+                {filterCats.size + (filterDate ? 1 : 0)}
+              </span>
+            )}
+          </button>
         </div>
       </div>
 
+      {/* Panneau de filtres (sous le header, non-sticky) */}
+      {showFilters && (
+        <div className="bg-white border-b border-gray-200 px-4 py-4 space-y-4">
+
+          {/* Date de début */}
+          <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
+              À partir du
+            </label>
+            <input
+              type="date"
+              value={filterDate}
+              min={today}
+              onChange={e => setFilterDate(e.target.value)}
+              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-800 outline-none"
+            />
+          </div>
+
+          {/* Catégories */}
+          {availableCats.length > 0 && (
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
+                Type d'événement
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {availableCats.map(([code, nom]) => (
+                  <button
+                    key={code}
+                    onClick={() => toggleCat(code)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                      filterCats.has(code)
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-white text-gray-700 border-gray-200'
+                    }`}
+                  >
+                    {nom}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex gap-2 pt-1">
+            <button
+              onClick={resetFilters}
+              className="flex-1 py-2.5 rounded-xl bg-gray-100 text-gray-700 text-sm font-semibold"
+            >
+              Réinitialiser
+            </button>
+            <button
+              onClick={() => setShowFilters(false)}
+              className="flex-1 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold"
+            >
+              Appliquer
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="px-4 py-4 space-y-6">
-        {/* À l'affiche (si pas de recherche) */}
-        {!search && <AfficheCarousel posts={aLaffiche} />}
+        {/* À l'affiche (si pas de filtre actif) */}
+        {!isFiltering && <AfficheCarousel posts={aLaffiche} />}
 
         {/* Résultats vides */}
         {filtered.length === 0 && (
           <div className="text-center py-12">
             <p className="text-4xl mb-3">🔍</p>
-            <p className="text-gray-500 font-medium">Aucun résultat pour « {search} »</p>
+            <p className="text-gray-500 font-medium">
+              {search ? `Aucun résultat pour « ${search} »` : 'Aucun événement pour ces critères'}
+            </p>
+            {hasActiveFilters && (
+              <button onClick={resetFilters} className="mt-3 text-blue-600 font-semibold text-sm">
+                Réinitialiser les filtres
+              </button>
+            )}
           </div>
         )}
 
         {/* Aujourd'hui */}
-        {!search && todayPosts.length > 0 && (
+        {!filterDate && todayPosts.length > 0 && (
           <section>
             <div className="flex items-center gap-2 mb-3">
               <h2 className="text-base font-extrabold text-gray-900">Aujourd'hui</h2>
@@ -371,17 +490,15 @@ export default function AgendaClient({ posts, aLaffiche, expos, today }: Props) 
               </span>
               <div className="flex-1 h-px bg-gray-200" />
             </div>
-            <div className="space-y-4">
-              {todayPosts.map(post => <PostCard key={post.id} post={post} />)}
-            </div>
+            <PostCardList posts={todayPosts} />
           </section>
         )}
 
-        {/* Expositions (carrousel, hors recherche) */}
-        {!search && <ExpoCarousel posts={expos} />}
+        {/* Expositions (carrousel, hors filtre actif) */}
+        {!isFiltering && <ExpoCarousel posts={expos} />}
 
         {/* Jours suivants */}
-        {(search ? grouped : grouped.filter(([d]) => d > todayKey)).map(([date, datePosts]) => {
+        {(isFiltering ? grouped : grouped.filter(([d]) => d > todayKey)).map(([date, datePosts]) => {
           const { jour, date: dateStr } = formatDateHeader(date)
           return (
             <section key={date}>
@@ -390,9 +507,7 @@ export default function AgendaClient({ posts, aLaffiche, expos, today }: Props) 
                 {dateStr && <span className="text-sm text-gray-400">{dateStr}</span>}
                 <div className="flex-1 h-px bg-gray-200" />
               </div>
-              <div className="space-y-4">
-                {datePosts.map(post => <PostCard key={post.id} post={post} />)}
-              </div>
+              <PostCardList posts={datePosts} />
             </section>
           )
         })}

@@ -2,6 +2,7 @@
 
 import { PostWithRelations } from '@/types/database'
 import PostCard from '@/components/PostCard'
+import PostCardList from '@/components/PostCardList'
 import Link from 'next/link'
 import { useEventSheet } from '@/contexts/EventSheetContext'
 
@@ -119,9 +120,7 @@ export default function AgendaHome({
         {todayPosts.length > 0 && (
           <section>
             <SectionHeader title="Aujourd'hui" subtitle={formatDateShort(today)} />
-            <div className="space-y-4">
-              {todayPosts.map(post => <PostCard key={post.id} post={post} />)}
-            </div>
+            <PostCardList posts={todayPosts} />
           </section>
         )}
 
@@ -129,9 +128,7 @@ export default function AgendaHome({
         {enCeMoment.length > 0 && (
           <section>
             <SectionHeader title="En ce moment" />
-            <div className="space-y-4">
-              {enCeMoment.map(post => <PostCard key={post.id} post={post} />)}
-            </div>
+            <PostCardList posts={enCeMoment} />
           </section>
         )}
 
@@ -154,9 +151,7 @@ export default function AgendaHome({
         {demainPosts.length > 0 && (
           <section>
             <SectionHeader title="Demain" subtitle={formatDateShort(tomorrow)} />
-            <div className="space-y-4">
-              {demainPosts.map(post => <PostCard key={post.id} post={post} />)}
-            </div>
+            <PostCardList posts={demainPosts} />
           </section>
         )}
 
@@ -164,9 +159,7 @@ export default function AgendaHome({
         {autresGrouped.map(([date, datePosts]) => (
           <section key={date}>
             <SectionHeader title={formatDateLabel(date)} />
-            <div className="space-y-4">
-              {datePosts.map(post => <PostCard key={post.id} post={post} />)}
-            </div>
+            <PostCardList posts={datePosts} />
           </section>
         ))}
 

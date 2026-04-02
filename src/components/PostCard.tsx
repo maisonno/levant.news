@@ -43,15 +43,16 @@ const CAT_EMOJI: Record<string, string> = {
 
 interface Props {
   post: PostWithRelations
+  /** Mode groupé : la carte est dans un conteneur PostCardList — pas de border/shadow/rounded propres */
+  grouped?: boolean
 }
 
-export default function PostCard({ post }: Props) {
+export default function PostCard({ post, grouped = false }: Props) {
   const { open } = useEventSheet()
 
   const cat    = post.categorie
   const colors = cat ? (CAT_COLORS[cat.code] ?? { bg: 'bg-gray-100', text: 'text-gray-600' }) : null
   const lieu   = post.lieu?.nom ?? post.organisateur?.nom ?? null
-
   const placesInfo = post.inscription
     ? (post.nb_inscriptions_max ? 'PLACES DISPO' : 'INSCRIPTION')
     : null
@@ -61,9 +62,15 @@ export default function PostCard({ post }: Props) {
       onClick={() => open(post)}
       className="w-full text-left"
     >
-      <div className="flex bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 h-28 active:scale-[0.98] transition-transform">
+      <div className={
+        grouped
+          // Mode groupé : plat, transitions de couleur au tap
+          ? 'flex bg-white h-28 active:bg-gray-50 transition-colors'
+          // Mode carte seule : coins arrondis, ombre, bordure
+          : 'flex bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 h-28 active:scale-[0.98] transition-transform'
+      }>
 
-        {/* Image — plein bord gauche/haut/bas */}
+        {/* Image */}
         <div className="w-28 flex-shrink-0 bg-gray-100">
           {post.affiche_url ? (
             <img
@@ -78,40 +85,25 @@ export default function PostCard({ post }: Props) {
           )}
         </div>
 
-        {/* Texte — droite */}
+        {/* Texte */}
         <div className="flex-1 min-w-0 px-4 py-3 flex flex-col justify-center gap-1">
-
-          {/* Pilule catégorie */}
           {cat && colors && (
             <span className={`inline-block self-start text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${colors.bg} ${colors.text}`}>
               {cat.nom}
             </span>
           )}
-
-          {/* Titre */}
           <p className="font-bold text-gray-900 text-[15px] leading-snug line-clamp-2">
             {post.titre}
           </p>
-
-          {/* Heure + Lieu */}
           <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
-            {post.heure && (
-              <span className="flex items-center gap-1">
-                🕐 {post.heure}
-              </span>
-            )}
-            {lieu && (
-              <span className="flex items-center gap-1 truncate">
-                📍 {lieu}
-              </span>
-            )}
+            {post.heure && <span className="flex items-center gap-1">🕐 {post.heure}</span>}
+            {lieu && <span className="flex items-center gap-1 truncate">📍 {lieu}</span>}
             {placesInfo && (
               <span className="text-[10px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
                 {placesInfo}
               </span>
             )}
           </div>
-
         </div>
       </div>
     </button>
