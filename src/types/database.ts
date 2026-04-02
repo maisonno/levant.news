@@ -128,6 +128,7 @@ export interface Article {
   texte: string | null
   image_url: string | null
   publie: boolean
+  mis_en_avant: boolean
   lien_url: string | null
   ordre: number
   created_at: string

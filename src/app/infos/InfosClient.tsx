@@ -52,7 +52,7 @@ function HeroCard({ article }: { article: Article }) {
             </p>
           )}
           {article.lien_url && (
-            <p className={`text-xs font-semibold mt-2 ${meta.text}`}>Voir le lien →</p>
+            <p className={`text-xs font-semibold mt-1.5 ${meta.text}`}>Voir le lien →</p>
           )}
         </div>
       </div>
@@ -99,7 +99,11 @@ function VerticalCard({ article }: { article: Article }) {
 
 function ThemeSection({ theme, articles }: { theme: string; articles: Article[] }) {
   const meta = getMeta(theme)
-  const [hero, ...rest] = articles
+
+  // L'article mis_en_avant devient le hero ; sinon le premier par ordre
+  const heroIndex = articles.findIndex(a => a.mis_en_avant)
+  const hero = heroIndex >= 0 ? articles[heroIndex] : articles[0]
+  const rest = articles.filter((_, i) => i !== (heroIndex >= 0 ? heroIndex : 0))
 
   return (
     <section>
@@ -117,7 +121,7 @@ function ThemeSection({ theme, articles }: { theme: string; articles: Article[] 
 
       {/* Grille 2 colonnes */}
       {rest.length > 0 && (
-        <div className="mt-3 grid grid-cols-2 gap-3">
+        <div className="mt-2 grid grid-cols-2 gap-2">
           {rest.map(article => (
             <VerticalCard key={article.id} article={article} />
           ))}
