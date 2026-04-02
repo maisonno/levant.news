@@ -1,5 +1,6 @@
 'use client'
 
+import { AuthProvider } from '@/contexts/AuthContext'
 import { DrawerProvider } from '@/contexts/DrawerContext'
 import { EventSheetProvider } from '@/contexts/EventSheetContext'
 import { EtabSheetProvider } from '@/contexts/EtabSheetContext'
@@ -12,6 +13,7 @@ import FloatingBurger from '@/components/FloatingBurger'
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   return (
+    <AuthProvider>
     <DrawerProvider>
       <EventSheetProvider>
         <EtabSheetProvider>
@@ -26,5 +28,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         </EtabSheetProvider>
       </EventSheetProvider>
     </DrawerProvider>
+    </AuthProvider>
   )
 }

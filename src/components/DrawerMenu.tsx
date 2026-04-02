@@ -1,6 +1,7 @@
 'use client'
 
 import { useDrawer } from '@/contexts/DrawerContext'
+import { useAuth } from '@/contexts/AuthContext'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 
@@ -23,6 +24,7 @@ const PRO_MODULES = [
 
 export default function DrawerMenu() {
   const { isOpen, close } = useDrawer()
+  const { user, profile } = useAuth()
   const pathname = usePathname()
 
   return (
@@ -46,9 +48,36 @@ export default function DrawerMenu() {
           <div className="text-[22px] font-extrabold text-white tracking-tight mb-1">
             Levant<span className="opacity-50">.news</span>
           </div>
-          <div className="text-[11px] font-medium text-white/55 uppercase tracking-widest">
+          <div className="text-[11px] font-medium text-white/55 uppercase tracking-widest mb-4">
             L'Île du Levant
           </div>
+
+          {/* Auth block */}
+          {user ? (
+            <Link href="/compte/profil" onClick={close}
+              className="flex items-center gap-3 bg-white/10 rounded-2xl px-4 py-3">
+              <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center text-base font-extrabold text-white flex-shrink-0">
+                {(profile?.prenom ?? user.email ?? '?').charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <p className="text-white font-bold text-sm leading-snug truncate">
+                  {profile ? `${profile.prenom} ${profile.nom}` : user.email}
+                </p>
+                <p className="text-white/50 text-[10px] uppercase tracking-wide">
+                  {profile?.role === 'pro' ? 'Compte Pro' : 'Mon compte'}
+                </p>
+              </div>
+              <svg width="7" height="12" viewBox="0 0 7 12" fill="none" className="text-white/40 flex-shrink-0">
+                <path d="M1 1l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </Link>
+          ) : (
+            <Link href="/compte/connexion" onClick={close}
+              className="flex items-center justify-center gap-2 bg-white rounded-2xl px-4 py-3 text-sm font-bold text-blue-700">
+              <span>👤</span>
+              <span>Se connecter / Créer un compte</span>
+            </Link>
+          )}
         </div>
 
         {/* Liens */}
