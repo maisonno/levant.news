@@ -54,10 +54,10 @@ export default function PostCard({ post }: Props) {
 
   return (
     <Link href={`/agenda/${post.id}`}>
-      <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
+      <div className="flex bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 h-28">
 
-        {/* Image plein bord — haut, gauche, droite */}
-        <div className="w-full aspect-video bg-gray-100">
+        {/* Image — plein bord gauche/haut/bas */}
+        <div className="w-28 flex-shrink-0 bg-gray-100">
           {post.affiche_url ? (
             <img
               src={post.affiche_url}
@@ -65,44 +65,46 @@ export default function PostCard({ post }: Props) {
               className="w-full h-full object-cover"
             />
           ) : (
-            <div className={`w-full h-full flex items-center justify-center text-4xl ${colors?.bg ?? 'bg-gray-50'}`}>
+            <div className={`w-full h-full flex items-center justify-center text-3xl ${colors?.bg ?? 'bg-gray-50'}`}>
               {CAT_EMOJI[cat?.code ?? ''] ?? '📅'}
             </div>
           )}
         </div>
 
-        {/* Infos sous l'image */}
-        <div className="px-4 py-3">
+        {/* Texte — droite */}
+        <div className="flex-1 min-w-0 px-4 py-3 flex flex-col justify-center gap-1">
+
           {/* Pilule catégorie */}
           {cat && colors && (
-            <span className={`inline-block text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full mb-2 ${colors.bg} ${colors.text}`}>
+            <span className={`inline-block self-start text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${colors.bg} ${colors.text}`}>
               {cat.nom}
             </span>
           )}
 
-          {/* Titre — plus gros */}
-          <p className="font-bold text-gray-900 text-base leading-snug">
+          {/* Titre */}
+          <p className="font-bold text-gray-900 text-[15px] leading-snug line-clamp-2">
             {post.titre}
           </p>
 
           {/* Heure + Lieu */}
-          <div className="flex items-center gap-3 mt-1.5 text-sm text-gray-500 flex-wrap">
+          <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
             {post.heure && (
               <span className="flex items-center gap-1">
-                <span>🕐</span>{post.heure}
+                🕐 {post.heure}
               </span>
             )}
             {lieu && (
-              <span className="flex items-center gap-1">
-                <span>📍</span>{lieu}
+              <span className="flex items-center gap-1 truncate">
+                📍 {lieu}
               </span>
             )}
             {placesInfo && (
-              <span className="text-[11px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
+              <span className="text-[10px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
                 {placesInfo}
               </span>
             )}
           </div>
+
         </div>
       </div>
     </Link>
