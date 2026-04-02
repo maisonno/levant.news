@@ -133,16 +133,16 @@ export default function EtabSheet() {
       >
         <div className="bg-white rounded-t-3xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
 
-          {/* Poignée de drag */}
-          <div className="flex justify-center pt-3 pb-1 flex-shrink-0 bg-white absolute top-0 left-0 right-0 z-10 pointer-events-none">
-            <div className="w-10 h-1 bg-gray-300 rounded-full" />
-          </div>
-
           {/* Contenu scrollable */}
           <div className="overflow-y-auto flex-1 pb-safe">
 
-            {/* Photo ou bandeau couleur + bouton ✕ */}
+            {/* Photo ou bandeau couleur + poignée + bouton ✕ */}
             <div className="relative w-full aspect-square bg-gray-100 flex-shrink-0">
+
+              {/* Poignée de drag — overlaid sur la photo */}
+              <div className="absolute top-3 left-0 right-0 z-10 flex justify-center pointer-events-none">
+                <div className="w-10 h-1 bg-white/70 backdrop-blur-sm rounded-full shadow-sm" />
+              </div>
               {hasPhoto ? (
                 <img src={etab.photo_url!} alt={etab.nom} className="w-full h-full object-cover" />
               ) : (
@@ -159,7 +159,7 @@ export default function EtabSheet() {
               />
               <button
                 onClick={close}
-                className="absolute top-4 right-4 w-9 h-9 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white text-lg font-bold active:bg-black/60"
+                className="absolute top-10 right-4 w-9 h-9 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white text-lg font-bold active:bg-black/60"
                 aria-label="Fermer"
               >
                 ✕

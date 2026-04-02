@@ -158,16 +158,16 @@ export default function EventSheet() {
       >
         <div className="bg-white rounded-t-3xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
 
-          {/* Poignée de drag */}
-          <div className="flex justify-center pt-3 pb-1 flex-shrink-0 bg-white absolute top-0 left-0 right-0 z-10 pointer-events-none">
-            <div className="w-10 h-1 bg-white/70 rounded-full" />
-          </div>
-
           {/* Contenu scrollable */}
           <div className="overflow-y-auto flex-1 pb-safe">
 
-            {/* Image carrée pleine largeur + bouton ✕ */}
+            {/* Image carrée pleine largeur + poignée + bouton ✕ */}
             <div className="relative w-full aspect-square bg-gray-100 flex-shrink-0">
+
+              {/* Poignée de drag — overlaid sur l'image */}
+              <div className="absolute top-3 left-0 right-0 z-10 flex justify-center pointer-events-none">
+                <div className="w-10 h-1 bg-white/70 backdrop-blur-sm rounded-full shadow-sm" />
+              </div>
               {post.affiche_url ? (
                 <img
                   src={post.affiche_url}
@@ -187,7 +187,7 @@ export default function EventSheet() {
               {/* Bouton ✕ */}
               <button
                 onClick={close}
-                className="absolute top-4 right-4 w-9 h-9 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white text-lg font-bold active:bg-black/60"
+                className="absolute top-10 right-4 w-9 h-9 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white text-lg font-bold active:bg-black/60"
                 aria-label="Fermer"
               >
                 ✕
