@@ -101,7 +101,23 @@ export default async function HomePage() {
     })
 
     misEnAvant = rawMea.map(enrich)
-    aLaffiche  = rawAffiche.map(enrich)
+
+    // À l'affiche : 1 seul événement par organisateur (le plus proche),
+    // ordre aléatoire, max 10
+    const afficheEnriched = rawAffiche.map(enrich) // déjà trié date_debut asc
+    const byOrg = new Map<string, PostWithRelations>()
+    for (const post of afficheEnriched) {
+      // Comme le résultat est trié date_debut asc, le 1er par org = le plus proche
+      const key = post.organisateur_id ?? `__solo_${post.id}`
+      if (!byOrg.has(key)) byOrg.set(key, post)
+    }
+    const deduped = Array.from(byOrg.values())
+    // Fisher-Yates shuffle
+    for (let i = deduped.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [deduped[i], deduped[j]] = [deduped[j], deduped[i]]
+    }
+    aLaffiche = deduped.slice(0, 10)
 
     // Séparer EXPO du reste pour l'agenda
     const agendaEnriched  = rawAgenda.map(enrich)
