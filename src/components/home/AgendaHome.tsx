@@ -137,7 +137,7 @@ export default function AgendaHome({
           <section>
             <SectionHeader title="À l'affiche" />
             <div
-              className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory"
+              className="flex items-start gap-3 overflow-x-auto pb-2 snap-x snap-mandatory"
               style={{ scrollbarWidth: 'none' }}
             >
               {aLaffiche.map(post => (
@@ -168,7 +168,7 @@ export default function AgendaHome({
           <section>
             <SectionHeader title="Expositions" />
             <div
-              className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory"
+              className="flex items-start gap-3 overflow-x-auto pb-2 snap-x snap-mandatory"
               style={{ scrollbarWidth: 'none' }}
             >
               {expos.map(post => (

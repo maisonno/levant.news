@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import PostCard from '@/components/PostCard'
 import PostCardList from '@/components/PostCardList'
 import { useEventSheet } from '@/contexts/EventSheetContext'
+import { useDrawer } from '@/contexts/DrawerContext'
 
 // ─── Utilitaires ──────────────────────────────────────────────────────────────
 
@@ -199,7 +200,7 @@ function AfficheCarousel({ posts }: { posts: PostWithRelations[] }) {
         <h2 className="text-base font-extrabold text-gray-900">À l'affiche</h2>
       </div>
       <div
-        className="flex gap-3 overflow-x-auto px-4 pb-2 snap-x snap-mandatory scrollbar-none"
+        className="flex items-start gap-3 overflow-x-auto px-4 pb-2 snap-x snap-mandatory scrollbar-none"
         style={{ scrollbarWidth: 'none' }}
       >
         {posts.map(post => (
@@ -241,7 +242,7 @@ function ExpoCarousel({ posts }: { posts: PostWithRelations[] }) {
         <div className="flex-1 h-px bg-gray-200" />
       </div>
       <div
-        className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory"
+        className="flex items-start gap-3 overflow-x-auto pb-2 snap-x snap-mandatory"
         style={{ scrollbarWidth: 'none' }}
       >
         {posts.map(post => (
@@ -281,7 +282,8 @@ interface Props {
 }
 
 export default function AgendaClient({ posts, aLaffiche, expos, today }: Props) {
-  const router = useRouter()
+  const router  = useRouter()
+  const { toggle: openMenu } = useDrawer()
   const [search,      setSearch]      = useState('')
   const [filterDate,  setFilterDate]  = useState('')
   const [filterCats,  setFilterCats]  = useState<Set<string>>(new Set())
@@ -354,14 +356,25 @@ export default function AgendaClient({ posts, aLaffiche, expos, today }: Props) 
         style={{ background: 'linear-gradient(180deg,#0a1f4e 0%, #1A56DB 100%)' }}
       >
         <div className="flex items-center gap-3 mb-3">
-          <button
-            onClick={() => router.back()}
-            className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center text-white"
-            aria-label="Retour"
+          {/* Bouton Accueil */}
+          <Link
+            href="/"
+            className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center text-white flex-shrink-0"
+            aria-label="Accueil"
           >
-            ←
-          </button>
+            🏠
+          </Link>
           <h1 className="text-xl font-extrabold text-white tracking-tight flex-1">Agenda</h1>
+          {/* Burger menu */}
+          <button
+            onClick={openMenu}
+            className="w-9 h-9 rounded-xl bg-white/20 flex flex-col items-center justify-center gap-[4px] flex-shrink-0"
+            aria-label="Menu"
+          >
+            <span className="w-4 h-0.5 bg-white rounded-full" />
+            <span className="w-4 h-0.5 bg-white rounded-full" />
+            <span className="w-4 h-0.5 bg-white rounded-full" />
+          </button>
         </div>
 
         {/* Barre de recherche + bouton Filtrer */}

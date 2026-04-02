@@ -132,7 +132,10 @@ export default async function HomePage() {
     demainPosts = agendaNonExpo.filter(p => p.date_debut === tomorrow)
     autresPosts = agendaNonExpo.filter(p => p.date_debut > tomorrow)
     enCeMoment  = ongoingNonExpo
-    expos       = [...ongoingExpos, ...agendaExpos]
+    // Dédup par id + tri par date (identique à agenda/page.tsx)
+    const expoMap = new Map<string, PostWithRelations>()
+    for (const p of [...ongoingExpos, ...agendaExpos]) expoMap.set(p.id, p)
+    expos = Array.from(expoMap.values()).sort((a, b) => a.date_debut.localeCompare(b.date_debut))
 
   } catch (err) {
     console.error('Erreur homepage:', err)
