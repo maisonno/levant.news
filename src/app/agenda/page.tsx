@@ -12,6 +12,11 @@ export default async function AgendaPage() {
   futurDate.setDate(futurDate.getDate() + 60)
   const future = futurDate.toISOString().split('T')[0]
 
+  // Afficher aussi 30 jours en arrière pour les événements passés récents
+  const passDate = new Date()
+  passDate.setDate(passDate.getDate() - 30)
+  const past = passDate.toISOString().split('T')[0]
+
   let posts: PostWithRelations[] = []
   let aLaffiche: PostWithRelations[] = []
 
@@ -27,8 +32,8 @@ export default async function AgendaPage() {
         `)
         .eq('publie', true)
         .eq('dans_agenda', true)
+        .gte('date_debut', past)
         .lte('date_debut', future)
-        .or(`date_fin.gte.${today},date_fin.is.null,date_debut.gte.${today}`)
         .order('date_debut', { ascending: true })
         .order('ordre_dans_journee', { ascending: true, nullsFirst: false }),
 
