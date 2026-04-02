@@ -28,7 +28,7 @@ function HeroCard({ article }: { article: Article }) {
   const meta = getMeta(article.theme_code)
 
   return (
-    <button onClick={() => open(article)} className="w-full text-left active:scale-[0.98] transition-transform">
+    <button onClick={() => open(article)} className="block w-full text-left active:scale-[0.98] transition-transform">
       <div className="rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100">
         {/* Image */}
         {article.image_url && (
@@ -67,7 +67,7 @@ function VerticalCard({ article }: { article: Article }) {
   const meta = getMeta(article.theme_code)
 
   return (
-    <button onClick={() => open(article)} className="w-full text-left active:scale-[0.97] transition-transform">
+    <button onClick={() => open(article)} className="block w-full text-left active:scale-[0.97] transition-transform">
       <div className="rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100 flex flex-col">
         {/* Image */}
         <div className="w-full aspect-square bg-gray-100 flex-shrink-0">
@@ -106,7 +106,7 @@ function ThemeSection({ theme, articles }: { theme: string; articles: Article[] 
   return (
     <section>
       {/* En-tête de section */}
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex items-center gap-3 mb-3">
         <span className={`w-9 h-9 rounded-xl ${meta.bg} ${meta.text} flex items-center justify-center text-lg flex-shrink-0`}>
           {meta.icon}
         </span>
@@ -213,7 +213,7 @@ export default function InfosClient({ articles }: Props) {
       </div>
 
       {/* Contenu */}
-      <div className="px-4 py-5 space-y-8">
+      <div className="px-4 py-4 space-y-6">
         {sections.map(({ theme, articles: list }) => (
           <ThemeSection key={theme} theme={theme} articles={list} />
         ))}
