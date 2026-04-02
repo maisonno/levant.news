@@ -6,6 +6,7 @@ const PROTECTED = [
   '/compte/profil',
   '/perdu/nouveau',
   '/pro/',
+  '/admin/',
 ]
 
 export async function proxy(request: NextRequest) {
