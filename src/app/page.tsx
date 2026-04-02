@@ -25,7 +25,7 @@ export default async function HomePage() {
     const { createClient } = await import('@/lib/supabase/server')
     const supabase = await createClient()
 
-    const [meaRes, magRes, agendaRes, ongoingRes, afficheRes] = await Promise.allSettled([
+    const [meaRes, magRes, agendaRes, ongoingRes, afficheRes, futureExpoRes] = await Promise.allSettled([
 
       // Posts mis en avant (bloc MisEnAvant)
       supabase
@@ -73,16 +73,26 @@ export default async function HomePage() {
         .eq('a_laffiche', true)
         .or(`date_fin.gte.${today},and(date_fin.is.null,date_debut.gte.${today})`)
         .order('date_debut', { ascending: true }),
+
+      // Expos à venir — sans limite de date (comme la page Agenda)
+      supabase
+        .from('posts')
+        .select('*, categorie:categories(code, nom)')
+        .eq('publie', true)
+        .eq('dans_agenda', true)
+        .gte('date_debut', today)
+        .order('date_debut', { ascending: true }),
     ])
 
-    const rawMea     = meaRes.status     === 'fulfilled' ? (meaRes.value.data     ?? []) : []
-    const rawAgenda  = agendaRes.status  === 'fulfilled' ? (agendaRes.value.data  ?? []) : []
-    const rawOngoing = ongoingRes.status === 'fulfilled' ? (ongoingRes.value.data ?? []) : []
-    const rawAffiche = afficheRes.status === 'fulfilled' ? (afficheRes.value.data ?? []) : []
+    const rawMea        = meaRes.status        === 'fulfilled' ? (meaRes.value.data        ?? []) : []
+    const rawAgenda     = agendaRes.status     === 'fulfilled' ? (agendaRes.value.data     ?? []) : []
+    const rawOngoing    = ongoingRes.status    === 'fulfilled' ? (ongoingRes.value.data    ?? []) : []
+    const rawAffiche    = afficheRes.status    === 'fulfilled' ? (afficheRes.value.data    ?? []) : []
+    const rawFutureExpo = futureExpoRes.status === 'fulfilled' ? (futureExpoRes.value.data ?? []) : []
     if (magRes.status === 'fulfilled') articles = magRes.value.data ?? []
 
     // Fetch tous les établissements en une seule requête
-    const allRaw = [...rawMea, ...rawAgenda, ...rawOngoing, ...rawAffiche]
+    const allRaw = [...rawMea, ...rawAgenda, ...rawOngoing, ...rawAffiche, ...rawFutureExpo]
     const etabIds = [...new Set(allRaw.flatMap((p: any) => [p.organisateur_id, p.lieu_id].filter(Boolean)))]
 
     let etabMap: Record<string, any> = {}
@@ -124,7 +134,6 @@ export default async function HomePage() {
     const ongoingEnriched = rawOngoing.map(enrich)
 
     const agendaNonExpo  = agendaEnriched.filter( (p: PostWithRelations) => p.categorie?.code !== 'EXPO')
-    const agendaExpos    = agendaEnriched.filter( (p: PostWithRelations) => p.categorie?.code === 'EXPO')
     const ongoingNonExpo = ongoingEnriched.filter((p: PostWithRelations) => p.categorie?.code !== 'EXPO')
     const ongoingExpos   = ongoingEnriched.filter((p: PostWithRelations) => p.categorie?.code === 'EXPO')
 
@@ -132,9 +141,11 @@ export default async function HomePage() {
     demainPosts = agendaNonExpo.filter(p => p.date_debut === tomorrow)
     autresPosts = agendaNonExpo.filter(p => p.date_debut > tomorrow)
     enCeMoment  = ongoingNonExpo
-    // Dédup par id + tri par date (identique à agenda/page.tsx)
+
+    // Expos : en cours + toutes les futures sans limite de date, dédup par id
+    const futureExpos = rawFutureExpo.map(enrich).filter((p: PostWithRelations) => p.categorie?.code === 'EXPO')
     const expoMap = new Map<string, PostWithRelations>()
-    for (const p of [...ongoingExpos, ...agendaExpos]) expoMap.set(p.id, p)
+    for (const p of [...ongoingExpos, ...futureExpos]) expoMap.set(p.id, p)
     expos = Array.from(expoMap.values()).sort((a, b) => a.date_debut.localeCompare(b.date_debut))
 
   } catch (err) {
