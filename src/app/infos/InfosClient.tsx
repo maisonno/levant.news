@@ -100,10 +100,8 @@ function VerticalCard({ article }: { article: Article }) {
 function ThemeSection({ theme, articles }: { theme: string; articles: Article[] }) {
   const meta = getMeta(theme)
 
-  // L'article mis_en_avant devient le hero ; sinon le premier par ordre
-  const heroIndex = articles.findIndex(a => a.mis_en_avant)
-  const hero = heroIndex >= 0 ? articles[heroIndex] : articles[0]
-  const rest = articles.filter((_, i) => i !== (heroIndex >= 0 ? heroIndex : 0))
+  const heroes = articles.filter(a => a.mis_en_avant)
+  const rest   = articles.filter(a => !a.mis_en_avant)
 
   return (
     <section>
@@ -116,12 +114,18 @@ function ThemeSection({ theme, articles }: { theme: string; articles: Article[] 
         <div className="flex-1 h-px bg-gray-200" />
       </div>
 
-      {/* Hero */}
-      <HeroCard article={hero} />
+      {/* Articles mis en avant (tous en grand, dans l'ordre) */}
+      {heroes.length > 0 && (
+        <div className="space-y-2">
+          {heroes.map(article => (
+            <HeroCard key={article.id} article={article} />
+          ))}
+        </div>
+      )}
 
-      {/* Grille 2 colonnes */}
+      {/* Grille 2 colonnes pour les autres */}
       {rest.length > 0 && (
-        <div className="mt-2 grid grid-cols-2 gap-2">
+        <div className={`grid grid-cols-2 gap-2 ${heroes.length > 0 ? 'mt-2' : ''}`}>
           {rest.map(article => (
             <VerticalCard key={article.id} article={article} />
           ))}
