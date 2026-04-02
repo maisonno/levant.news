@@ -8,13 +8,7 @@ export default async function AgendaPage() {
   const supabase = await createClient()
   const today = new Date().toISOString().split('T')[0]
 
-  const futurDate = new Date()
-  futurDate.setDate(futurDate.getDate() + 60)
-  const future = futurDate.toISOString().split('T')[0]
-
-  const passDate = new Date()
-  passDate.setDate(passDate.getDate() - 30)
-  const past = passDate.toISOString().split('T')[0]
+  // Pas de limite de date — liste complète jusqu'au dernier post disponible
 
   let posts: PostWithRelations[] = []
   let aLaffiche: PostWithRelations[] = []
@@ -27,8 +21,7 @@ export default async function AgendaPage() {
         .select('*, categorie:categories(code, nom)')
         .eq('publie', true)
         .eq('dans_agenda', true)
-        .gte('date_debut', past)
-        .lte('date_debut', future)
+        .gte('date_debut', today)
         .order('date_debut', { ascending: true })
         .order('ordre_dans_journee', { ascending: true, nullsFirst: false }),
 

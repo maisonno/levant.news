@@ -179,14 +179,21 @@ function EventCardCompact({ post }: { post: PostWithRelations }) {
   )
 }
 
+function formatAfficheDate(debut: string, fin: string | null): string {
+  const d = new Date(debut + 'T12:00:00')
+  const dateDebut = d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+  if (!fin || fin === debut) return dateDebut
+  const dateFin = new Date(fin + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+  return `${dateDebut} › ${dateFin}`
+}
+
 function AfficheCarousel({ posts }: { posts: PostWithRelations[] }) {
   if (posts.length === 0) return null
 
   return (
     <div className="mb-2">
-      <div className="px-4 mb-3 flex items-center justify-between">
+      <div className="px-4 mb-3">
         <h2 className="text-base font-extrabold text-gray-900">À l'affiche</h2>
-        <span className="text-xs text-gray-400">{posts.length} événement{posts.length > 1 ? 's' : ''}</span>
       </div>
       <div
         className="flex gap-3 overflow-x-auto px-4 pb-2 snap-x snap-mandatory scrollbar-none"
@@ -196,30 +203,24 @@ function AfficheCarousel({ posts }: { posts: PostWithRelations[] }) {
           <Link
             key={post.id}
             href={`/agenda/${post.id}`}
-            className="flex-shrink-0 snap-start w-56 rounded-2xl overflow-hidden relative"
-            style={{ height: '160px' }}
+            className="flex-shrink-0 snap-start w-48 rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100"
           >
-            {post.affiche_url ? (
-              <img src={post.affiche_url} alt={post.titre} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full" style={{ background: 'linear-gradient(135deg,#1e3a8a,#3730a3)' }} />
-            )}
-            <div
-              className="absolute inset-0"
-              style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 55%)' }}
-            />
-            <div className="absolute bottom-0 left-0 right-0 p-3">
-              {post.categorie && (
-                <span className="text-[10px] font-bold text-white/70 uppercase tracking-wide">
-                  {post.categorie.nom}
-                </span>
+            {/* Image carrée */}
+            <div className="w-full aspect-square bg-gray-100">
+              {post.affiche_url ? (
+                <img src={post.affiche_url} alt={post.titre} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full" style={{ background: 'linear-gradient(135deg,#1e3a8a,#3730a3)' }} />
               )}
-              <p className="text-white font-bold text-sm leading-tight line-clamp-2 mt-0.5">
+            </div>
+            {/* Date + titre en dessous */}
+            <div className="p-3">
+              <p className="text-xs font-semibold text-blue-600 mb-1">
+                {formatAfficheDate(post.date_debut, post.date_fin)}
+              </p>
+              <p className="text-sm font-bold text-gray-900 leading-tight line-clamp-2">
                 {post.titre}
               </p>
-              {post.heure && (
-                <p className="text-white/60 text-xs mt-1">🕐 {post.heure}</p>
-              )}
             </div>
           </Link>
         ))}
@@ -321,21 +322,14 @@ export default function AgendaClient({ posts, aLaffiche, today }: Props) {
         {/* Aujourd'hui */}
         {!search && todayPosts.length > 0 && (
           <section>
-            <div className="flex items-center gap-3 mb-3">
-              <div>
-                <h2 className="text-base font-extrabold text-gray-900">Aujourd'hui</h2>
-                <p className="text-xs text-gray-500">
-                  {new Date(today + 'T12:00:00').toLocaleDateString('fr-FR', {
-                    weekday: 'long', day: 'numeric', month: 'long'
-                  })}
-                </p>
-              </div>
-              <div className="flex-1 h-px bg-gray-200" />
-              <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full">
-                {todayPosts.length}
+            <div className="flex items-center gap-2 mb-3">
+              <h2 className="text-base font-extrabold text-gray-900">Aujourd'hui</h2>
+              <span className="text-sm text-gray-400">
+                {new Date(today + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
               </span>
+              <div className="flex-1 h-px bg-gray-200" />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {todayPosts.map(post => <PostCard key={post.id} post={post} />)}
             </div>
           </section>
@@ -346,29 +340,23 @@ export default function AgendaClient({ posts, aLaffiche, today }: Props) {
           const { jour, date: dateStr } = formatDateHeader(date)
           return (
             <section key={date}>
-              <div className="flex items-center gap-3 mb-3">
-                <div>
-                  <h2 className="text-base font-extrabold text-gray-900">{jour}</h2>
-                  {dateStr && <p className="text-xs text-gray-500">{dateStr}</p>}
-                </div>
+              <div className="flex items-center gap-2 mb-3">
+                <h2 className="text-base font-extrabold text-gray-900">{jour}</h2>
+                {dateStr && <span className="text-sm text-gray-400">{dateStr}</span>}
                 <div className="flex-1 h-px bg-gray-200" />
-                <span className="text-xs font-bold text-gray-400">
-                  {datePosts.length} événement{datePosts.length > 1 ? 's' : ''}
-                </span>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {datePosts.map(post => <PostCard key={post.id} post={post} />)}
               </div>
             </section>
           )
         })}
 
-        {/* Fin de l'agenda */}
-        {!search && grouped.length > 0 && (
-          <div className="text-center py-6 pb-safe">
-            <p className="text-2xl mb-2">⚓</p>
-            <p className="text-gray-400 text-sm font-medium">Fin de l'agenda affiché</p>
-            <p className="text-gray-300 text-xs mt-1">60 prochains jours</p>
+        {/* Fin de liste */}
+        {grouped.length > 0 && (
+          <div className="text-center py-8 pb-safe">
+            <p className="text-2xl mb-1">⚓</p>
+            <p className="text-gray-300 text-xs">Fin de l'agenda</p>
           </div>
         )}
       </div>
