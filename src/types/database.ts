@@ -18,6 +18,7 @@ export interface Profile {
   updated_at: string
 }
 
+// Table: type_etablissement (singulier)
 export interface TypeEtablissement {
   code: string
   nom: string

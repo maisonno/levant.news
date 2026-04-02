@@ -19,7 +19,7 @@ export default async function AnnuairePage() {
         .order('nom', { ascending: true }),
 
       supabase
-        .from('types_etablissement')
+        .from('type_etablissement')
         .select('*')
         .order('ordre', { ascending: true }),
     ])

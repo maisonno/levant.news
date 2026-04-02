@@ -112,14 +112,19 @@ export default function AnnuaireClient({ etabs, types }: Props) {
       map.get(key)!.push(e)
     }
 
-    // Trier les sections selon l'ordre des types
-    const typeCodes = types.map(t => t.code)
+    // Trier les sections selon l'ordre des types (si dispo), sinon ordre alpha des codes
+    const typeCodes = types.length > 0
+      ? types.map(t => t.code)
+      : [...map.keys()].filter(Boolean).sort() as string[]
+
     const result: { type: TypeEtablissement | null; etabs: Etablissement[] }[] = []
 
     for (const code of typeCodes) {
       const list = map.get(code)
       if (list && list.length > 0) {
-        result.push({ type: typeMap.get(code) ?? null, etabs: list })
+        // Fallback si pas de type connu : nom = code
+        const knownType = typeMap.get(code) ?? { code, nom: code, ordre: 0 }
+        result.push({ type: knownType, etabs: list })
       }
       map.delete(code)
     }
