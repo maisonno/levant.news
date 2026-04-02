@@ -42,9 +42,8 @@ const CAT_EMOJI: Record<string, string> = {
 }
 
 interface Props {
-  post: PostWithRelations
-  /** Mode groupé : la carte est dans un conteneur PostCardList — pas de border/shadow/rounded propres */
-  grouped?: boolean
+  post:     PostWithRelations
+  grouped?: boolean   // carte dans un PostCardList groupé (pas de border/shadow/rounded propres)
 }
 
 export default function PostCard({ post, grouped = false }: Props) {
@@ -57,20 +56,61 @@ export default function PostCard({ post, grouped = false }: Props) {
     ? (post.nb_inscriptions_max ? 'PLACES DISPO' : 'INSCRIPTION')
     : null
 
+  // ── Carte PHARE ────────────────────────────────────────────────────────────
+  // Image à droite (50 % plus grande), texte à gauche aligné à droite, titre grand
+  if (post.phare) {
+    return (
+      <button onClick={() => open(post)} className="w-full text-left">
+        <div className="flex flex-row-reverse bg-white rounded-2xl overflow-hidden shadow-md border border-blue-100 h-44 active:scale-[0.98] transition-transform">
+
+          {/* Image — droite, 50 % plus large que la normale (w-28 → w-44) */}
+          <div className="w-44 flex-shrink-0 bg-gray-100">
+            {post.affiche_url ? (
+              <img
+                src={post.affiche_url}
+                alt={post.titre}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className={`w-full h-full flex items-center justify-center text-4xl ${colors?.bg ?? 'bg-gray-50'}`}>
+                {CAT_EMOJI[cat?.code ?? ''] ?? '📅'}
+              </div>
+            )}
+          </div>
+
+          {/* Texte — gauche, aligné à droite */}
+          <div className="flex-1 min-w-0 px-4 py-4 flex flex-col justify-center gap-1.5 text-right">
+            {cat && colors && (
+              <span className={`inline-block self-end text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${colors.bg} ${colors.text}`}>
+                {cat.nom}
+              </span>
+            )}
+            <p className="font-extrabold text-gray-900 text-[18px] leading-snug line-clamp-3">
+              {post.titre}
+            </p>
+            <div className="flex items-center justify-end gap-2 text-xs text-gray-500 flex-wrap">
+              {placesInfo && (
+                <span className="text-[10px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
+                  {placesInfo}
+                </span>
+              )}
+              {lieu && <span className="truncate">📍 {lieu}</span>}
+              {post.heure && <span>🕐 {post.heure}</span>}
+            </div>
+          </div>
+        </div>
+      </button>
+    )
+  }
+
+  // ── Carte normale ─────────────────────────────────────────────────────────
   return (
-    <button
-      onClick={() => open(post)}
-      className="w-full text-left"
-    >
+    <button onClick={() => open(post)} className="w-full text-left">
       <div className={
         grouped
-          // Mode groupé : plat, transitions de couleur au tap
           ? 'flex bg-white h-28 active:bg-gray-50 transition-colors'
-          // Mode carte seule : coins arrondis, ombre, bordure
           : 'flex bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 h-28 active:scale-[0.98] transition-transform'
       }>
-
-        {/* Image */}
         <div className="w-28 flex-shrink-0 bg-gray-100">
           {post.affiche_url ? (
             <img
@@ -84,8 +124,6 @@ export default function PostCard({ post, grouped = false }: Props) {
             </div>
           )}
         </div>
-
-        {/* Texte */}
         <div className="flex-1 min-w-0 px-4 py-3 flex flex-col justify-center gap-1">
           {cat && colors && (
             <span className={`inline-block self-start text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${colors.bg} ${colors.text}`}>
