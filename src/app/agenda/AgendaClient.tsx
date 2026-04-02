@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react'
 import { PostWithRelations } from '@/types/database'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import PostCard from '@/components/PostCard'
 
 // ─── Utilitaires ──────────────────────────────────────────────────────────────
 
@@ -317,7 +318,7 @@ export default function AgendaClient({ posts, aLaffiche, today }: Props) {
           </div>
         )}
 
-        {/* Aujourd'hui — cartes complètes */}
+        {/* Aujourd'hui */}
         {!search && todayPosts.length > 0 && (
           <section>
             <div className="flex items-center gap-3 mb-3">
@@ -334,8 +335,8 @@ export default function AgendaClient({ posts, aLaffiche, today }: Props) {
                 {todayPosts.length}
               </span>
             </div>
-            <div className="space-y-3">
-              {todayPosts.map(post => <EventCardFull key={post.id} post={post} />)}
+            <div className="space-y-2">
+              {todayPosts.map(post => <PostCard key={post.id} post={post} />)}
             </div>
           </section>
         )}
@@ -343,11 +344,8 @@ export default function AgendaClient({ posts, aLaffiche, today }: Props) {
         {/* Jours suivants */}
         {(search ? grouped : grouped.filter(([d]) => d > todayKey)).map(([date, datePosts]) => {
           const { jour, date: dateStr } = formatDateHeader(date)
-          const hasFullCards = datePosts.some(p => p.phare || p.affiche_url)
-
           return (
             <section key={date}>
-              {/* En-tête de date */}
               <div className="flex items-center gap-3 mb-3">
                 <div>
                   <h2 className="text-base font-extrabold text-gray-900">{jour}</h2>
@@ -358,14 +356,8 @@ export default function AgendaClient({ posts, aLaffiche, today }: Props) {
                   {datePosts.length} événement{datePosts.length > 1 ? 's' : ''}
                 </span>
               </div>
-
-              {/* Cartes */}
               <div className="space-y-2">
-                {datePosts.map(post =>
-                  hasFullCards && (post.phare || post.affiche_url)
-                    ? <EventCardFull key={post.id} post={post} />
-                    : <EventCardCompact key={post.id} post={post} />
-                )}
+                {datePosts.map(post => <PostCard key={post.id} post={post} />)}
               </div>
             </section>
           )

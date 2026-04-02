@@ -10,7 +10,7 @@ export const revalidate = 60
 export default async function HomePage() {
   const today = new Date().toISOString().split('T')[0]
 
-  let misEnAvant = null
+  let misEnAvant: PostWithRelations[] = []
   let articles: any[] = []
   let todayPosts: PostWithRelations[] = []
 
@@ -18,16 +18,18 @@ export default async function HomePage() {
     const { createClient } = await import('@/lib/supabase/server')
     const supabase = await createClient()
 
-    const [mea, mag, postsRes] = await Promise.allSettled([
+    const [meaRes, magRes, postsRes] = await Promise.allSettled([
+
+      // Tous les posts "mis en avant" actifs
       supabase
         .from('posts')
-        .select('*')
+        .select('*, categorie:categories(code, nom)')
         .eq('publie', true)
         .eq('mis_en_avant', true)
-        .or(`date_fin.gte.${today},date_fin.is.null`)
-        .order('date_debut', { ascending: false })
-        .limit(1),
+        .or(`date_fin.gte.${today},date_debut.eq.${today}`)
+        .order('ordre_dans_journee', { ascending: true, nullsFirst: false }),
 
+      // Levant Mag
       supabase
         .from('articles_mag')
         .select('*')
@@ -35,42 +37,43 @@ export default async function HomePage() {
         .order('date_publication', { ascending: false })
         .limit(6),
 
+      // Événements d'aujourd'hui uniquement
+      // = commence aujourd'hui, OU en cours (début avant aujourd'hui, fin >= aujourd'hui)
       supabase
         .from('posts')
         .select('*, categorie:categories(code, nom)')
         .eq('publie', true)
         .eq('dans_agenda', true)
-        .lte('date_debut', today)
-        .or(`date_fin.gte.${today},date_fin.is.null`)
+        .or(`date_debut.eq.${today},and(date_debut.lt.${today},date_fin.gte.${today})`)
         .order('ordre_dans_journee', { ascending: true, nullsFirst: false })
         .limit(10),
     ])
 
-    if (mea.status === 'fulfilled') misEnAvant = mea.value.data?.[0] ?? null
-    if (mag.status === 'fulfilled') articles = mag.value.data ?? []
+    // Enrichir avec les établissements
+    const rawMea   = meaRes.status   === 'fulfilled' ? (meaRes.value.data   ?? []) : []
+    const rawPosts = postsRes.status === 'fulfilled' ? (postsRes.value.data ?? []) : []
+    if (magRes.status === 'fulfilled') articles = magRes.value.data ?? []
 
-    if (postsRes.status === 'fulfilled' && postsRes.value.data) {
-      const rawPosts = postsRes.value.data
+    const allRaw = [...rawMea, ...rawPosts]
+    const etabIds = [...new Set(allRaw.flatMap((p: any) => [p.organisateur_id, p.lieu_id].filter(Boolean)))]
 
-      // Fetch établissements séparément pour éviter l'ambiguïté FK
-      const etablissementIds = [
-        ...new Set(rawPosts.flatMap((p: any) => [p.organisateur_id, p.lieu_id].filter(Boolean)))
-      ]
-      let etablissementsMap: Record<string, any> = {}
-      if (etablissementIds.length > 0) {
-        const { data: etabs } = await supabase
-          .from('etablissements')
-          .select('id, nom, photo_url')
-          .in('id', etablissementIds)
-        if (etabs) etablissementsMap = Object.fromEntries(etabs.map(e => [e.id, e]))
-      }
-
-      todayPosts = rawPosts.map((p: any) => ({
-        ...p,
-        organisateur: p.organisateur_id ? etablissementsMap[p.organisateur_id] ?? null : null,
-        lieu: p.lieu_id ? etablissementsMap[p.lieu_id] ?? null : null,
-      })) as PostWithRelations[]
+    let etabMap: Record<string, any> = {}
+    if (etabIds.length > 0) {
+      const { data: etabs } = await supabase
+        .from('etablissements')
+        .select('id, nom, photo_url')
+        .in('id', etabIds)
+      if (etabs) etabMap = Object.fromEntries(etabs.map(e => [e.id, e]))
     }
+
+    const enrich = (p: any): PostWithRelations => ({
+      ...p,
+      organisateur: p.organisateur_id ? etabMap[p.organisateur_id] ?? null : null,
+      lieu:         p.lieu_id         ? etabMap[p.lieu_id]         ?? null : null,
+    })
+
+    misEnAvant = rawMea.map(enrich)
+    todayPosts = rawPosts.map(enrich)
 
   } catch (err) {
     console.error('Erreur homepage:', err)
@@ -79,7 +82,7 @@ export default async function HomePage() {
   return (
     <main className="pb-safe">
       <Hero />
-      {misEnAvant && <MisEnAvant post={misEnAvant} />}
+      <MisEnAvant posts={misEnAvant} />
       <MagCarousel articles={articles} />
       <QuickTiles />
       <AgendaHome posts={todayPosts} today={today} />
