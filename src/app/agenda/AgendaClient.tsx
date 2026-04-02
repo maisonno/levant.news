@@ -203,7 +203,7 @@ function AfficheCarousel({ posts }: { posts: PostWithRelations[] }) {
           <Link
             key={post.id}
             href={`/agenda/${post.id}`}
-            className="flex-shrink-0 snap-start w-48 rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100"
+            className="flex-shrink-0 snap-start w-44 rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100"
           >
             {/* Image carrée */}
             <div className="w-full aspect-square bg-gray-100">

@@ -30,7 +30,7 @@ export default async function AgendaPage() {
         .select('*, categorie:categories(code, nom)')
         .eq('publie', true)
         .eq('a_laffiche', true)
-        .gte('date_fin', today)
+        .or(`date_fin.gte.${today},and(date_fin.is.null,date_debut.gte.${today})`)
         .order('date_debut', { ascending: true }),
     ])
 
@@ -68,7 +68,20 @@ export default async function AgendaPage() {
     })
 
     posts = rawPosts.map(enrich)
-    aLaffiche = rawAffiche.map(enrich)
+
+    // À l'affiche : 1 par organisateur (le plus proche), shuffle, max 10
+    const afficheEnriched = rawAffiche.map(enrich) // trié date_debut asc
+    const byOrg = new Map<string, PostWithRelations>()
+    for (const post of afficheEnriched) {
+      const key = post.organisateur_id ?? `__solo_${post.id}`
+      if (!byOrg.has(key)) byOrg.set(key, post)
+    }
+    const deduped = Array.from(byOrg.values())
+    for (let i = deduped.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [deduped[i], deduped[j]] = [deduped[j], deduped[i]]
+    }
+    aLaffiche = deduped.slice(0, 10)
 
   } catch (err) {
     console.error('Erreur agenda:', err)

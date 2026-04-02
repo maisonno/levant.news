@@ -131,12 +131,17 @@ export default function AgendaHome({
           </section>
         )}
 
-        {/* À l'affiche — cartes horizontales */}
+        {/* À l'affiche — carrousel images carrées */}
         {aLaffiche.length > 0 && (
           <section>
             <SectionHeader title="À l'affiche" />
-            <div className="space-y-4">
-              {aLaffiche.map(post => <PostCard key={post.id} post={post} />)}
+            <div
+              className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory"
+              style={{ scrollbarWidth: 'none' }}
+            >
+              {aLaffiche.map(post => (
+                <CarouselCard key={post.id} post={post} accentColor="text-blue-600" />
+              ))}
             </div>
           </section>
         )}
