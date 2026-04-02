@@ -8,19 +8,26 @@ import { PostWithRelations } from '@/types/database'
 export const revalidate = 60
 
 export default async function HomePage() {
-  const today = new Date().toISOString().split('T')[0]
+  const today    = new Date().toISOString().split('T')[0]
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0]
+  const maxDate  = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]
 
-  let misEnAvant: PostWithRelations[] = []
-  let articles: any[] = []
-  let todayPosts: PostWithRelations[] = []
+  let misEnAvant:  PostWithRelations[] = []
+  let articles:    any[]               = []
+  let todayPosts:  PostWithRelations[] = []
+  let enCeMoment:  PostWithRelations[] = []
+  let aLaffiche:   PostWithRelations[] = []
+  let demainPosts: PostWithRelations[] = []
+  let autresPosts: PostWithRelations[] = []
+  let expos:       PostWithRelations[] = []
 
   try {
     const { createClient } = await import('@/lib/supabase/server')
     const supabase = await createClient()
 
-    const [meaRes, magRes, postsRes] = await Promise.allSettled([
+    const [meaRes, magRes, agendaRes, ongoingRes, afficheRes] = await Promise.allSettled([
 
-      // Tous les posts "mis en avant" actifs
+      // Posts mis en avant (bloc MisEnAvant)
       supabase
         .from('posts')
         .select('*, categorie:categories(code, nom)')
@@ -37,24 +44,45 @@ export default async function HomePage() {
         .order('date_publication', { ascending: false })
         .limit(6),
 
-      // Événements d'aujourd'hui uniquement
-      // = commence aujourd'hui, OU en cours (début avant aujourd'hui, fin >= aujourd'hui)
+      // Agenda : aujourd'hui + 7 prochains jours (inclut les EXPO, on filtrera après)
       supabase
         .from('posts')
         .select('*, categorie:categories(code, nom)')
         .eq('publie', true)
         .eq('dans_agenda', true)
-        .or(`date_debut.eq.${today},and(date_debut.lt.${today},date_fin.gte.${today})`)
-        .order('ordre_dans_journee', { ascending: true, nullsFirst: false })
-        .limit(10),
+        .gte('date_debut', today)
+        .lte('date_debut', maxDate)
+        .order('date_debut', { ascending: true })
+        .order('ordre_dans_journee', { ascending: true, nullsFirst: false }),
+
+      // En ce moment : événements multi-jours déjà commencés
+      supabase
+        .from('posts')
+        .select('*, categorie:categories(code, nom)')
+        .eq('publie', true)
+        .eq('dans_agenda', true)
+        .lt('date_debut', today)
+        .gte('date_fin', today)
+        .order('date_debut', { ascending: true }),
+
+      // À l'affiche
+      supabase
+        .from('posts')
+        .select('*, categorie:categories(code, nom)')
+        .eq('publie', true)
+        .eq('a_laffiche', true)
+        .or(`date_fin.gte.${today},and(date_fin.is.null,date_debut.gte.${today})`)
+        .order('date_debut', { ascending: true }),
     ])
 
-    // Enrichir avec les établissements
-    const rawMea   = meaRes.status   === 'fulfilled' ? (meaRes.value.data   ?? []) : []
-    const rawPosts = postsRes.status === 'fulfilled' ? (postsRes.value.data ?? []) : []
+    const rawMea     = meaRes.status     === 'fulfilled' ? (meaRes.value.data     ?? []) : []
+    const rawAgenda  = agendaRes.status  === 'fulfilled' ? (agendaRes.value.data  ?? []) : []
+    const rawOngoing = ongoingRes.status === 'fulfilled' ? (ongoingRes.value.data ?? []) : []
+    const rawAffiche = afficheRes.status === 'fulfilled' ? (afficheRes.value.data ?? []) : []
     if (magRes.status === 'fulfilled') articles = magRes.value.data ?? []
 
-    const allRaw = [...rawMea, ...rawPosts]
+    // Fetch tous les établissements en une seule requête
+    const allRaw = [...rawMea, ...rawAgenda, ...rawOngoing, ...rawAffiche]
     const etabIds = [...new Set(allRaw.flatMap((p: any) => [p.organisateur_id, p.lieu_id].filter(Boolean)))]
 
     let etabMap: Record<string, any> = {}
@@ -73,7 +101,22 @@ export default async function HomePage() {
     })
 
     misEnAvant = rawMea.map(enrich)
-    todayPosts = rawPosts.map(enrich)
+    aLaffiche  = rawAffiche.map(enrich)
+
+    // Séparer EXPO du reste pour l'agenda
+    const agendaEnriched  = rawAgenda.map(enrich)
+    const ongoingEnriched = rawOngoing.map(enrich)
+
+    const agendaNonExpo  = agendaEnriched.filter( (p: PostWithRelations) => p.categorie?.code !== 'EXPO')
+    const agendaExpos    = agendaEnriched.filter( (p: PostWithRelations) => p.categorie?.code === 'EXPO')
+    const ongoingNonExpo = ongoingEnriched.filter((p: PostWithRelations) => p.categorie?.code !== 'EXPO')
+    const ongoingExpos   = ongoingEnriched.filter((p: PostWithRelations) => p.categorie?.code === 'EXPO')
+
+    todayPosts  = agendaNonExpo.filter(p => p.date_debut === today)
+    demainPosts = agendaNonExpo.filter(p => p.date_debut === tomorrow)
+    autresPosts = agendaNonExpo.filter(p => p.date_debut > tomorrow)
+    enCeMoment  = ongoingNonExpo
+    expos       = [...ongoingExpos, ...agendaExpos]
 
   } catch (err) {
     console.error('Erreur homepage:', err)
@@ -85,7 +128,16 @@ export default async function HomePage() {
       <MisEnAvant posts={misEnAvant} />
       <MagCarousel articles={articles} />
       <QuickTiles />
-      <AgendaHome posts={todayPosts} today={today} />
+      <AgendaHome
+        todayPosts={todayPosts}
+        enCeMoment={enCeMoment}
+        aLaffiche={aLaffiche}
+        demainPosts={demainPosts}
+        autresPosts={autresPosts}
+        expos={expos}
+        today={today}
+        tomorrow={tomorrow}
+      />
     </main>
   )
 }

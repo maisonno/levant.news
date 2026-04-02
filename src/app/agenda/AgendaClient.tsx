@@ -329,7 +329,7 @@ export default function AgendaClient({ posts, aLaffiche, today }: Props) {
               </span>
               <div className="flex-1 h-px bg-gray-200" />
             </div>
-            <div className="space-y-3">
+            <div className="space-y-4">
               {todayPosts.map(post => <PostCard key={post.id} post={post} />)}
             </div>
           </section>
@@ -345,7 +345,7 @@ export default function AgendaClient({ posts, aLaffiche, today }: Props) {
                 {dateStr && <span className="text-sm text-gray-400">{dateStr}</span>}
                 <div className="flex-1 h-px bg-gray-200" />
               </div>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {datePosts.map(post => <PostCard key={post.id} post={post} />)}
               </div>
             </section>
