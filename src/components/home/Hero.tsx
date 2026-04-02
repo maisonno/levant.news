@@ -1,6 +1,8 @@
 'use client'
 
+import Link from 'next/link'
 import { useDrawer } from '@/contexts/DrawerContext'
+import { useAuth } from '@/contexts/AuthContext'
 
 // Pour utiliser une photo de fond : dépose le fichier dans /public/ sous le nom hero-bg.jpg
 // (ou hero-bg.png / hero-bg.webp) et change la constante ci-dessous.
@@ -8,6 +10,12 @@ const HERO_BG = '/hero-bg.jpg'
 
 export default function Hero() {
   const { toggle } = useDrawer()
+  const { user, profile } = useAuth()
+
+  const accountHref    = user ? '/compte/profil' : '/compte/connexion'
+  const accountInitial = profile?.prenom?.charAt(0).toUpperCase()
+                      ?? user?.email?.charAt(0).toUpperCase()
+                      ?? null
 
   return (
     <div
@@ -45,15 +53,20 @@ export default function Hero() {
         </button>
 
         {/* Compte */}
-        <button
+        <Link
+          href={accountHref}
           className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center"
           aria-label="Mon compte"
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="8" r="4" />
-            <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-          </svg>
-        </button>
+          {accountInitial ? (
+            <span className="text-white font-extrabold text-base">{accountInitial}</span>
+          ) : (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="8" r="4" />
+              <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+            </svg>
+          )}
+        </Link>
       </div>
 
       {/* Logo centré */}
