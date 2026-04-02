@@ -11,14 +11,14 @@ export default async function HomePage() {
   const today = new Date().toISOString().split('T')[0]
 
   let misEnAvant = null
-  let articles = []
+  let articles: any[] = []
   let todayPosts: PostWithRelations[] = []
 
   try {
     const { createClient } = await import('@/lib/supabase/server')
     const supabase = await createClient()
 
-    const [mea, mag, posts] = await Promise.allSettled([
+    const [mea, mag, postsRes] = await Promise.allSettled([
       supabase
         .from('posts')
         .select('*')
@@ -37,25 +37,43 @@ export default async function HomePage() {
 
       supabase
         .from('posts')
-        .select(`
-          *,
-          organisateur:etablissements!organisateur_id(id, nom, photo_url),
-          lieu:etablissements!lieu_id(id, nom),
-          categorie:categories!categorie_code(code, nom)
-        `)
+        .select('*, categorie:categories(code, nom)')
         .eq('publie', true)
         .eq('dans_agenda', true)
         .lte('date_debut', today)
         .or(`date_fin.gte.${today},date_fin.is.null`)
-        .order('ordre_dans_journee', { ascending: true, nullsFirst: false }),
+        .order('ordre_dans_journee', { ascending: true, nullsFirst: false })
+        .limit(10),
     ])
 
     if (mea.status === 'fulfilled') misEnAvant = mea.value.data?.[0] ?? null
     if (mag.status === 'fulfilled') articles = mag.value.data ?? []
-    if (posts.status === 'fulfilled') todayPosts = (posts.value.data ?? []) as PostWithRelations[]
+
+    if (postsRes.status === 'fulfilled' && postsRes.value.data) {
+      const rawPosts = postsRes.value.data
+
+      // Fetch établissements séparément pour éviter l'ambiguïté FK
+      const etablissementIds = [
+        ...new Set(rawPosts.flatMap((p: any) => [p.organisateur_id, p.lieu_id].filter(Boolean)))
+      ]
+      let etablissementsMap: Record<string, any> = {}
+      if (etablissementIds.length > 0) {
+        const { data: etabs } = await supabase
+          .from('etablissements')
+          .select('id, nom, photo_url')
+          .in('id', etablissementIds)
+        if (etabs) etablissementsMap = Object.fromEntries(etabs.map(e => [e.id, e]))
+      }
+
+      todayPosts = rawPosts.map((p: any) => ({
+        ...p,
+        organisateur: p.organisateur_id ? etablissementsMap[p.organisateur_id] ?? null : null,
+        lieu: p.lieu_id ? etablissementsMap[p.lieu_id] ?? null : null,
+      })) as PostWithRelations[]
+    }
 
   } catch (err) {
-    console.error('Erreur chargement homepage:', err)
+    console.error('Erreur homepage:', err)
   }
 
   return (
