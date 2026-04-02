@@ -128,7 +128,7 @@ function HourCard({ slot, selected, onClick }: { slot: HourlySlot; selected: boo
           : 'border-gray-100 bg-white shadow-sm'
       }`}
     >
-      <p className={`text-[10px] font-bold ${selected ? 'text-blue-100' : 'text-gray-400'}`}>
+      <p className={`text-xs font-bold ${selected ? 'text-blue-100' : 'text-gray-500'}`}>
         {formatHour(slot.time)}
       </p>
       <span className="text-2xl leading-none">{wemojiOf(slot.code)}</span>
@@ -136,7 +136,7 @@ function HourCard({ slot, selected, onClick }: { slot: HourlySlot; selected: boo
         {Math.round(slot.temp)}°
       </p>
       {slot.precip > 0 && (
-        <p className={`text-[10px] font-semibold ${selected ? 'text-blue-200' : 'text-blue-500'}`}>
+        <p className={`text-xs font-semibold ${selected ? 'text-blue-200' : 'text-blue-500'}`}>
           💧{slot.precip}%
         </p>
       )}
@@ -160,13 +160,13 @@ function DetailBlock({ slot }: { slot: HourlySlot }) {
 
       {/* 1 — Météo générale */}
       <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-4">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Météo</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-3">Météo</p>
         <div className="flex items-center gap-4 mb-3">
           <span className="text-5xl">{wemojiOf(slot.code)}</span>
           <div>
-            <p className="text-gray-500 text-sm">{wlabelOf(slot.code)}</p>
+            <p className="text-gray-600 text-sm font-semibold">{wlabelOf(slot.code)}</p>
             <p className="text-3xl font-extrabold text-gray-900">{Math.round(slot.temp)}°C</p>
-            <p className="text-sm text-gray-400">Ressenti {Math.round(slot.apparent)}°C</p>
+            <p className="text-sm text-gray-500">Ressenti {Math.round(slot.apparent)}°C</p>
           </div>
         </div>
         {slot.precip > 0 ? (
@@ -184,29 +184,29 @@ function DetailBlock({ slot }: { slot: HourlySlot }) {
 
       {/* 2 — Ciel */}
       <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-4">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Ciel</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-3">Ciel</p>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-gray-700">
               <WindArrow deg={slot.windDir} size={18} />
               <div>
                 <p className="text-sm font-bold">{Math.round(slot.wind)} km/h {degToCardinal(slot.windDir)}</p>
-                <p className="text-xs text-gray-400">Rafales {Math.round(slot.windGusts)} km/h</p>
+                <p className="text-sm text-gray-500">Rafales {Math.round(slot.windGusts)} km/h</p>
               </div>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-gray-50 rounded-2xl px-3 py-2">
-              <p className="text-[10px] text-gray-400 font-semibold uppercase">UV</p>
+            <div className="bg-gray-50 rounded-2xl px-3 py-2.5">
+              <p className="text-xs text-gray-500 font-semibold uppercase mb-0.5">UV</p>
               <p className="text-lg font-extrabold text-gray-900">{slot.uv.toFixed(1)}</p>
-              <p className="text-[10px] text-gray-400">
+              <p className="text-xs text-gray-500">
                 {slot.uv < 3 ? 'Faible' : slot.uv < 6 ? 'Modéré' : slot.uv < 8 ? 'Élevé' : slot.uv < 11 ? 'Très élevé' : 'Extrême'}
               </p>
             </div>
-            <div className="bg-gray-50 rounded-2xl px-3 py-2">
-              <p className="text-[10px] text-gray-400 font-semibold uppercase">Nuages</p>
+            <div className="bg-gray-50 rounded-2xl px-3 py-2.5">
+              <p className="text-xs text-gray-500 font-semibold uppercase mb-0.5">Nuages</p>
               <p className="text-lg font-extrabold text-gray-900">{slot.cloud}%</p>
-              <p className="text-[10px] text-gray-400">Couverture</p>
+              <p className="text-xs text-gray-500">Couverture</p>
             </div>
           </div>
         </div>
@@ -214,7 +214,7 @@ function DetailBlock({ slot }: { slot: HourlySlot }) {
 
       {/* 3 — Mer */}
       <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-4">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Mer</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-3">Mer</p>
         <div className="space-y-3">
           {slot.seaTemp !== null && (
             <div className="flex items-center gap-3">
@@ -226,15 +226,15 @@ function DetailBlock({ slot }: { slot: HourlySlot }) {
             </div>
           )}
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-blue-50 rounded-2xl px-3 py-2">
-              <p className="text-[10px] text-blue-400 font-semibold uppercase">Vagues</p>
+            <div className="bg-blue-50 rounded-2xl px-3 py-2.5">
+              <p className="text-xs text-blue-500 font-semibold uppercase mb-0.5">Vagues</p>
               <p className="text-lg font-extrabold text-blue-900">{slot.waveH.toFixed(1)} m</p>
-              <p className="text-[10px] text-blue-400">{degToCardinal(slot.waveDir)}</p>
+              <p className="text-xs text-blue-500">{degToCardinal(slot.waveDir)}</p>
             </div>
-            <div className="bg-indigo-50 rounded-2xl px-3 py-2">
-              <p className="text-[10px] text-indigo-400 font-semibold uppercase">Houle</p>
+            <div className="bg-indigo-50 rounded-2xl px-3 py-2.5">
+              <p className="text-xs text-indigo-500 font-semibold uppercase mb-0.5">Houle</p>
               <p className="text-lg font-extrabold text-indigo-900">{slot.swellH.toFixed(1)} m</p>
-              <p className="text-[10px] text-indigo-400">{degToCardinal(slot.swellDir)} · {slot.swellPeriod.toFixed(0)}s</p>
+              <p className="text-xs text-indigo-500">{degToCardinal(slot.swellDir)} · {slot.swellPeriod.toFixed(0)}s</p>
             </div>
           </div>
         </div>
@@ -373,7 +373,7 @@ export default function MeteoPage() {
                   )}
                   {/* Groupe jour : label + cartes */}
                   <div className="flex flex-col gap-1.5 flex-shrink-0">
-                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest px-0.5 capitalize">
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-widest px-0.5 capitalize">
                       {label}
                     </p>
                     <div className="flex gap-2">
