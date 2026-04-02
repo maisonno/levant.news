@@ -47,11 +47,12 @@ function shortDate(iso: string) {
 function addDays(iso: string, n: number) {
   const d = new Date(iso + 'T00:00:00')
   d.setDate(d.getDate() + n)
-  return d.toISOString().split('T')[0]
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
 }
 
 function todayIso() {
-  return new Date().toISOString().split('T')[0]
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
 }
 
 function formatHeure(h: string) {
@@ -138,7 +139,7 @@ function DatePicker({ value, onChange }: { value: string; onChange: (d: string) 
         {/* Flèche gauche */}
         <button
           onClick={() => onChange(addDays(value, -1))}
-          className="w-10 h-10 rounded-xl bg-white/20 hover:bg-white/30 flex items-center justify-center text-white text-xl font-bold transition-colors"
+          className="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 text-xl font-bold transition-colors"
           aria-label="Jour précédent"
         >
           ‹
@@ -147,18 +148,18 @@ function DatePicker({ value, onChange }: { value: string; onChange: (d: string) 
         {/* Date cliquable */}
         <button
           onClick={() => setOpen(o => !o)}
-          className="flex-1 flex items-center justify-center gap-0.5 rounded-2xl border-2 border-white/40 bg-white/10 hover:bg-white/20 px-4 py-2 transition-colors"
+          className="flex-1 flex items-center justify-center gap-0.5 rounded-2xl border-2 border-blue-300 bg-white hover:bg-blue-50 px-4 py-2 transition-colors shadow-sm"
           aria-label="Choisir une date"
         >
-          <span className="text-base font-bold text-white">{dd}/</span>
-          <span className="text-base font-bold bg-white text-blue-700 px-1.5 py-0 rounded-lg leading-tight">{mm}</span>
-          <span className="text-base font-bold text-white">/{yyyy}</span>
+          <span className="text-base font-bold text-gray-800">{dd}/</span>
+          <span className="text-base font-bold bg-blue-600 text-white px-1.5 py-0 rounded-lg leading-tight">{mm}</span>
+          <span className="text-base font-bold text-gray-800">/{yyyy}</span>
         </button>
 
         {/* Flèche droite */}
         <button
           onClick={() => onChange(addDays(value, 1))}
-          className="w-10 h-10 rounded-xl bg-white/20 hover:bg-white/30 flex items-center justify-center text-white text-xl font-bold transition-colors"
+          className="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 text-xl font-bold transition-colors"
           aria-label="Jour suivant"
         >
           ›
@@ -328,10 +329,8 @@ export default function BateauPage() {
             </svg>
           </a>
         </div>
-        <h1 className="text-2xl font-extrabold text-white tracking-tight mb-4">Bateaux</h1>
-
-        {/* Date picker intégré dans le header */}
-        <DatePicker value={selectedDate} onChange={setSelectedDate} />
+        <h1 className="text-2xl font-extrabold text-white tracking-tight">Bateaux</h1>
+        <p className="text-white/50 text-xs mt-0.5">Horaires de liaison maritime</p>
       </div>
 
       <div className="px-4 mt-4 space-y-4">
@@ -342,6 +341,9 @@ export default function BateauPage() {
             {infos.map(info => <InfoCard key={info.id} info={info} />)}
           </div>
         )}
+
+        {/* Sélecteur de date */}
+        <DatePicker value={selectedDate} onChange={setSelectedDate} />
 
         {/* Titre du jour */}
         <h2 className="text-base font-extrabold text-gray-900 capitalize">
