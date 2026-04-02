@@ -229,15 +229,56 @@ function AfficheCarousel({ posts }: { posts: PostWithRelations[] }) {
   )
 }
 
+function ExpoCarousel({ posts }: { posts: PostWithRelations[] }) {
+  if (posts.length === 0) return null
+
+  return (
+    <div className="mb-2">
+      <div className="flex items-center gap-2 mb-3">
+        <h2 className="text-base font-extrabold text-gray-900">Expositions</h2>
+        <div className="flex-1 h-px bg-gray-200" />
+      </div>
+      <div
+        className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory"
+        style={{ scrollbarWidth: 'none' }}
+      >
+        {posts.map(post => (
+          <Link
+            key={post.id}
+            href={`/agenda/${post.id}`}
+            className="flex-shrink-0 snap-start w-44 rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100"
+          >
+            <div className="w-full aspect-square bg-amber-50">
+              {post.affiche_url ? (
+                <img src={post.affiche_url} alt={post.titre} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-4xl">🖼️</div>
+              )}
+            </div>
+            <div className="p-3">
+              <p className="text-xs font-semibold text-amber-600 mb-1">
+                {formatAfficheDate(post.date_debut, post.date_fin ?? null)}
+              </p>
+              <p className="text-sm font-bold text-gray-900 leading-tight line-clamp-2">{post.titre}</p>
+              {post.lieu && <p className="text-xs text-gray-400 mt-1 truncate">{post.lieu.nom}</p>}
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ─── Composant principal ──────────────────────────────────────────────────────
 
 interface Props {
   posts: PostWithRelations[]
   aLaffiche: PostWithRelations[]
+  expos: PostWithRelations[]
   today: string
 }
 
-export default function AgendaClient({ posts, aLaffiche, today }: Props) {
+export default function AgendaClient({ posts, aLaffiche, expos, today }: Props) {
   const router = useRouter()
   const [search, setSearch] = useState('')
 
@@ -334,6 +375,9 @@ export default function AgendaClient({ posts, aLaffiche, today }: Props) {
             </div>
           </section>
         )}
+
+        {/* Expositions (carrousel, hors recherche) */}
+        {!search && <ExpoCarousel posts={expos} />}
 
         {/* Jours suivants */}
         {(search ? grouped : grouped.filter(([d]) => d > todayKey)).map(([date, datePosts]) => {

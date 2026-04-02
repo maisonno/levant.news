@@ -10,7 +10,7 @@ export const revalidate = 60
 export default async function HomePage() {
   const today    = new Date().toISOString().split('T')[0]
   const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0]
-  const maxDate  = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]
+  const maxDate  = new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0]
 
   let misEnAvant:  PostWithRelations[] = []
   let articles:    any[]               = []
