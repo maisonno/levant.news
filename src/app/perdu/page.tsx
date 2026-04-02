@@ -1,12 +1,19 @@
-export default function Page() {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="text-center p-8">
-        <p className="text-4xl mb-4">🚧</p>
-        <h1 className="text-xl font-bold text-gray-800 mb-2">En construction</h1>
-        <p className="text-gray-500 text-sm">Ce module arrive bientôt.</p>
-        <a href="/" className="mt-4 inline-block text-blue-600 font-semibold text-sm">← Accueil</a>
-      </div>
-    </div>
-  )
+import { createClient } from '@/lib/supabase/server'
+import PerduClient from './PerduClient'
+
+export const dynamic = 'force-dynamic'
+
+export default async function PerduPage() {
+  const supabase = await createClient()
+
+  // On récupère : actives non expirées (J-10) + toutes les fermées
+  // Le filtrage J+10 se fait côté client pour éviter un calcul SQL complexe ;
+  // on limite aux 200 derniers créés pour ne pas surcharger.
+  const { data: annonces } = await supabase
+    .from('objets_perdus')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(200)
+
+  return <PerduClient annonces={annonces ?? []} />
 }

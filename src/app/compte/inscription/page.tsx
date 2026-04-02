@@ -27,7 +27,7 @@ export default function InscriptionPage() {
       password,
       options: {
         data: { prenom, nom },
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=/compte/profil`,
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin}/auth/callback?next=/compte/profil`,
       },
     })
 
