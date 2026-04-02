@@ -17,9 +17,9 @@ export default async function EventPage({ params }: Props) {
     .from('posts')
     .select(`
       *,
-      organisateur:etablissements!posts_organisateur_id_fkey(id, nom, photo_url, email, telephone, site_url, adresse),
-      lieu:etablissements!posts_lieu_id_fkey(id, nom, adresse, geocodage),
-      categorie:categories!posts_categorie_code_fkey(code, nom)
+      organisateur:etablissements!organisateur_id(id, nom, photo_url, email, telephone, site_url, adresse),
+      lieu:etablissements!lieu_id(id, nom, adresse, geocodage),
+      categorie:categories!categorie_code(code, nom)
     `)
     .eq('id', id)
     .eq('publie', true)
