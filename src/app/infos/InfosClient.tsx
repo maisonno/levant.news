@@ -60,41 +60,35 @@ function HeroCard({ article }: { article: Article }) {
   )
 }
 
-// ─── Carte compacte (articles suivants) ──────────────────────────────────────
+// ─── Carte verticale (grille 2 colonnes) ─────────────────────────────────────
 
-function CompactCard({ article }: { article: Article }) {
+function VerticalCard({ article }: { article: Article }) {
   const { open } = useArticleSheet()
   const meta = getMeta(article.theme_code)
 
   return (
-    <button onClick={() => open(article)} className="w-full text-left">
-      <div className="flex bg-white h-24 active:bg-gray-50 transition-colors">
-        {/* Thumbnail */}
-        <div className="w-24 flex-shrink-0 bg-gray-100">
+    <button onClick={() => open(article)} className="w-full text-left active:scale-[0.97] transition-transform">
+      <div className="rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100 flex flex-col">
+        {/* Image */}
+        <div className="w-full aspect-square bg-gray-100 flex-shrink-0">
           {article.image_url ? (
             <img src={article.image_url} alt={article.titre} className="w-full h-full object-cover" />
           ) : (
-            <div className={`w-full h-full ${meta.bg} flex items-center justify-center text-2xl`}>
+            <div className={`w-full h-full ${meta.bg} flex items-center justify-center text-3xl`}>
               {meta.icon}
             </div>
           )}
         </div>
         {/* Texte */}
-        <div className="flex-1 min-w-0 px-4 py-3 flex flex-col justify-center gap-1">
-          <p className="font-bold text-gray-900 text-[14px] leading-snug line-clamp-2">
+        <div className="p-3 flex flex-col gap-1">
+          <p className="font-bold text-gray-900 text-[13px] leading-snug line-clamp-2">
             {article.titre}
           </p>
           {article.texte && (
-            <p className="text-xs text-gray-400 line-clamp-1 leading-snug">
+            <p className="text-[11px] text-gray-400 line-clamp-2 leading-snug">
               {article.texte.replace(/\*\*/g, '').replace(/\*/g, '').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').split('\n')[0]}
             </p>
           )}
-        </div>
-        {/* Chevron */}
-        <div className="flex items-center pr-4 text-gray-300 flex-shrink-0">
-          <svg width="7" height="12" viewBox="0 0 7 12" fill="none">
-            <path d="M1 1l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
         </div>
       </div>
     </button>
@@ -121,11 +115,11 @@ function ThemeSection({ theme, articles }: { theme: string; articles: Article[] 
       {/* Hero */}
       <HeroCard article={hero} />
 
-      {/* Cartes compactes groupées iOS-style */}
+      {/* Grille 2 colonnes */}
       {rest.length > 0 && (
-        <div className="mt-3 rounded-2xl overflow-hidden border border-gray-100 shadow-sm divide-y divide-gray-100">
+        <div className="mt-3 grid grid-cols-2 gap-3">
           {rest.map(article => (
-            <CompactCard key={article.id} article={article} />
+            <VerticalCard key={article.id} article={article} />
           ))}
         </div>
       )}
