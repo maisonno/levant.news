@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useDrawer } from '@/contexts/DrawerContext'
 
 // ─── Types ────────────────────────────────────────────────────
@@ -70,6 +70,164 @@ const STATUT_CONFIG = {
   change:  { badge: 'bg-orange-100 text-orange-700', label: 'Changé' },
 }
 
+// ─── DatePicker ───────────────────────────────────────────────
+
+function DatePicker({ value, onChange }: { value: string; onChange: (d: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const [viewMonth, setViewMonth] = useState(() => {
+    const d = new Date(value + 'T00:00:00')
+    return { year: d.getFullYear(), month: d.getMonth() }
+  })
+  const ref = useRef<HTMLDivElement>(null)
+
+  // Sync view month quand la date change de l'extérieur
+  useEffect(() => {
+    const d = new Date(value + 'T00:00:00')
+    setViewMonth({ year: d.getFullYear(), month: d.getMonth() })
+  }, [value])
+
+  // Fermer au clic extérieur
+  useEffect(() => {
+    if (!open) return
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [open])
+
+  const sel = new Date(value + 'T00:00:00')
+  const dd = String(sel.getDate()).padStart(2, '0')
+  const mm = String(sel.getMonth() + 1).padStart(2, '0')
+  const yyyy = sel.getFullYear()
+
+  const monthName = new Date(viewMonth.year, viewMonth.month, 1)
+    .toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+
+  // Grille calendrier (semaine commence lundi)
+  const firstDow = new Date(viewMonth.year, viewMonth.month, 1).getDay()
+  const startOffset = firstDow === 0 ? 6 : firstDow - 1
+  const daysInMonth = new Date(viewMonth.year, viewMonth.month + 1, 0).getDate()
+  const cells: (number | null)[] = [
+    ...Array(startOffset).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ]
+  while (cells.length % 7 !== 0) cells.push(null)
+
+  const today = todayIso()
+
+  function prevMonth() {
+    setViewMonth(vm => {
+      const d = new Date(vm.year, vm.month - 1, 1)
+      return { year: d.getFullYear(), month: d.getMonth() }
+    })
+  }
+  function nextMonth() {
+    setViewMonth(vm => {
+      const d = new Date(vm.year, vm.month + 1, 1)
+      return { year: d.getFullYear(), month: d.getMonth() }
+    })
+  }
+
+  return (
+    <div ref={ref} className="relative">
+
+      {/* Barre de navigation date */}
+      <div className="flex items-center gap-2">
+
+        {/* Flèche gauche */}
+        <button
+          onClick={() => onChange(addDays(value, -1))}
+          className="w-10 h-10 rounded-xl bg-white/20 hover:bg-white/30 flex items-center justify-center text-white text-xl font-bold transition-colors"
+          aria-label="Jour précédent"
+        >
+          ‹
+        </button>
+
+        {/* Date cliquable */}
+        <button
+          onClick={() => setOpen(o => !o)}
+          className="flex-1 flex items-center justify-center gap-0.5 rounded-2xl border-2 border-white/40 bg-white/10 hover:bg-white/20 px-4 py-2 transition-colors"
+          aria-label="Choisir une date"
+        >
+          <span className="text-base font-bold text-white">{dd}/</span>
+          <span className="text-base font-bold bg-white text-blue-700 px-1.5 py-0 rounded-lg leading-tight">{mm}</span>
+          <span className="text-base font-bold text-white">/{yyyy}</span>
+        </button>
+
+        {/* Flèche droite */}
+        <button
+          onClick={() => onChange(addDays(value, 1))}
+          className="w-10 h-10 rounded-xl bg-white/20 hover:bg-white/30 flex items-center justify-center text-white text-xl font-bold transition-colors"
+          aria-label="Jour suivant"
+        >
+          ›
+        </button>
+      </div>
+
+      {/* Popup calendrier */}
+      {open && (
+        <div className="absolute top-full left-0 right-0 mt-3 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 p-4">
+
+          {/* Navigation mois */}
+          <div className="flex items-center justify-between mb-3">
+            <button
+              onClick={prevMonth}
+              className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-500 font-bold text-sm transition-colors"
+            >◄</button>
+            <span className="text-sm font-bold text-gray-800 capitalize">{monthName}</span>
+            <button
+              onClick={nextMonth}
+              className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-500 font-bold text-sm transition-colors"
+            >►</button>
+          </div>
+
+          {/* Entêtes jours */}
+          <div className="grid grid-cols-7 mb-1">
+            {['L','M','M','J','V','S','D'].map((l, i) => (
+              <div key={i} className="text-center text-xs font-bold text-gray-400 py-1">{l}</div>
+            ))}
+          </div>
+
+          {/* Cases jours */}
+          <div className="grid grid-cols-7">
+            {cells.map((cell, i) => {
+              if (!cell) return <div key={i} className="h-9" />
+              const cellIso = `${viewMonth.year}-${String(viewMonth.month + 1).padStart(2,'0')}-${String(cell).padStart(2,'0')}`
+              const isSelected = cellIso === value
+              const isToday = cellIso === today
+              return (
+                <button
+                  key={i}
+                  onClick={() => { onChange(cellIso); setOpen(false) }}
+                  className={`h-9 w-9 mx-auto flex items-center justify-center rounded-full text-sm font-medium transition-all ${
+                    isSelected
+                      ? 'bg-blue-600 text-white font-bold shadow-sm'
+                      : isToday
+                      ? 'text-blue-600 font-bold ring-2 ring-blue-200'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  {cell}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Raccourci Aujourd'hui */}
+          <button
+            onClick={() => { onChange(today); setOpen(false) }}
+            className="mt-3 w-full text-xs font-semibold text-blue-600 hover:text-blue-800 py-1 transition-colors"
+          >
+            Aujourd'hui
+          </button>
+
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Composants ───────────────────────────────────────────────
 
 function InfoCard({ info }: { info: InfoBateau }) {
@@ -130,9 +288,6 @@ export default function BateauPage() {
   const [infos,        setInfos]        = useState<InfoBateau[]>([])
   const [loading,      setLoading]      = useState(true)
 
-  // 7 jours de calendrier
-  const days = Array.from({ length: 14 }, (_, i) => addDays(today, i))
-
   useEffect(() => {
     setLoading(true)
     fetch(`/api/bateau?date=${selectedDate}`)
@@ -173,35 +328,10 @@ export default function BateauPage() {
             </svg>
           </a>
         </div>
-        <h1 className="text-2xl font-extrabold text-white tracking-tight">Bateaux</h1>
-        <p className="text-white/50 text-xs mt-0.5">Horaires de liaison maritime</p>
-      </div>
+        <h1 className="text-2xl font-extrabold text-white tracking-tight mb-4">Bateaux</h1>
 
-      {/* Calendrier horizontal */}
-      <div className="bg-white border-b border-gray-100 px-4 py-3">
-        <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-          {days.map(d => {
-            const active = d === selectedDate
-            return (
-              <button
-                key={d}
-                onClick={() => setSelectedDate(d)}
-                className={`flex-shrink-0 flex flex-col items-center px-3 py-2 rounded-xl transition-all ${
-                  active
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <span className={`text-[10px] font-bold uppercase ${active ? 'text-blue-200' : 'text-gray-400'}`}>
-                  {new Date(d + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'short' })}
-                </span>
-                <span className="text-base font-extrabold leading-tight">
-                  {new Date(d + 'T00:00:00').getDate()}
-                </span>
-              </button>
-            )
-          })}
-        </div>
+        {/* Date picker intégré dans le header */}
+        <DatePicker value={selectedDate} onChange={setSelectedDate} />
       </div>
 
       <div className="px-4 mt-4 space-y-4">
@@ -218,7 +348,7 @@ export default function BateauPage() {
           {formatDate(selectedDate)}
         </h2>
 
-        {/* Loading */}
+        {/* Chargement */}
         {loading && (
           <div className="flex justify-center py-10">
             <div className="w-7 h-7 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
