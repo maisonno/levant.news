@@ -359,21 +359,28 @@ export default function MeteoPage() {
       {/* Carrousel + détails */}
       {!loading && !error && slots.length > 0 && (
         <>
-          {/* Carrousel par jour */}
+          {/* Carrousel — une seule ligne scrollable */}
           <div className="mt-4" ref={scrollRef}>
-            {days.map(({ label, key, slots: daySlots }, di) => (
-              <div key={key}>
-                {/* Séparateur jour */}
-                <div className={`flex items-center gap-3 px-4 ${di === 0 ? 'pt-0 pb-2' : 'pt-4 pb-2'}`}>
-                  <div className="h-px flex-1 bg-gray-300" />
-                  <p className="text-xs font-extrabold uppercase tracking-widest text-gray-400 capitalize flex-shrink-0">
-                    {label}
-                  </p>
-                  <div className="h-px flex-1 bg-gray-300" />
-                </div>
-
-                {/* Cartes horizontales */}
-                <div className="flex gap-2 overflow-x-auto px-4 pb-2" style={{ scrollbarWidth: 'none' }}>
+            <div
+              className="flex gap-2 overflow-x-auto px-4 pb-3 items-stretch"
+              style={{ scrollbarWidth: 'none' }}
+            >
+              {days.map(({ label, key, slots: daySlots }, di) => (
+                <div key={key} className="flex gap-2 items-stretch flex-shrink-0">
+                  {/* Séparateur vertical entre jours */}
+                  {di > 0 && (
+                    <div className="flex flex-col items-center gap-1 flex-shrink-0 py-1">
+                      <div className="flex-1 w-px bg-gray-200" />
+                      <p
+                        className="text-[8px] font-bold text-gray-300 uppercase tracking-wider flex-shrink-0 px-0.5"
+                        style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
+                      >
+                        {label}
+                      </p>
+                      <div className="flex-1 w-px bg-gray-200" />
+                    </div>
+                  )}
+                  {/* Cartes du jour */}
                   {daySlots.map(({ slot, idx }) => (
                     <HourCard
                       key={slot.time}
@@ -383,8 +390,8 @@ export default function MeteoPage() {
                     />
                   ))}
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
           {/* Bloc détails */}
