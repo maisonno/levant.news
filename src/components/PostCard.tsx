@@ -1,4 +1,6 @@
-import Link from 'next/link'
+'use client'
+
+import { useEventSheet } from '@/contexts/EventSheetContext'
 import { PostWithRelations } from '@/types/database'
 
 const CAT_COLORS: Record<string, { bg: string; text: string }> = {
@@ -44,6 +46,8 @@ interface Props {
 }
 
 export default function PostCard({ post }: Props) {
+  const { open } = useEventSheet()
+
   const cat    = post.categorie
   const colors = cat ? (CAT_COLORS[cat.code] ?? { bg: 'bg-gray-100', text: 'text-gray-600' }) : null
   const lieu   = post.lieu?.nom ?? post.organisateur?.nom ?? null
@@ -53,8 +57,11 @@ export default function PostCard({ post }: Props) {
     : null
 
   return (
-    <Link href={`/agenda/${post.id}`}>
-      <div className="flex bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 h-28">
+    <button
+      onClick={() => open(post)}
+      className="w-full text-left"
+    >
+      <div className="flex bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 h-28 active:scale-[0.98] transition-transform">
 
         {/* Image — plein bord gauche/haut/bas */}
         <div className="w-28 flex-shrink-0 bg-gray-100">
@@ -107,6 +114,6 @@ export default function PostCard({ post }: Props) {
 
         </div>
       </div>
-    </Link>
+    </button>
   )
 }

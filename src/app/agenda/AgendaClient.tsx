@@ -5,6 +5,7 @@ import { PostWithRelations } from '@/types/database'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import PostCard from '@/components/PostCard'
+import { useEventSheet } from '@/contexts/EventSheetContext'
 
 // ─── Utilitaires ──────────────────────────────────────────────────────────────
 
@@ -188,6 +189,7 @@ function formatAfficheDate(debut: string, fin: string | null): string {
 }
 
 function AfficheCarousel({ posts }: { posts: PostWithRelations[] }) {
+  const { open } = useEventSheet()
   if (posts.length === 0) return null
 
   return (
@@ -200,12 +202,11 @@ function AfficheCarousel({ posts }: { posts: PostWithRelations[] }) {
         style={{ scrollbarWidth: 'none' }}
       >
         {posts.map(post => (
-          <Link
+          <button
             key={post.id}
-            href={`/agenda/${post.id}`}
-            className="flex-shrink-0 snap-start w-44 rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100"
+            onClick={() => open(post)}
+            className="flex-shrink-0 snap-start w-44 rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100 text-left active:scale-[0.97] transition-transform"
           >
-            {/* Image carrée */}
             <div className="w-full aspect-square bg-gray-100">
               {post.affiche_url ? (
                 <img src={post.affiche_url} alt={post.titre} className="w-full h-full object-cover" />
@@ -213,7 +214,6 @@ function AfficheCarousel({ posts }: { posts: PostWithRelations[] }) {
                 <div className="w-full h-full" style={{ background: 'linear-gradient(135deg,#1e3a8a,#3730a3)' }} />
               )}
             </div>
-            {/* Date + titre en dessous */}
             <div className="p-3">
               <p className="text-xs font-semibold text-blue-600 mb-1">
                 {formatAfficheDate(post.date_debut, post.date_fin)}
@@ -222,7 +222,7 @@ function AfficheCarousel({ posts }: { posts: PostWithRelations[] }) {
                 {post.titre}
               </p>
             </div>
-          </Link>
+          </button>
         ))}
       </div>
     </div>
@@ -230,6 +230,7 @@ function AfficheCarousel({ posts }: { posts: PostWithRelations[] }) {
 }
 
 function ExpoCarousel({ posts }: { posts: PostWithRelations[] }) {
+  const { open } = useEventSheet()
   if (posts.length === 0) return null
 
   return (
@@ -243,10 +244,10 @@ function ExpoCarousel({ posts }: { posts: PostWithRelations[] }) {
         style={{ scrollbarWidth: 'none' }}
       >
         {posts.map(post => (
-          <Link
+          <button
             key={post.id}
-            href={`/agenda/${post.id}`}
-            className="flex-shrink-0 snap-start w-44 rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100"
+            onClick={() => open(post)}
+            className="flex-shrink-0 snap-start w-44 rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100 text-left active:scale-[0.97] transition-transform"
           >
             <div className="w-full aspect-square bg-amber-50">
               {post.affiche_url ? (
@@ -262,7 +263,7 @@ function ExpoCarousel({ posts }: { posts: PostWithRelations[] }) {
               <p className="text-sm font-bold text-gray-900 leading-tight line-clamp-2">{post.titre}</p>
               {post.lieu && <p className="text-xs text-gray-400 mt-1 truncate">{post.lieu.nom}</p>}
             </div>
-          </Link>
+          </button>
         ))}
       </div>
     </div>

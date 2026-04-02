@@ -1,6 +1,9 @@
+'use client'
+
 import { PostWithRelations } from '@/types/database'
 import PostCard from '@/components/PostCard'
 import Link from 'next/link'
+import { useEventSheet } from '@/contexts/EventSheetContext'
 
 interface Props {
   todayPosts:  PostWithRelations[]
@@ -43,10 +46,11 @@ function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }
 }
 
 function CarouselCard({ post, accentColor = 'text-blue-600' }: { post: PostWithRelations; accentColor?: string }) {
+  const { open } = useEventSheet()
   return (
-    <Link
-      href={`/agenda/${post.id}`}
-      className="flex-shrink-0 snap-start w-44 rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100"
+    <button
+      onClick={() => open(post)}
+      className="flex-shrink-0 snap-start w-44 rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100 text-left active:scale-[0.97] transition-transform"
     >
       <div className="w-full aspect-square bg-gray-100">
         {post.affiche_url ? (
@@ -69,7 +73,7 @@ function CarouselCard({ post, accentColor = 'text-blue-600' }: { post: PostWithR
           <p className="text-xs text-gray-400 mt-1 truncate">{post.lieu.nom}</p>
         )}
       </div>
-    </Link>
+    </button>
   )
 }
 
