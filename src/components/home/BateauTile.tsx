@@ -53,21 +53,21 @@ export default function BateauTile() {
   return (
     <Link
       href="/bateau"
-      className="relative bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl p-4 text-white overflow-hidden"
+      className="relative bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl p-3 text-white overflow-hidden"
     >
       {/* Dot vert "actif" */}
-      <div className="absolute top-3 right-3">
-        <span className="w-2.5 h-2.5 bg-green-400 rounded-full block animate-pulse" />
+      <div className="absolute top-2 right-2">
+        <span className="w-2 h-2 bg-green-400 rounded-full block animate-pulse" />
       </div>
 
-      <div className="text-3xl mb-1">⛵</div>
-      <p className="font-bold text-base leading-tight">Bateau</p>
+      <div className="text-2xl mb-1">⛵</div>
+      <p className="font-bold text-xs leading-tight">Bateau</p>
       {label !== null
         ? <>
-            <p className="text-white font-extrabold text-lg mt-0.5">{label}</p>
-            <p className="text-white/70 text-xs truncate">{sub}</p>
+            <p className="text-white font-extrabold text-sm mt-0.5">{label}</p>
+            <p className="text-white/70 text-[10px] truncate">{sub}</p>
           </>
-        : <p className="text-white/70 text-xs mt-0.5">{sub}</p>
+        : <p className="text-white/70 text-[10px] mt-0.5">{sub}</p>
       }
 
       {/* Glow décoratif */}
