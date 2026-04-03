@@ -91,9 +91,10 @@ interface PostFormProps {
   etablissements: Etablissement[]
   onSave: (data: Partial<PostWithRelations>) => Promise<void>
   onClose: () => void
+  isAdmin?: boolean
 }
 
-function PostForm({ initial, categories, etablissements, onSave, onClose }: PostFormProps) {
+function PostForm({ initial, categories, etablissements, onSave, onClose, isAdmin = true }: PostFormProps) {
   const [titre,        setTitre]        = useState(initial?.titre ?? '')
   const [complement,   setComplement]   = useState(initial?.complement ?? '')
   const [dateDebut,    setDateDebut]    = useState(initial?.date_debut ?? '')
@@ -185,7 +186,7 @@ function PostForm({ initial, categories, etablissements, onSave, onClose }: Post
           [publie, setPublie, 'Publié'],
           [misEnAvant, setMisEnAvant, 'Mis en avant'],
           [inscription, setInscription, 'Inscription'],
-          [refuse, setRefuse, 'Refusé'],
+          ...(isAdmin ? [[refuse, setRefuse, 'Refusé']] : []),
         ] as [boolean, (v: boolean) => void, string][]).map(([val, setter, label]) => (
           <button key={label} type="button" onClick={() => setter(!val)}
             className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-semibold text-left ${
@@ -225,9 +226,10 @@ interface PostCardProps {
   onRefuser:   () => void
   onEdit:      () => void
   onDelete:    () => void
+  isAdmin?: boolean
 }
 
-function PostCard({ post, onPublier, onDepublier, onRefuser, onEdit, onDelete }: PostCardProps) {
+function PostCard({ post, onPublier, onDepublier, onRefuser, onEdit, onDelete, isAdmin = true }: PostCardProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const cat = post.categorie
   const catColor = cat ? (CAT_COLORS[cat.code] ?? 'bg-gray-100 text-gray-600') : null
@@ -270,7 +272,7 @@ function PostCard({ post, onPublier, onDepublier, onRefuser, onEdit, onDelete }:
                 <button onClick={() => { onDepublier(); setMenuOpen(false) }}
                   className="w-full text-left px-4 py-3 text-sm text-orange-700 hover:bg-orange-50">⏸ Dépublier</button>
               )}
-              {!post.refuse && !post.publie && (
+              {isAdmin && !post.refuse && !post.publie && (
                 <button onClick={() => { onRefuser(); setMenuOpen(false) }}
                   className="w-full text-left px-4 py-3 text-sm text-red-700 hover:bg-red-50">❌ Refuser</button>
               )}
@@ -297,10 +299,12 @@ function PostCard({ post, onPublier, onDepublier, onRefuser, onEdit, onDelete }:
             className="flex-1 py-2 rounded-xl bg-green-600 text-white text-xs font-bold">
             ✅ Publier
           </button>
-          <button onClick={onRefuser}
-            className="px-3 py-2 rounded-xl bg-red-50 text-red-600 text-xs font-bold">
-            Refuser
-          </button>
+          {isAdmin && (
+            <button onClick={onRefuser}
+              className="px-3 py-2 rounded-xl bg-red-50 text-red-600 text-xs font-bold">
+              Refuser
+            </button>
+          )}
         </div>
       )}
       {post.publie && (
@@ -319,9 +323,10 @@ function PostCard({ post, onPublier, onDepublier, onRefuser, onEdit, onDelete }:
 interface PostsAdminProps {
   etablissementIds?: string[] // undefined = admin (pas de filtre) ; tableau = filtre pro
   topOffset?: string           // classe Tailwind sticky top-* (défaut: top-[104px])
+  isAdmin?: boolean            // masque les actions réservées à l'admin si false
 }
 
-export default function PostsAdmin({ etablissementIds, topOffset = 'top-[104px]' }: PostsAdminProps) {
+export default function PostsAdmin({ etablissementIds, topOffset = 'top-[104px]', isAdmin = true }: PostsAdminProps) {
   const supabase = createClient()
   const [tab, setTab] = useState<Tab>('moderation')
   const [posts, setPosts]           = useState<PostWithRelations[]>([])
@@ -453,6 +458,7 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[104px]'
         )}
         {filtered.map(p => (
           <PostCard key={p.id} post={p}
+            isAdmin={isAdmin}
             onPublier={()   => updatePost(p.id, { publie: true, refuse: false })}
             onDepublier={() => updatePost(p.id, { publie: false })}
             onRefuser={() => updatePost(p.id, { refuse: true, publie: false })}
@@ -478,6 +484,7 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[104px]'
                 etablissements={etablissements}
                 onSave={savePost}
                 onClose={() => setShowForm(false)}
+                isAdmin={isAdmin}
               />
             </div>
           </div>
