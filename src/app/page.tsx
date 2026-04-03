@@ -34,7 +34,8 @@ export default async function HomePage() {
         .select('*, categorie:categories(code, nom)')
         .eq('publie', true)
         .eq('mis_en_avant', true)
-        .or(`date_fin.gte.${today},date_debut.eq.${today}`)
+        .or(`date_fin.gte.${today},and(date_fin.is.null,date_debut.gte.${today})`)
+        .order('date_debut', { ascending: true })
         .order('ordre_dans_journee', { ascending: true, nullsFirst: false }),
 
       // Levant Mag
