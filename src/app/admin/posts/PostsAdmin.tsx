@@ -283,6 +283,8 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[104px]'
   const [editPost, setEditPost]     = useState<PostWithRelations | null>(null)
   const [showForm, setShowForm]     = useState(false)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const [saveError, setSaveError]   = useState<string | null>(null)
+  const [saveSuccess, setSaveSuccess] = useState(false)
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -348,28 +350,41 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[104px]'
   }
 
   async function savePost(data: Partial<PostWithRelations>) {
+    setSaveError(null)
+    setSaveSuccess(false)
     if (editPost?.id) {
       const { data: updated, error } = await supabase
         .from('posts').update(data).eq('id', editPost.id).select()
       console.log('[PostsAdmin] update →', { updated, error })
       if (error) {
-        alert(`Erreur Supabase :\n${error.message} (${error.code})`); return
+        setSaveError(`Erreur Supabase : ${error.message} (${error.code})`)
+        return
       }
       if (!updated || updated.length === 0) {
-        alert('RLS : aucune ligne mise à jour. Ajoute la policy UPDATE posts dans Supabase.'); return
+        setSaveError('❌ Droits insuffisants (RLS) — exécute le fichier docs/levant-news/posts-rls-policies.sql dans Supabase.')
+        return
       }
       await load()
     } else {
-      const { error } = await supabase
-        .from('posts').insert({ ...data, dans_agenda: true })
-      console.log('[PostsAdmin] insert →', { error })
+      const { data: inserted, error } = await supabase
+        .from('posts').insert({ ...data, dans_agenda: true }).select()
+      console.log('[PostsAdmin] insert →', { inserted, error })
       if (error) {
-        alert(`Erreur Supabase :\n${error.message} (${error.code})`); return
+        setSaveError(`Erreur Supabase : ${error.message} (${error.code})`)
+        return
+      }
+      if (!inserted || inserted.length === 0) {
+        setSaveError('❌ Droits insuffisants (RLS) — exécute le fichier docs/levant-news/posts-rls-policies.sql dans Supabase.')
+        return
       }
       await load()
     }
-    setShowForm(false)
-    setEditPost(null)
+    setSaveSuccess(true)
+    setTimeout(() => {
+      setShowForm(false)
+      setEditPost(null)
+      setSaveSuccess(false)
+    }, 800)
   }
 
   const TABS: { id: Tab; label: string; count: number }[] = [
@@ -430,19 +445,29 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[104px]'
       {/* Formulaire slide-up */}
       {showForm && (
         <>
-          <div className="fixed inset-0 z-40 bg-black/40" onClick={() => setShowForm(false)} />
+          <div className="fixed inset-0 z-40 bg-black/40" onClick={() => { setShowForm(false); setSaveError(null); setSaveSuccess(false) }} />
           <div className="fixed bottom-0 left-0 right-0 z-50 mx-auto max-w-[430px] bg-white rounded-t-3xl shadow-2xl max-h-[92vh] flex flex-col">
             <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-gray-100 flex-shrink-0">
               <h2 className="font-extrabold text-gray-900">{editPost ? 'Modifier le post' : 'Nouveau post'}</h2>
-              <button onClick={() => setShowForm(false)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">✕</button>
+              <button onClick={() => { setShowForm(false); setSaveError(null); setSaveSuccess(false) }} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">✕</button>
             </div>
             <div className="overflow-y-auto flex-1 px-5 py-4">
+              {saveError && (
+                <div className="mb-3 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+                  {saveError}
+                </div>
+              )}
+              {saveSuccess && (
+                <div className="mb-3 p-3 rounded-xl bg-green-50 border border-green-200 text-green-700 text-sm font-bold text-center">
+                  ✅ Enregistré !
+                </div>
+              )}
               <PostForm
                 initial={editPost ?? undefined}
                 categories={categories}
                 etablissements={etablissements}
                 onSave={savePost}
-                onClose={() => setShowForm(false)}
+                onClose={() => { setShowForm(false); setSaveError(null); setSaveSuccess(false) }}
                 isAdmin={isAdmin}
                 etablissementIds={etablissementIds}
               />
