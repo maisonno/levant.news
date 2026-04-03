@@ -264,6 +264,89 @@ function PostCard({ post, onPublier, onDepublier, onRefuser, onEdit, onDelete, i
   )
 }
 
+// ─── Carte post horizontale (tab À venir) ─────────────────────────────────────
+
+function PostCardHorizontal({ post, onEdit, onPublier, onDepublier, onRefuser, onDelete, isAdmin = true }: PostCardProps) {
+  const [menuOpen, setMenuOpen] = useState(false)
+  const cat = post.categorie
+  const catColor = cat ? (CAT_COLORS[cat.code] ?? 'bg-gray-100 text-gray-600') : null
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex">
+      {/* Image gauche */}
+      <div className="w-20 flex-shrink-0 bg-gray-100 relative">
+        {post.affiche_url
+          ? <img src={post.affiche_url} alt={post.titre} className="w-full h-full object-cover absolute inset-0" />
+          : <div className="w-full h-full flex items-center justify-center text-2xl text-gray-200">📅</div>
+        }
+      </div>
+
+      {/* Contenu */}
+      <div className="flex-1 min-w-0 p-3 flex flex-col gap-1">
+        {/* Badges */}
+        <div className="flex flex-wrap gap-1">
+          {cat && catColor && (
+            <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${catColor}`}>
+              {cat.nom}
+            </span>
+          )}
+          {post.mis_en_avant && (
+            <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">⭐ Avant</span>
+          )}
+        </div>
+
+        {/* Titre */}
+        <p className="font-bold text-gray-900 text-sm leading-snug truncate">{post.titre}</p>
+
+        {/* Date + lieu */}
+        <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-400">
+          <span>📅 {fmtDate(post.date_debut)}{post.heure ? ` · ${post.heure}` : ''}</span>
+          {post.lieu && <span className="truncate">📍 {post.lieu.nom}</span>}
+          {post.organisateur && <span className="truncate">🏪 {post.organisateur.nom}</span>}
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-2 pt-1">
+          <button
+            onClick={onEdit}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 text-xs font-bold"
+          >
+            ✏️ Modifier
+          </button>
+
+          {/* Menu ··· */}
+          <div className="relative ml-auto">
+            <button
+              onClick={() => setMenuOpen(v => !v)}
+              className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 text-base leading-none"
+            >
+              ···
+            </button>
+            {menuOpen && (
+              <div className="absolute right-0 bottom-9 z-20 bg-white border border-gray-100 rounded-2xl shadow-lg overflow-hidden min-w-[140px]">
+                {post.publie && (
+                  <button onClick={() => { onDepublier(); setMenuOpen(false) }}
+                    className="w-full text-left px-4 py-3 text-sm text-orange-700 hover:bg-orange-50">⏸ Dépublier</button>
+                )}
+                {!post.publie && !post.refuse && (
+                  <button onClick={() => { onPublier(); setMenuOpen(false) }}
+                    className="w-full text-left px-4 py-3 text-sm text-green-700 hover:bg-green-50">✅ Publier</button>
+                )}
+                {isAdmin && !post.refuse && !post.publie && (
+                  <button onClick={() => { onRefuser(); setMenuOpen(false) }}
+                    className="w-full text-left px-4 py-3 text-sm text-red-700 hover:bg-red-50">❌ Refuser</button>
+                )}
+                <button onClick={() => { onDelete(); setMenuOpen(false) }}
+                  className="w-full text-left px-4 py-3 text-sm text-red-700 hover:bg-red-50 border-t border-gray-100">🗑 Supprimer</button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Composant principal ──────────────────────────────────────────────────────
 
 interface PostsAdminProps {
@@ -330,6 +413,10 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[104px]'
     return !q || p.titre.toLowerCase().includes(q) ||
       (p.organisateur?.nom ?? '').toLowerCase().includes(q) ||
       (p.nom_redacteur ?? '').toLowerCase().includes(q)
+  }).sort((a, b) => {
+    // À venir : date croissante ; autres onglets : created_at décroissant (déjà triés par la query)
+    if (tab === 'avenir') return a.date_debut.localeCompare(b.date_debut)
+    return 0
   })
 
   const count = {
@@ -430,16 +517,19 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[104px]'
             {tab === 'moderation' ? '✅ File de modération vide.' : 'Aucun résultat.'}
           </p>
         )}
-        {filtered.map(p => (
-          <PostCard key={p.id} post={p}
-            isAdmin={isAdmin}
-            onPublier={()   => updatePost(p.id, { publie: true, refuse: false })}
-            onDepublier={() => updatePost(p.id, { publie: false })}
-            onRefuser={() => updatePost(p.id, { refuse: true, publie: false })}
-            onEdit={() => { setEditPost(p); setShowForm(true) }}
-            onDelete={() => setConfirmDelete(p.id)}
-          />
-        ))}
+        {filtered.map(p => {
+          const cardProps = {
+            key: p.id, post: p, isAdmin,
+            onPublier:   () => updatePost(p.id, { publie: true, refuse: false }),
+            onDepublier: () => updatePost(p.id, { publie: false }),
+            onRefuser:   () => updatePost(p.id, { refuse: true, publie: false }),
+            onEdit:      () => { setEditPost(p); setShowForm(true) },
+            onDelete:    () => setConfirmDelete(p.id),
+          }
+          return tab === 'avenir'
+            ? <PostCardHorizontal {...cardProps} />
+            : <PostCard {...cardProps} />
+        })}
       </div>
 
       {/* Formulaire slide-up */}
