@@ -18,10 +18,11 @@ export default function WebcamPage() {
           </span>
         </div>
 
-        {/* Player webcam */}
+        {/* Player webcam — remplacer EMBED_URL par l'URL fournie par Viewsurf (bouton Intégrer) */}
+        {/* URL actuelle à corriger : le paramètre i= contient "undefined" */}
         <div className="rounded-2xl overflow-hidden shadow-sm bg-black" style={{ aspectRatio: '16/9' }}>
           <iframe
-            src="https://v.viewsurf.com/2390?i=ODMxODp1bmRlZmluZWQ"
+            src="https://v.viewsurf.com/2390"
             className="w-full h-full border-0"
             allow="autoplay; fullscreen"
             allowFullScreen
@@ -29,6 +30,16 @@ export default function WebcamPage() {
             title="Webcam Île du Levant"
           />
         </div>
+
+        {/* Lien de secours si le player ne charge pas */}
+        <a
+          href="https://pv.viewsurf.com/2390/Ile-du-Levant"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl bg-white border border-gray-200 text-sm font-semibold text-gray-600 shadow-sm"
+        >
+          <span>🎥</span> Voir sur Viewsurf.com
+        </a>
 
         {/* Source */}
         <p className="text-xs text-gray-400 text-right">
