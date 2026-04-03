@@ -349,10 +349,20 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[104px]'
 
   async function savePost(data: Partial<PostWithRelations>) {
     if (editPost?.id) {
-      await supabase.from('posts').update(data).eq('id', editPost.id)
+      const { error } = await supabase.from('posts').update(data).eq('id', editPost.id)
+      if (error) {
+        console.error('[PostsAdmin] update error:', error)
+        alert(`Erreur lors de la sauvegarde :\n${error.message}\n(code: ${error.code})`)
+        return
+      }
       await load()
     } else {
-      await supabase.from('posts').insert({ ...data, dans_agenda: true })
+      const { error } = await supabase.from('posts').insert({ ...data, dans_agenda: true })
+      if (error) {
+        console.error('[PostsAdmin] insert error:', error)
+        alert(`Erreur lors de la création :\n${error.message}\n(code: ${error.code})`)
+        return
+      }
       await load()
     }
     setShowForm(false)
