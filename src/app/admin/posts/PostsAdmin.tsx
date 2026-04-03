@@ -349,19 +349,22 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[104px]'
 
   async function savePost(data: Partial<PostWithRelations>) {
     if (editPost?.id) {
-      const { error } = await supabase.from('posts').update(data).eq('id', editPost.id)
+      const { data: updated, error } = await supabase
+        .from('posts').update(data).eq('id', editPost.id).select()
+      console.log('[PostsAdmin] update →', { updated, error })
       if (error) {
-        console.error('[PostsAdmin] update error:', error)
-        alert(`Erreur lors de la sauvegarde :\n${error.message}\n(code: ${error.code})`)
-        return
+        alert(`Erreur Supabase :\n${error.message} (${error.code})`); return
+      }
+      if (!updated || updated.length === 0) {
+        alert('RLS : aucune ligne mise à jour. Ajoute la policy UPDATE posts dans Supabase.'); return
       }
       await load()
     } else {
-      const { error } = await supabase.from('posts').insert({ ...data, dans_agenda: true })
+      const { error } = await supabase
+        .from('posts').insert({ ...data, dans_agenda: true })
+      console.log('[PostsAdmin] insert →', { error })
       if (error) {
-        console.error('[PostsAdmin] insert error:', error)
-        alert(`Erreur lors de la création :\n${error.message}\n(code: ${error.code})`)
-        return
+        alert(`Erreur Supabase :\n${error.message} (${error.code})`); return
       }
       await load()
     }
