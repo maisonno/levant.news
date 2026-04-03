@@ -34,7 +34,10 @@ export default function AdminNav({ displayName }: { displayName: string }) {
       />
 
       {/* Barre titre */}
-      <div className="relative z-10 flex items-center justify-between px-4 pt-12 pb-1">
+      <div
+        className="relative z-10 flex items-center justify-between px-4 pb-1"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top) + 6px)' }}
+      >
 
         {/* ← Retour accueil */}
         <Link href="/" aria-label="Retour à l'accueil" className="w-10 h-10 flex items-center justify-center -ml-2">

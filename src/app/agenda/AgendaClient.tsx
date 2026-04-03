@@ -349,45 +349,44 @@ export default function AgendaClient({ posts, aLaffiche, expos, today }: Props) 
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <PageHeader photo="/images/header-agenda.jpg" sticky pb="pb-3">
-        <div className="flex items-center gap-2 mb-3">
-          <h1 className="text-xl font-extrabold text-white tracking-tight flex-1">Agenda</h1>
-        </div>
-        {/* Barre de recherche + bouton Filtrer */}
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
-            <input
-              type="text"
-              placeholder="Chercher un événement…"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="w-full bg-white rounded-xl py-3 pl-9 pr-8 text-sm text-gray-800 placeholder-gray-400 outline-none shadow-sm"
-            />
-            {search && (
-              <button
-                onClick={() => setSearch('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"
-              >×</button>
-            )}
+      <PageHeader
+        photo="/images/header-agenda.jpg"
+        stickyContent={
+          <div className="flex gap-2 px-1">
+            <div className="relative flex-1">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
+              <input
+                type="text"
+                placeholder="Chercher un événement…"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="w-full bg-white rounded-xl py-2.5 pl-9 pr-8 text-sm text-gray-800 placeholder-gray-400 outline-none shadow-sm"
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"
+                >×</button>
+              )}
+            </div>
+            <button
+              onClick={() => setShowFilters(v => !v)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold shadow-sm flex-shrink-0 transition-colors ${
+                hasActiveFilters ? 'bg-amber-400 text-amber-900' : 'bg-white text-gray-700'
+              }`}
+            >
+              <span>⊞</span>
+              <span>Filtrer</span>
+              {hasActiveFilters && (
+                <span className="bg-amber-900/20 text-amber-900 text-[10px] font-black px-1.5 py-0.5 rounded-full">
+                  {filterCats.size + (filterDate ? 1 : 0)}
+                </span>
+              )}
+            </button>
           </div>
-          <button
-            onClick={() => setShowFilters(v => !v)}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold shadow-sm flex-shrink-0 transition-colors ${
-              hasActiveFilters
-                ? 'bg-amber-400 text-amber-900'
-                : 'bg-white text-gray-700'
-            }`}
-          >
-            <span>⊞</span>
-            <span>Filtrer</span>
-            {hasActiveFilters && (
-              <span className="bg-amber-900/20 text-amber-900 text-[10px] font-black px-1.5 py-0.5 rounded-full">
-                {filterCats.size + (filterDate ? 1 : 0)}
-              </span>
-            )}
-          </button>
-        </div>
+        }
+      >
+        <h1 className="text-xl font-extrabold text-white tracking-tight">Agenda</h1>
       </PageHeader>
 
       {/* Panneau de filtres (sous le header, non-sticky) */}

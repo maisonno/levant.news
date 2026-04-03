@@ -40,19 +40,11 @@ export default function Hero() {
       />
 
       {/* Barre de navigation */}
-      <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-5 pt-12 z-10">
-        {/* Burger */}
-        <button
-          onClick={toggle}
-          className="w-10 h-10 flex flex-col items-center justify-center gap-[5px] rounded-xl"
-          aria-label="Menu"
-        >
-          <span className="w-5 h-0.5 bg-white rounded-full" />
-          <span className="w-5 h-0.5 bg-white rounded-full" />
-          <span className="w-5 h-0.5 bg-white rounded-full" />
-        </button>
-
-        {/* Compte */}
+      <div
+        className="absolute top-0 left-0 right-0 flex items-center justify-between px-5 z-10"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top) + 6px)' }}
+      >
+        {/* Compte — à gauche */}
         <Link
           href={accountHref}
           className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center"
@@ -67,6 +59,17 @@ export default function Hero() {
             </svg>
           )}
         </Link>
+
+        {/* Burger — à droite */}
+        <button
+          onClick={toggle}
+          className="w-10 h-10 flex flex-col items-center justify-center gap-[5px]"
+          aria-label="Menu"
+        >
+          <span className="w-5 h-0.5 bg-white rounded-full" />
+          <span className="w-5 h-0.5 bg-white rounded-full" />
+          <span className="w-5 h-0.5 bg-white rounded-full" />
+        </button>
       </div>
 
       {/* Logo centré */}

@@ -142,27 +142,28 @@ export default function AnnuaireClient({ etabs, types }: Props) {
   return (
     <div className="min-h-screen bg-gray-50">
 
-      <PageHeader photo="/images/header-annuaire.jpg" sticky pb="pb-3">
-        <div className="flex items-center mb-3">
-          <h1 className="text-xl font-extrabold text-white tracking-tight">Annuaire</h1>
-        </div>
-        {/* Barre de recherche */}
-        <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
-          <input
-            type="text"
-            placeholder="Rechercher un établissement…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="w-full bg-white rounded-xl py-3 pl-9 pr-8 text-sm text-gray-800 placeholder-gray-400 outline-none shadow-sm"
-          />
-          {search && (
-            <button
-              onClick={() => setSearch('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"
-            >×</button>
-          )}
-        </div>
+      <PageHeader
+        photo="/images/header-annuaire.jpg"
+        stickyContent={
+          <div className="relative px-1">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
+            <input
+              type="text"
+              placeholder="Rechercher un établissement…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full bg-white rounded-xl py-2.5 pl-9 pr-8 text-sm text-gray-800 placeholder-gray-400 outline-none shadow-sm"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg"
+              >×</button>
+            )}
+          </div>
+        }
+      >
+        <h1 className="text-xl font-extrabold text-white tracking-tight">Annuaire</h1>
       </PageHeader>
 
       {/* Contenu */}

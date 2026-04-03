@@ -182,7 +182,7 @@ export default function InfosClient({ articles }: Props) {
   return (
     <div className="min-h-screen bg-gray-50">
 
-      <PageHeader photo="/images/header-infos.jpg" sticky pb="pb-4">
+      <PageHeader photo="/images/header-infos.jpg" pb="pb-4">
         <h1 className="text-xl font-extrabold text-white tracking-tight">Infos pratiques</h1>
       </PageHeader>
 
