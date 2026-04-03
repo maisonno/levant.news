@@ -314,8 +314,13 @@ export default function ProfilPage() {
   const displayName = profile ? `${profile.prenom} ${profile.nom}` : user.email ?? ''
   const roleBadge = ROLE_BADGE[role]
 
+  // Debug
+  console.log('[Profil] profile:', profile)
+  console.log('[Profil] role résolu:', role)
+
   // Onglets visibles selon le rôle
   const visibleTabs = TABS.filter(t => t.roles.includes(role))
+  console.log('[Profil] onglets visibles:', visibleTabs.map(t => t.id))
 
   // Si l'onglet actif n'est plus visible (changement de rôle), revenir au premier
   const activeTab = visibleTabs.find(t => t.id === active) ? active : visibleTabs[0]?.id ?? 'compte'
