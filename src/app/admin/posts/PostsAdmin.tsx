@@ -48,6 +48,7 @@ function PostForm({ initial, categories, etablissements, onSave, onClose, isAdmi
   const [nbMax,        setNbMax]        = useState(initial?.nb_inscriptions_max?.toString() ?? '')
   const [refuse,       setRefuse]       = useState(initial?.refuse ?? false)
   const [phare,        setPhare]        = useState(initial?.phare ?? false)
+  const [aLaffiche,    setALaffiche]    = useState(initial?.a_laffiche ?? false)
   const [saving, setSaving] = useState(false)
 
   // Pour un pro, on restreint aux établissements liés à son compte
@@ -65,7 +66,8 @@ function PostForm({ initial, categories, etablissements, onSave, onClose, isAdmi
       date_debut: dateDebut, date_fin: dateFin || null,
       heure: heure || null, categorie_code: categorieCode || null,
       organisateur_id: organisateurId || null, lieu_id: lieuId || null,
-      publie, mis_en_avant: misEnAvant, affiche_url: afficheUrl || null,
+      publie, mis_en_avant: misEnAvant, a_laffiche: aLaffiche,
+      affiche_url: afficheUrl || null,
       inscription, nb_inscriptions_max: nbMax ? parseInt(nbMax) : null,
       refuse, phare,
     })
@@ -128,6 +130,7 @@ function PostForm({ initial, categories, etablissements, onSave, onClose, isAdmi
         {([
           [publie, setPublie, 'Publié', !isAdmin],
           [misEnAvant, setMisEnAvant, 'Mis en avant', false],
+          [aLaffiche, setALaffiche, '⭐ À l\'affiche', false],
           [inscription, setInscription, 'Inscription', false],
           ...(isAdmin ? [[refuse, setRefuse, 'Refusé', false]] : []),
           ...(isAdmin ? [[phare, setPhare, '🔦 Phare', false]] : []),
@@ -294,6 +297,12 @@ function PostCardHorizontal({ post, onEdit, onPublier, onDepublier, onRefuser, o
           )}
           {post.mis_en_avant && (
             <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">⭐ Avant</span>
+          )}
+          {post.a_laffiche && (
+            <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-pink-100 text-pink-700">🎬 Affiche</span>
+          )}
+          {post.phare && (
+            <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">🔦 Phare</span>
           )}
         </div>
 

@@ -54,12 +54,13 @@ function formatPostDate(debut: string, fin: string | null): string {
 }
 
 interface Props {
-  post:      PostWithRelations
-  grouped?:  boolean   // carte dans un PostCardList groupé (pas de border/shadow/rounded propres)
-  showDate?: boolean   // afficher la date sous le titre (MisEnAvant uniquement)
+  post:         PostWithRelations
+  grouped?:     boolean   // carte dans un PostCardList groupé (pas de border/shadow/rounded propres)
+  showDate?:    boolean   // afficher la date sous le titre (MisEnAvant uniquement)
+  ignorePhare?: boolean   // désactiver le rendu Phare (ex: section Mis en Avant)
 }
 
-export default function PostCard({ post, grouped = false, showDate = false }: Props) {
+export default function PostCard({ post, grouped = false, showDate = false, ignorePhare = false }: Props) {
   const { open } = useEventSheet()
 
   const cat    = post.categorie
@@ -71,7 +72,7 @@ export default function PostCard({ post, grouped = false, showDate = false }: Pr
 
   // ── Carte PHARE ────────────────────────────────────────────────────────────
   // Image à droite (50 % plus grande), texte à gauche aligné à droite, titre grand
-  if (post.phare) {
+  if (post.phare && !ignorePhare) {
     return (
       <button onClick={() => open(post)} className="w-full text-left">
         <div className="flex flex-row-reverse bg-white rounded-2xl overflow-hidden shadow-md border border-blue-100 h-44 active:scale-[0.98] transition-transform">

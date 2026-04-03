@@ -12,7 +12,7 @@ export default function MisEnAvant({ posts }: Props) {
   return (
     <div className="mx-4 mt-4 space-y-2">
       {posts.map(post => (
-        <PostCard key={post.id} post={post} showDate />
+        <PostCard key={post.id} post={post} showDate ignorePhare />
       ))}
     </div>
   )
