@@ -41,6 +41,18 @@ const CAT_EMOJI: Record<string, string> = {
   CUISINE:           '👨‍🍳',
 }
 
+function formatPostDate(debut: string, fin: string | null): string {
+  const d = new Date(debut + 'T12:00:00')
+  if (!fin || fin === debut) {
+    return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+  }
+  const f = new Date(fin + 'T12:00:00')
+  const sameMonth = d.getMonth() === f.getMonth() && d.getFullYear() === f.getFullYear()
+  const ds = d.toLocaleDateString('fr-FR', { day: 'numeric', month: sameMonth ? undefined : 'short' })
+  const fs = f.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+  return `${ds} › ${fs}`
+}
+
 interface Props {
   post:     PostWithRelations
   grouped?: boolean   // carte dans un PostCardList groupé (pas de border/shadow/rounded propres)
@@ -88,6 +100,10 @@ export default function PostCard({ post, grouped = false }: Props) {
             <p className="font-extrabold text-gray-900 text-[18px] leading-snug line-clamp-3">
               {post.titre}
             </p>
+            <p className="text-xs text-gray-400 flex items-center justify-end gap-1">
+              <span>📅</span>
+              <span>{formatPostDate(post.date_debut, post.date_fin ?? null)}</span>
+            </p>
             <div className="flex items-center justify-end gap-2 text-xs text-gray-500 flex-wrap">
               {placesInfo && (
                 <span className="text-[10px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
@@ -132,6 +148,10 @@ export default function PostCard({ post, grouped = false }: Props) {
           )}
           <p className="font-bold text-gray-900 text-[15px] leading-snug line-clamp-2">
             {post.titre}
+          </p>
+          <p className="text-xs text-gray-400 flex items-center gap-1">
+            <span>📅</span>
+            <span>{formatPostDate(post.date_debut, post.date_fin ?? null)}</span>
           </p>
           <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
             {post.heure && <span className="flex items-center gap-1">🕐 {post.heure}</span>}

@@ -66,12 +66,13 @@ function CarouselCard({ post, accentColor = 'text-blue-600' }: { post: PostWithR
         )}
       </div>
       <div className="p-3">
-        <p className={`text-xs font-semibold mb-1 ${accentColor}`}>
-          {formatCarouselDate(post.date_debut, post.date_fin ?? null)}
+        <p className="text-sm font-bold text-gray-900 leading-tight line-clamp-2 mb-1">{post.titre}</p>
+        <p className={`text-xs font-semibold flex items-center gap-1 ${accentColor}`}>
+          <span>📅</span>
+          <span>{formatCarouselDate(post.date_debut, post.date_fin ?? null)}</span>
         </p>
-        <p className="text-sm font-bold text-gray-900 leading-tight line-clamp-2">{post.titre}</p>
         {post.lieu && (
-          <p className="text-xs text-gray-400 mt-1 truncate">{post.lieu.nom}</p>
+          <p className="text-xs text-gray-400 mt-1 truncate">📍 {post.lieu.nom}</p>
         )}
       </div>
     </button>
