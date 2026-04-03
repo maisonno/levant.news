@@ -47,6 +47,7 @@ function PostForm({ initial, categories, etablissements, onSave, onClose, isAdmi
   const [inscription,  setInscription]  = useState(initial?.inscription ?? false)
   const [nbMax,        setNbMax]        = useState(initial?.nb_inscriptions_max?.toString() ?? '')
   const [refuse,       setRefuse]       = useState(initial?.refuse ?? false)
+  const [phare,        setPhare]        = useState(initial?.phare ?? false)
   const [saving, setSaving] = useState(false)
 
   // Pour un pro, on restreint aux établissements liés à son compte
@@ -66,7 +67,7 @@ function PostForm({ initial, categories, etablissements, onSave, onClose, isAdmi
       organisateur_id: organisateurId || null, lieu_id: lieuId || null,
       publie, mis_en_avant: misEnAvant, affiche_url: afficheUrl || null,
       inscription, nb_inscriptions_max: nbMax ? parseInt(nbMax) : null,
-      refuse,
+      refuse, phare,
     })
     setSaving(false)
   }
@@ -129,6 +130,7 @@ function PostForm({ initial, categories, etablissements, onSave, onClose, isAdmi
           [misEnAvant, setMisEnAvant, 'Mis en avant', false],
           [inscription, setInscription, 'Inscription', false],
           ...(isAdmin ? [[refuse, setRefuse, 'Refusé', false]] : []),
+          ...(isAdmin ? [[phare, setPhare, '🔦 Phare', false]] : []),
         ] as [boolean, (v: boolean) => void, string, boolean][]).map(([val, setter, label, disabled]) => (
           <button key={label} type="button"
             onClick={() => !disabled && setter(!val)}
