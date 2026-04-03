@@ -1,13 +1,69 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
-import { ObjetPerdu, NotifPref } from '@/types/database'
+import { ObjetPerdu, NotifPref, Role } from '@/types/database'
+import TabUtilisateurs from './TabUtilisateurs'
 
-// ─── Section : Mes coordonnées ────────────────────────────────────────────────
+// ─── Imports dynamiques des composants admin ──────────────────────────────────
+
+interface PostsAdminProps { etablissementIds?: string[]; topOffset?: string }
+interface EtabAdminProps  { etablissementIds?: string[]; topOffset?: string }
+
+const PostsAdmin = dynamic<PostsAdminProps>(
+  () => import('@/app/admin/posts/PostsAdmin'),
+  { loading: () => <Loader /> }
+)
+const ArticlesAdmin = dynamic(
+  () => import('@/app/admin/articles/ArticlesAdmin'),
+  { loading: () => <Loader /> }
+)
+const EtablissementsAdmin = dynamic<EtabAdminProps>(
+  () => import('@/app/admin/etablissements/EtablissementsAdmin'),
+  { loading: () => <Loader /> }
+)
+const BateauAdmin = dynamic(
+  () => import('@/app/admin/bateau/BateauAdmin'),
+  { loading: () => <Loader /> }
+)
+
+function Loader() {
+  return <p className="text-center text-gray-400 text-sm py-12">Chargement…</p>
+}
+
+// ─── Configuration des onglets ────────────────────────────────────────────────
+
+type TabId = 'compte' | 'annonces' | 'notifications' | 'evenements' | 'articles' | 'etablissements' | 'bateau' | 'utilisateurs'
+
+interface TabDef {
+  id: TabId
+  label: string
+  icon: string
+  roles: Role[]
+}
+
+const TABS: TabDef[] = [
+  { id: 'compte',         label: 'Mon compte',     icon: '👤', roles: ['user','pro','compagnie','admin'] },
+  { id: 'annonces',       label: 'Mes annonces',   icon: '🔍', roles: ['user','pro','compagnie','admin'] },
+  { id: 'notifications',  label: 'Notifications',  icon: '🔔', roles: ['user','pro','compagnie','admin'] },
+  { id: 'evenements',     label: 'Événements',     icon: '📅', roles: ['pro','admin'] },
+  { id: 'articles',       label: 'Articles',       icon: '📖', roles: ['admin'] },
+  { id: 'etablissements', label: 'Établissements', icon: '🏪', roles: ['pro','admin'] },
+  { id: 'bateau',         label: 'Bateau',         icon: '⛵', roles: ['compagnie','admin'] },
+  { id: 'utilisateurs',   label: 'Utilisateurs',   icon: '👥', roles: ['admin'] },
+]
+
+const ROLE_BADGE: Record<Role, { label: string; color: string }> = {
+  user:      { label: '',           color: '' },
+  pro:       { label: 'Compte Pro', color: 'bg-amber-400 text-amber-900' },
+  compagnie: { label: 'Compagnie',  color: 'bg-blue-600 text-white' },
+  admin:     { label: 'Admin',      color: 'bg-purple-600 text-white' },
+}
+
+// ─── Section : Mon compte ─────────────────────────────────────────────────────
 
 function SectionCoordonnees() {
   const { user, profile } = useAuth()
@@ -106,9 +162,9 @@ function SectionAnnonces() {
     <div className="text-center py-6">
       <p className="text-3xl mb-2">🔍</p>
       <p className="text-sm text-gray-400">Aucune annonce pour l'instant.</p>
-      <Link href="/perdu/nouveau" className="mt-3 inline-block text-blue-600 font-semibold text-sm">
+      <a href="/perdu/nouveau" className="mt-3 inline-block text-blue-600 font-semibold text-sm">
         Déclarer un objet
-      </Link>
+      </a>
     </div>
   )
 
@@ -156,9 +212,9 @@ function SectionAnnonces() {
 // ─── Section : Notifications ──────────────────────────────────────────────────
 
 const NOTIF_OPTIONS: { value: NotifPref; label: string; desc: string; icon: string }[] = [
-  { value: 'toujours',   label: 'Toujours',          desc: 'Toutes les notifications, où que tu sois', icon: '🔔' },
-  { value: 'sur_ile',    label: 'Sur l\'île seulement', desc: 'Uniquement quand tu es à l\'Île du Levant',  icon: '🏝️' },
-  { value: 'jamais',     label: 'Jamais',             desc: 'Aucune notification',                      icon: '🔕' },
+  { value: 'toujours',   label: 'Toujours',             desc: 'Toutes les notifications, où que tu sois',    icon: '🔔' },
+  { value: 'sur_ile',    label: "Sur l'île seulement",  desc: "Uniquement quand tu es à l'Île du Levant",    icon: '🏝️' },
+  { value: 'jamais',     label: 'Jamais',               desc: 'Aucune notification',                         icon: '🔕' },
 ]
 
 function SectionNotifications() {
@@ -209,20 +265,36 @@ function SectionNotifications() {
 
 // ─── Page principale ──────────────────────────────────────────────────────────
 
-const SECTIONS = [
-  { id: 'coordonnees',   label: 'Mes coordonnées',  icon: '👤' },
-  { id: 'annonces',      label: 'Mes annonces',      icon: '🔍' },
-  { id: 'notifications', label: 'Notifications',     icon: '🔔' },
-]
-
 export default function ProfilPage() {
   const { user, profile, loading, signOut } = useAuth()
   const router = useRouter()
-  const [active, setActive] = useState('coordonnees')
+  const supabase = createClient()
 
+  const [active, setActive] = useState<TabId>('compte')
+  const [userEtabIds, setUserEtabIds] = useState<string[] | undefined>(undefined)
+
+  // Redirect si non connecté
   useEffect(() => {
     if (!loading && !user) router.push('/compte/connexion')
   }, [loading, user, router])
+
+  // Charger les établissements liés (pour pro et compagnie)
+  const loadEtabs = useCallback(async () => {
+    if (!user || !profile) return
+    if (profile.role === 'admin') {
+      setUserEtabIds(undefined) // pas de filtre
+      return
+    }
+    if (profile.role === 'pro' || profile.role === 'compagnie') {
+      const { data } = await supabase
+        .from('compte_etablissements')
+        .select('etablissement_id')
+        .eq('user_id', user.id)
+      setUserEtabIds((data ?? []).map((r: { etablissement_id: string }) => r.etablissement_id))
+    }
+  }, [user, profile]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => { loadEtabs() }, [loadEtabs])
 
   if (loading || !user) {
     return (
@@ -238,41 +310,47 @@ export default function ProfilPage() {
     router.refresh()
   }
 
+  const role: Role = profile?.role ?? 'user'
   const displayName = profile ? `${profile.prenom} ${profile.nom}` : user.email ?? ''
+  const roleBadge = ROLE_BADGE[role]
+
+  // Onglets visibles selon le rôle
+  const visibleTabs = TABS.filter(t => t.roles.includes(role))
+
+  // Si l'onglet actif n'est plus visible (changement de rôle), revenir au premier
+  const activeTab = visibleTabs.find(t => t.id === active) ? active : visibleTabs[0]?.id ?? 'compte'
 
   return (
     <div className="min-h-screen bg-gray-50">
+
       {/* Header */}
-      <div
-        className="px-4 pt-14 pb-5"
-        style={{ background: 'linear-gradient(180deg,#0a1f4e 0%, #1A56DB 100%)' }}
-      >
+      <div className="bg-white border-b border-gray-100 px-4 pt-14 pb-4">
         <div className="flex items-center gap-3 mb-4">
-          <Link href="/"
-            className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0"
+          <a href="/"
+            className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0"
             aria-label="Accueil">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/>
               <path d="M9 21V12h6v9"/>
             </svg>
-          </Link>
-          <h1 className="text-xl font-extrabold text-white tracking-tight flex-1">Mon compte</h1>
+          </a>
+          <h1 className="text-xl font-extrabold text-gray-900 tracking-tight flex-1">Mon compte</h1>
           <button onClick={handleSignOut}
-            className="text-white/60 text-xs font-semibold px-3 py-1.5 rounded-xl bg-white/10">
+            className="text-gray-500 text-xs font-semibold px-3 py-1.5 rounded-xl bg-gray-100">
             Déconnexion
           </button>
         </div>
 
-        {/* Avatar + nom */}
+        {/* Avatar + nom + badge */}
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center text-xl font-extrabold text-white">
+          <div className="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center text-xl font-extrabold text-blue-700 flex-shrink-0">
             {displayName.charAt(0).toUpperCase()}
           </div>
           <div>
-            <p className="text-white font-bold text-base leading-snug">{displayName}</p>
-            {profile?.role === 'pro' && (
-              <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-amber-400 text-amber-900">
-                Compte Pro
+            <p className="text-gray-900 font-bold text-base leading-snug">{displayName}</p>
+            {roleBadge.label && (
+              <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${roleBadge.color}`}>
+                {roleBadge.label}
               </span>
             )}
           </div>
@@ -280,34 +358,62 @@ export default function ProfilPage() {
       </div>
 
       {/* Onglets */}
-      <div className="sticky top-0 z-20 bg-white border-b border-gray-100 px-4 flex gap-1 overflow-x-auto scrollbar-none"
-           style={{ scrollbarWidth: 'none' }}>
-        {SECTIONS.map(s => (
-          <button key={s.id} onClick={() => setActive(s.id)}
+      <div
+        className="sticky top-0 z-20 bg-white border-b border-gray-100 px-4 flex gap-1 overflow-x-auto"
+        style={{ scrollbarWidth: 'none' }}
+      >
+        {visibleTabs.map(t => (
+          <button key={t.id} onClick={() => setActive(t.id)}
             className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-3.5 text-xs font-bold border-b-2 transition-colors ${
-              active === s.id
+              activeTab === t.id
                 ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-400'
+                : 'border-transparent text-gray-400 hover:text-gray-600'
             }`}>
-            <span>{s.icon}</span>
-            <span>{s.label}</span>
+            <span>{t.icon}</span>
+            <span className="whitespace-nowrap">{t.label}</span>
           </button>
         ))}
-        {profile?.role === 'pro' && (
-          <Link href="/pro/evenements"
-            className="flex-shrink-0 flex items-center gap-1.5 px-3 py-3.5 text-xs font-bold border-b-2 border-transparent text-indigo-500">
-            <span>🏪</span>
-            <span>Espace Pro</span>
-          </Link>
-        )}
       </div>
 
-      {/* Contenu */}
-      <div className="px-4 py-5 max-w-sm mx-auto">
-        {active === 'coordonnees'   && <SectionCoordonnees />}
-        {active === 'annonces'      && <SectionAnnonces />}
-        {active === 'notifications' && <SectionNotifications />}
-      </div>
+      {/* Contenu — les onglets simples ont une contrainte de largeur, les onglets admin utilisent toute la largeur */}
+      {activeTab === 'compte' && (
+        <div className="px-4 py-5 max-w-sm mx-auto">
+          <SectionCoordonnees />
+        </div>
+      )}
+      {activeTab === 'annonces' && (
+        <div className="px-4 py-5 max-w-sm mx-auto">
+          <SectionAnnonces />
+        </div>
+      )}
+      {activeTab === 'notifications' && (
+        <div className="px-4 py-5 max-w-sm mx-auto">
+          <SectionNotifications />
+        </div>
+      )}
+
+      {/* Onglets admin / pro : pleine largeur */}
+      {activeTab === 'evenements' && (
+        <PostsAdmin
+          etablissementIds={role === 'admin' ? undefined : userEtabIds}
+          topOffset="top-[97px]"
+        />
+      )}
+      {activeTab === 'articles' && (
+        <ArticlesAdmin />
+      )}
+      {activeTab === 'etablissements' && (
+        <EtablissementsAdmin
+          etablissementIds={role === 'admin' ? undefined : userEtabIds}
+          topOffset="top-[97px]"
+        />
+      )}
+      {activeTab === 'bateau' && (
+        <BateauAdmin />
+      )}
+      {activeTab === 'utilisateurs' && (
+        <TabUtilisateurs />
+      )}
     </div>
   )
 }
