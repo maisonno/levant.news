@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useDrawer } from '@/contexts/DrawerContext'
+import PageHeader from '@/components/PageHeader'
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -281,7 +282,6 @@ function HoraireRow({ h }: { h: Horaire }) {
 // ─── Page ─────────────────────────────────────────────────────
 
 export default function BateauPage() {
-  const { toggle } = useDrawer()
   const today = todayIso()
 
   const [selectedDate, setSelectedDate] = useState(today)
@@ -310,28 +310,10 @@ export default function BateauPage() {
   return (
     <div className="min-h-screen bg-gray-50 pb-10">
 
-      {/* Header */}
-      <div
-        className="px-4 pt-14 pb-5"
-        style={{ background: 'linear-gradient(180deg,#0a1f4e 0%, #1A56DB 100%)' }}
-      >
-        <div className="flex items-center justify-between mb-3">
-          <button onClick={toggle} aria-label="Menu"
-            className="w-10 h-10 flex flex-col items-center justify-center gap-[5px] rounded-xl">
-            <span className="w-5 h-0.5 bg-white rounded-full" />
-            <span className="w-5 h-0.5 bg-white rounded-full" />
-            <span className="w-5 h-0.5 bg-white rounded-full" />
-          </button>
-          <a href="/" className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center" aria-label="Accueil">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/>
-              <path d="M9 21V12h6v9"/>
-            </svg>
-          </a>
-        </div>
+      <PageHeader photo="/images/header-bateau.jpg">
         <h1 className="text-2xl font-extrabold text-white tracking-tight">Bateaux</h1>
         <p className="text-white/50 text-xs mt-0.5">Horaires de liaison maritime</p>
-      </div>
+      </PageHeader>
 
       <div className="px-4 mt-4 space-y-4">
 

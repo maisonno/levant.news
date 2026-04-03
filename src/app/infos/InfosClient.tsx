@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Article } from '@/types/database'
 import { useArticleSheet } from '@/contexts/ArticleSheetContext'
 import { useDrawer } from '@/contexts/DrawerContext'
+import PageHeader from '@/components/PageHeader'
 
 // ─── Couleurs & icônes par thème ─────────────────────────────────────────────
 
@@ -152,7 +153,7 @@ interface Props {
 }
 
 export default function InfosClient({ articles }: Props) {
-  const { toggle: openMenu } = useDrawer()
+  useDrawer()
 
   // Grouper par thème, dans l'ordre THEME_ORDER
   const sections = useMemo(() => {
@@ -181,36 +182,9 @@ export default function InfosClient({ articles }: Props) {
   return (
     <div className="min-h-screen bg-gray-50">
 
-      {/* Header sticky */}
-      <div
-        className="sticky top-0 z-30 px-4 pt-14 pb-4"
-        style={{ background: 'linear-gradient(180deg,#0a1f4e 0%, #1A56DB 100%)' }}
-      >
-        <div className="flex items-center gap-3">
-          <button
-            onClick={openMenu}
-            className="w-9 h-9 rounded-xl bg-white/20 flex flex-col items-center justify-center gap-[4px] flex-shrink-0"
-            aria-label="Menu"
-          >
-            <span className="w-4 h-0.5 bg-white rounded-full" />
-            <span className="w-4 h-0.5 bg-white rounded-full" />
-            <span className="w-4 h-0.5 bg-white rounded-full" />
-          </button>
-
-          <h1 className="text-xl font-extrabold text-white tracking-tight flex-1">Infos pratiques</h1>
-
-          <Link
-            href="/"
-            className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0"
-            aria-label="Accueil"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/>
-              <path d="M9 21V12h6v9"/>
-            </svg>
-          </Link>
-        </div>
-      </div>
+      <PageHeader photo="/images/header-infos.jpg" sticky pb="pb-4">
+        <h1 className="text-xl font-extrabold text-white tracking-tight">Infos pratiques</h1>
+      </PageHeader>
 
       {/* Contenu */}
       <div className="px-4 py-4 space-y-6">

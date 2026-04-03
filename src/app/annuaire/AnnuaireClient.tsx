@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Etablissement, TypeEtablissement } from '@/types/database'
 import { useEtabSheet } from '@/contexts/EtabSheetContext'
 import { useDrawer } from '@/contexts/DrawerContext'
+import PageHeader from '@/components/PageHeader'
 
 // ─── Carte établissement ──────────────────────────────────────────────────────
 
@@ -82,7 +83,7 @@ interface Props {
 }
 
 export default function AnnuaireClient({ etabs, types }: Props) {
-  const { toggle: openMenu } = useDrawer()
+  useDrawer()
   const [search, setSearch] = useState('')
 
   // Types présents dans les données
@@ -141,38 +142,10 @@ export default function AnnuaireClient({ etabs, types }: Props) {
   return (
     <div className="min-h-screen bg-gray-50">
 
-      {/* Header sticky */}
-      <div
-        className="sticky top-0 z-30 px-4 pt-14 pb-3"
-        style={{ background: 'linear-gradient(180deg,#0a1f4e 0%, #1A56DB 100%)' }}
-      >
-        <div className="flex items-center gap-3 mb-3">
-          {/* Burger */}
-          <button
-            onClick={openMenu}
-            className="w-9 h-9 rounded-xl bg-white/20 flex flex-col items-center justify-center gap-[4px] flex-shrink-0"
-            aria-label="Menu"
-          >
-            <span className="w-4 h-0.5 bg-white rounded-full" />
-            <span className="w-4 h-0.5 bg-white rounded-full" />
-            <span className="w-4 h-0.5 bg-white rounded-full" />
-          </button>
-
-          <h1 className="text-xl font-extrabold text-white tracking-tight flex-1">Annuaire</h1>
-
-          {/* Accueil */}
-          <Link
-            href="/"
-            className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0"
-            aria-label="Accueil"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/>
-              <path d="M9 21V12h6v9"/>
-            </svg>
-          </Link>
+      <PageHeader photo="/images/header-annuaire.jpg" sticky pb="pb-3">
+        <div className="flex items-center mb-3">
+          <h1 className="text-xl font-extrabold text-white tracking-tight">Annuaire</h1>
         </div>
-
         {/* Barre de recherche */}
         <div className="relative">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
@@ -190,7 +163,7 @@ export default function AnnuaireClient({ etabs, types }: Props) {
             >×</button>
           )}
         </div>
-      </div>
+      </PageHeader>
 
       {/* Contenu */}
       <div className="px-4 py-4 space-y-6">

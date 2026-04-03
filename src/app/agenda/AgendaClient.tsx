@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import PostCard from '@/components/PostCard'
 import PostCardList from '@/components/PostCardList'
 import { useEventSheet } from '@/contexts/EventSheetContext'
-import { useDrawer } from '@/contexts/DrawerContext'
+import PageHeader from '@/components/PageHeader'
 
 // ─── Utilitaires ──────────────────────────────────────────────────────────────
 
@@ -283,7 +283,6 @@ interface Props {
 
 export default function AgendaClient({ posts, aLaffiche, expos, today }: Props) {
   const router  = useRouter()
-  const { toggle: openMenu } = useDrawer()
   const [search,      setSearch]      = useState('')
   const [filterDate,  setFilterDate]  = useState('')
   const [filterCats,  setFilterCats]  = useState<Set<string>>(new Set())
@@ -350,38 +349,10 @@ export default function AgendaClient({ posts, aLaffiche, expos, today }: Props) 
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header sticky */}
-      <div
-        className="sticky top-0 z-30 px-4 pt-14 pb-3"
-        style={{ background: 'linear-gradient(180deg,#0a1f4e 0%, #1A56DB 100%)' }}
-      >
-        <div className="flex items-center gap-3 mb-3">
-          {/* Burger menu — toujours à gauche */}
-          <button
-            onClick={openMenu}
-            className="w-9 h-9 rounded-xl bg-white/20 flex flex-col items-center justify-center gap-[4px] flex-shrink-0"
-            aria-label="Menu"
-          >
-            <span className="w-4 h-0.5 bg-white rounded-full" />
-            <span className="w-4 h-0.5 bg-white rounded-full" />
-            <span className="w-4 h-0.5 bg-white rounded-full" />
-          </button>
-
+      <PageHeader photo="/images/header-agenda.jpg" sticky pb="pb-3">
+        <div className="flex items-center gap-2 mb-3">
           <h1 className="text-xl font-extrabold text-white tracking-tight flex-1">Agenda</h1>
-
-          {/* Bouton Accueil — icône sobre à droite */}
-          <Link
-            href="/"
-            className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0"
-            aria-label="Accueil"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/>
-              <path d="M9 21V12h6v9"/>
-            </svg>
-          </Link>
         </div>
-
         {/* Barre de recherche + bouton Filtrer */}
         <div className="flex gap-2">
           <div className="relative flex-1">
@@ -417,7 +388,7 @@ export default function AgendaClient({ posts, aLaffiche, expos, today }: Props) 
             )}
           </button>
         </div>
-      </div>
+      </PageHeader>
 
       {/* Panneau de filtres (sous le header, non-sticky) */}
       {showFilters && (

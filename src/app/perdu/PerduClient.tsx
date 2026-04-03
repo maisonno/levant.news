@@ -4,8 +4,8 @@ import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
-import { useDrawer } from '@/contexts/DrawerContext'
 import { ObjetPerdu } from '@/types/database'
+import PageHeader from '@/components/PageHeader'
 import { useObjetPerduSheet } from '@/contexts/ObjetPerduSheetContext'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -102,7 +102,6 @@ function AnnonceCard({ annonce, onClick }: { annonce: ObjetPerdu; onClick: () =>
 export default function PerduClient() {
   const supabase = createClient()
   const { user } = useAuth()
-  const { toggle } = useDrawer()
   const { open, refreshKey } = useObjetPerduSheet()
 
   const [annonces, setAnnonces] = useState<ObjetPerdu[]>([])
@@ -159,33 +158,14 @@ export default function PerduClient() {
   return (
     <div className="min-h-screen bg-gray-50">
 
-      {/* Header */}
-      <div
-        className="px-4 pt-14 pb-5"
-        style={{ background: 'linear-gradient(180deg,#0a1f4e 0%, #1A56DB 100%)' }}
-      >
-        {/* Nav */}
-        <div className="flex items-center justify-between mb-3">
-          <button onClick={toggle} aria-label="Menu"
-            className="w-10 h-10 flex flex-col items-center justify-center gap-[5px] rounded-xl">
-            <span className="w-5 h-0.5 bg-white rounded-full" />
-            <span className="w-5 h-0.5 bg-white rounded-full" />
-            <span className="w-5 h-0.5 bg-white rounded-full" />
-          </button>
-          <a href="/" className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center" aria-label="Accueil">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/>
-              <path d="M9 21V12h6v9"/>
-            </svg>
-          </a>
-        </div>
+      <PageHeader photo="/images/header-perdu.jpg">
         <h1 className="text-2xl font-extrabold text-white tracking-tight mb-1">
           Objets perdus et trouvés
         </h1>
         <p className="text-white/60 text-xs leading-snug">
           Les annonces sont publiées pendant 10 jours puis disparaissent automatiquement.
         </p>
-      </div>
+      </PageHeader>
 
       {/* CTA + Recherche — sticky */}
       <div className="px-4 py-4 space-y-3 bg-white border-b border-gray-100 sticky top-0 z-20">
