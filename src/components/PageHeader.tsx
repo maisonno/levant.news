@@ -80,16 +80,18 @@ export default function PageHeader({ photo, pb = 'pb-6', children }: Props) {
             Levant<span style={{ opacity: 0.6 }}>.news</span>
           </span>
 
-          {/* ☰ Burger — 3 lignes sans contour */}
+          {/* ☰ Burger — caché sur desktop (sidebar permanente) */}
           <button
             onClick={toggle}
             aria-label="Menu"
-            className="w-10 h-10 flex flex-col items-center justify-center gap-[5px]"
+            className="w-10 h-10 flex flex-col items-center justify-center gap-[5px] md:hidden"
           >
             <span className="w-5 h-0.5 bg-white rounded-full" />
             <span className="w-5 h-0.5 bg-white rounded-full" />
             <span className="w-5 h-0.5 bg-white rounded-full" />
           </button>
+          {/* Espaceur sur desktop pour garder "Levant.news" centré */}
+          <div className="w-10 hidden md:block" />
 
         </div>
       </div>

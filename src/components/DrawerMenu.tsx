@@ -29,19 +29,23 @@ export default function DrawerMenu() {
 
   return (
     <>
-      {/* Overlay */}
+      {/* Overlay — mobile uniquement */}
       <div
-        className={`fixed inset-0 z-40 bg-black/45 transition-opacity duration-250 ${
+        className={`fixed inset-0 z-40 bg-black/45 transition-opacity duration-250 md:hidden ${
           isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
         onClick={close}
       />
 
-      {/* Drawer */}
+      {/* Drawer (mobile) / Sidebar (desktop) */}
       <div
-        className={`fixed top-0 left-0 bottom-0 w-72 z-50 flex flex-col bg-white rounded-r-3xl shadow-2xl transition-transform duration-300 ease-[cubic-bezier(.4,0,.2,1)] ${
-          isOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className={`
+          fixed top-0 left-0 bottom-0 w-72 z-50 flex flex-col bg-white rounded-r-3xl shadow-2xl
+          transition-transform duration-300 ease-[cubic-bezier(.4,0,.2,1)]
+          ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+          md:sticky md:top-0 md:h-screen md:w-64 md:translate-x-0
+          md:rounded-none md:shadow-none md:border-r md:border-gray-100 md:transition-none
+        `}
       >
         {/* Header drawer */}
         <div style={{ background: 'linear-gradient(160deg,#0a1f4e,#1A56DB)' }} className="px-5 pb-5 pt-14">

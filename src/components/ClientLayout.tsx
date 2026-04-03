@@ -21,13 +21,33 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         <EtabSheetProvider>
           <ArticleSheetProvider>
             <ObjetPerduSheetProvider>
-              <DrawerMenu />
-              <FloatingBurger />
-              {children}
-              <EventSheet />
-              <EtabSheet />
-              <ArticleSheet />
-              <ObjetPerduSheet />
+
+              {/*
+               * Layout responsive :
+               *   Mobile  → colonne unique max-w-430px centrée (DrawerMenu en fixed overlay)
+               *   Desktop → flex-row : sidebar 256px + contenu principal
+               */}
+              <div className="md:flex md:min-h-screen">
+
+                <DrawerMenu />
+
+                <main className="flex-1 min-w-0">
+                  {/* Mobile : centré max-w-430 / Desktop : pleine largeur */}
+                  <div
+                    className="max-w-[430px] mx-auto md:max-w-none md:mx-0 min-h-screen bg-gray-100 relative"
+                    style={{ overflowX: 'clip' }}
+                  >
+                    <FloatingBurger />
+                    {children}
+                    <EventSheet />
+                    <EtabSheet />
+                    <ArticleSheet />
+                    <ObjetPerduSheet />
+                  </div>
+                </main>
+
+              </div>
+
             </ObjetPerduSheetProvider>
           </ArticleSheetProvider>
         </EtabSheetProvider>

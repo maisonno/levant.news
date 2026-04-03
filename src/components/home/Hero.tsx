@@ -60,10 +60,10 @@ export default function Hero() {
           )}
         </Link>
 
-        {/* Burger — à droite */}
+        {/* Burger — à droite (caché sur desktop, sidebar permanente) */}
         <button
           onClick={toggle}
-          className="w-10 h-10 flex flex-col items-center justify-center gap-[5px]"
+          className="w-10 h-10 flex flex-col items-center justify-center gap-[5px] md:hidden"
           aria-label="Menu"
         >
           <span className="w-5 h-0.5 bg-white rounded-full" />

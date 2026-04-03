@@ -200,14 +200,14 @@ function AfficheCarousel({ posts }: { posts: PostWithRelations[] }) {
         <h2 className="text-base font-extrabold text-gray-900">À l'affiche</h2>
       </div>
       <div
-        className="flex items-start gap-3 overflow-x-auto px-4 pb-2 snap-x snap-mandatory scrollbar-none"
+        className="flex items-start gap-3 overflow-x-auto px-4 pb-2 snap-x snap-mandatory scrollbar-none md:grid md:grid-cols-3 md:overflow-x-visible md:pb-0 md:snap-none lg:grid-cols-4"
         style={{ scrollbarWidth: 'none' }}
       >
         {posts.map(post => (
           <button
             key={post.id}
             onClick={() => open(post)}
-            className="flex-shrink-0 snap-start w-44 rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100 text-left active:scale-[0.97] transition-transform"
+            className="flex-shrink-0 snap-start w-44 md:w-auto rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100 text-left active:scale-[0.97] transition-transform"
           >
             <div className="w-full aspect-square bg-gray-100">
               {post.affiche_url ? (
@@ -242,14 +242,14 @@ function ExpoCarousel({ posts }: { posts: PostWithRelations[] }) {
         <div className="flex-1 h-px bg-gray-200" />
       </div>
       <div
-        className="flex items-start gap-3 overflow-x-auto pb-2 snap-x snap-mandatory"
+        className="flex items-start gap-3 overflow-x-auto pb-2 snap-x snap-mandatory md:grid md:grid-cols-3 md:overflow-x-visible md:pb-0 md:snap-none lg:grid-cols-4"
         style={{ scrollbarWidth: 'none' }}
       >
         {posts.map(post => (
           <button
             key={post.id}
             onClick={() => open(post)}
-            className="flex-shrink-0 snap-start w-44 rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100 text-left active:scale-[0.97] transition-transform"
+            className="flex-shrink-0 snap-start w-44 md:w-auto rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100 text-left active:scale-[0.97] transition-transform"
           >
             <div className="w-full aspect-square bg-amber-50">
               {post.affiche_url ? (

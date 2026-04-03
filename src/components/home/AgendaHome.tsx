@@ -51,7 +51,7 @@ function CarouselCard({ post, accentColor = 'text-blue-600' }: { post: PostWithR
   return (
     <button
       onClick={() => open(post)}
-      className="flex-shrink-0 snap-start w-44 rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100 text-left active:scale-[0.97] transition-transform"
+      className="flex-shrink-0 snap-start w-44 md:w-auto rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100 text-left active:scale-[0.97] transition-transform"
     >
       <div className="w-full aspect-square bg-gray-100">
         {post.affiche_url ? (
@@ -137,7 +137,7 @@ export default function AgendaHome({
           <section>
             <SectionHeader title="À l'affiche" />
             <div
-              className="flex items-start gap-3 overflow-x-auto pb-2 snap-x snap-mandatory"
+              className="flex items-start gap-3 overflow-x-auto pb-2 snap-x snap-mandatory md:grid md:grid-cols-3 md:overflow-x-visible md:pb-0 md:snap-none lg:grid-cols-4"
               style={{ scrollbarWidth: 'none' }}
             >
               {aLaffiche.map(post => (
@@ -168,7 +168,7 @@ export default function AgendaHome({
           <section>
             <SectionHeader title="Expositions" />
             <div
-              className="flex items-start gap-3 overflow-x-auto pb-2 snap-x snap-mandatory"
+              className="flex items-start gap-3 overflow-x-auto pb-2 snap-x snap-mandatory md:grid md:grid-cols-3 md:overflow-x-visible md:pb-0 md:snap-none lg:grid-cols-4"
               style={{ scrollbarWidth: 'none' }}
             >
               {expos.map(post => (

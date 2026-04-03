@@ -28,7 +28,7 @@ export default function FloatingBurger() {
   if (pathname !== '/') return null
 
   return (
-    <div className="sticky top-0 h-0 z-30 pointer-events-none">
+    <div className="sticky top-0 h-0 z-30 pointer-events-none md:hidden">
       <button
         onClick={toggle}
         aria-label="Menu"
