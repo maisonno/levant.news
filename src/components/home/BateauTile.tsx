@@ -23,14 +23,15 @@ export default function BateauTile() {
         const now = new Date()
         const nowStr = now.toTimeString().slice(0, 5)
 
-        // Prochain départ prévu aujourd'hui
-        const next = (json.horaires as Horaire[]).find(
-          h => h.statut === 'prevu' && h.heure.slice(0, 5) > nowStr
+        // Prochain départ depuis Le Levant
+        const fromLevant = (json.horaires as Horaire[]).filter(
+          h => h.statut === 'prevu' && h.port_depart.toLowerCase().includes('levant')
         )
+        const next = fromLevant.find(h => h.heure.slice(0, 5) > nowStr)
 
         if (next) {
           setLabel(next.heure.slice(0, 5))
-          setSub(`${next.port_depart} → ${next.port_arrivee}`)
+          setSub(`→ ${next.port_arrivee}`)
         } else {
           // Chercher demain
           const tomorrow = new Date(now)
@@ -39,10 +40,12 @@ export default function BateauTile() {
           fetch(`/api/bateau?date=${tomorrowIso}`)
             .then(r => r.ok ? r.json() : null)
             .then(json2 => {
-              const first = (json2?.horaires as Horaire[] | undefined)?.find(h => h.statut === 'prevu')
+              const fromLevant2 = (json2?.horaires as Horaire[] | undefined)
+                ?.filter(h => h.statut === 'prevu' && h.port_depart.toLowerCase().includes('levant'))
+              const first = fromLevant2?.[0]
               if (first) {
                 setLabel(`Dem. ${first.heure.slice(0, 5)}`)
-                setSub(`${first.port_depart} → ${first.port_arrivee}`)
+                setSub(`→ ${first.port_arrivee}`)
               }
             })
         }

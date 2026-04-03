@@ -41,12 +41,12 @@ export default function MeteoTile() {
   return (
     <Link
       href="/meteo"
-      className="relative bg-gradient-to-br from-amber-400 to-orange-400 rounded-2xl p-3 text-white overflow-hidden"
+      className="relative bg-gradient-to-br from-sky-400 to-blue-600 rounded-2xl p-3 text-white overflow-hidden"
     >
       <div className="text-2xl mb-1">{emoji}</div>
       <p className="font-bold text-xs leading-tight">Météo</p>
       {temp !== null
-        ? <p className="text-white font-extrabold text-sm mt-0.5">{temp}°C</p>
+        ? <p className="text-white font-extrabold text-xl mt-0.5 leading-none">{temp}°C</p>
         : <p className="text-white/70 text-[10px] mt-0.5">Levant</p>
       }
 
