@@ -17,11 +17,6 @@ const MODULES = [
   { href: '/bateau',    icon: '⛵', label: 'Bateau' },
 ]
 
-const PRO_MODULES = [
-  { href: '/pro/evenements', icon: '✏️', label: 'Mes événements' },
-  { href: '/pro/fiche',      icon: '🏪', label: 'Ma fiche' },
-]
-
 export default function DrawerMenu() {
   const { isOpen, close } = useDrawer()
   const { user, profile } = useAuth()
@@ -47,44 +42,17 @@ export default function DrawerMenu() {
           md:rounded-none md:shadow-none md:border-r md:border-gray-100 md:transition-none
         `}
       >
-        {/* Header drawer */}
-        <div style={{ background: 'linear-gradient(160deg,#0a1f4e,#1A56DB)' }} className="px-5 pb-5 pt-14">
-          <Link href="/" onClick={close} className="block text-[22px] font-extrabold text-white tracking-tight mb-1">
-            Levant<span className="opacity-50">.news</span>
+        {/* Header — fond blanc, titre en bleu */}
+        <div className="px-5 pb-4 pt-14 bg-white border-b border-gray-100">
+          <Link href="/" onClick={close} className="block text-[22px] font-extrabold tracking-tight mb-1">
+            <span className="text-blue-700">Levant</span><span className="text-blue-400">.news</span>
           </Link>
-          <div className="text-[11px] font-semibold text-white/55 tracking-widest mb-4 italic">
+          <div className="text-[11px] font-semibold text-gray-400 tracking-widest italic">
             l'actu toute nue
           </div>
-
-          {/* Auth block */}
-          {user ? (
-            <Link href="/compte/profil" onClick={close}
-              className="flex items-center gap-3 bg-white/10 rounded-2xl px-4 py-3">
-              <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center text-base font-extrabold text-white flex-shrink-0">
-                {(profile?.prenom ?? user.email ?? '?').charAt(0).toUpperCase()}
-              </div>
-              <div className="min-w-0">
-                <p className="text-white font-bold text-sm leading-snug truncate">
-                  {profile ? `${profile.prenom} ${profile.nom}` : user.email}
-                </p>
-                <p className="text-white/50 text-[10px] uppercase tracking-wide">
-                  {profile?.role === 'pro' ? 'Compte Pro' : 'Mon compte'}
-                </p>
-              </div>
-              <svg width="7" height="12" viewBox="0 0 7 12" fill="none" className="text-white/40 flex-shrink-0">
-                <path d="M1 1l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </Link>
-          ) : (
-            <Link href="/compte/connexion" onClick={close}
-              className="flex items-center justify-center gap-2 bg-white rounded-2xl px-4 py-3 text-sm font-bold text-blue-700">
-              <span>👤</span>
-              <span>Se connecter / Créer un compte</span>
-            </Link>
-          )}
         </div>
 
-        {/* Liens */}
+        {/* Liens de navigation */}
         <div className="flex-1 overflow-y-auto py-2">
           <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 px-5 pt-3 pb-1">
             Navigation
@@ -115,24 +83,33 @@ export default function DrawerMenu() {
               </Link>
             )
           })}
+        </div>
 
-          <div className="h-px bg-gray-200 mx-5 my-2" />
-
-          {/* Section Pro */}
-          <div style={{ background: 'linear-gradient(120deg,#1e3a8a,#3730a3)' }} className="mx-3 rounded-xl px-4 py-3 mb-1">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-white/60 mb-1">Espace Pro</p>
-            {PRO_MODULES.map(({ href, icon, label }) => (
-              <Link
-                key={href}
-                href={href}
-                onClick={close}
-                className="flex items-center gap-3 py-2 text-white"
-              >
-                <span className="text-sm">{icon}</span>
-                <span className="text-sm font-semibold">{label}</span>
-              </Link>
-            ))}
-          </div>
+        {/* Mon Compte — tout en bas */}
+        <div className="border-t border-gray-100 px-4 py-4">
+          {user ? (
+            <Link href="/compte/profil" onClick={close}
+              className="flex items-center gap-3 rounded-2xl px-4 py-3 hover:bg-gray-50 transition-colors">
+              <div className="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center text-base font-extrabold text-blue-700 flex-shrink-0">
+                {(profile?.prenom ?? user.email ?? '?').charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <p className="text-gray-900 font-bold text-sm leading-snug truncate">
+                  {profile ? `${profile.prenom} ${profile.nom}` : user.email}
+                </p>
+                <p className="text-gray-400 text-[10px] uppercase tracking-wide">Mon compte</p>
+              </div>
+              <svg width="7" height="12" viewBox="0 0 7 12" fill="none" className="text-gray-300 flex-shrink-0 ml-auto">
+                <path d="M1 1l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </Link>
+          ) : (
+            <Link href="/compte/connexion" onClick={close}
+              className="flex items-center justify-center gap-2 bg-blue-600 rounded-2xl px-4 py-3 text-sm font-bold text-white">
+              <span>👤</span>
+              <span>Se connecter</span>
+            </Link>
+          )}
         </div>
       </div>
     </>
