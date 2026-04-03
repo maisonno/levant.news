@@ -9,7 +9,6 @@ const MODULES = [
   { href: '/',          icon: '🏠', label: 'Accueil' },
   { href: '/agenda',    icon: '📅', label: 'Agenda' },
   { href: '/annuaire',  icon: '🗂️', label: 'Annuaire' },
-  { href: '/mag',       icon: '📖', label: 'Levant Mag' },
   { href: '/perdu',     icon: '🔍', label: 'Perdu / Trouvé' },
   { href: '/infos',     icon: 'ℹ️', label: 'Infos pratiques' },
   { href: '/webcam',    icon: '📷', label: 'Webcam' },
