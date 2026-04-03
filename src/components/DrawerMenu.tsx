@@ -45,9 +45,9 @@ export default function DrawerMenu() {
       >
         {/* Header drawer */}
         <div style={{ background: 'linear-gradient(160deg,#0a1f4e,#1A56DB)' }} className="px-5 pb-5 pt-14">
-          <div className="text-[22px] font-extrabold text-white tracking-tight mb-1">
+          <Link href="/" onClick={close} className="block text-[22px] font-extrabold text-white tracking-tight mb-1">
             Levant<span className="opacity-50">.news</span>
-          </div>
+          </Link>
           <div className="text-[11px] font-semibold text-white/55 tracking-widest mb-4 italic">
             l'actu toute nue
           </div>

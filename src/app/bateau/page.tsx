@@ -61,9 +61,9 @@ function formatHeure(h: string) {
 }
 
 const INFO_CONFIG = {
-  avertissement: { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-800', badge: 'bg-orange-100 text-orange-700', icon: '⚠️', label: 'Avertissement' },
-  changement:    { bg: 'bg-blue-50',   border: 'border-blue-200',   text: 'text-blue-800',   badge: 'bg-blue-100 text-blue-700',   icon: '🔄', label: 'Changement' },
-  annulation:    { bg: 'bg-red-50',    border: 'border-red-200',    text: 'text-red-800',    badge: 'bg-red-100 text-red-700',    icon: '🚫', label: 'Annulation' },
+  avertissement: { accent: 'border-orange-400', iconBg: 'bg-orange-100', titleColor: 'text-orange-600', icon: '⚠️', label: 'Avertissement' },
+  changement:    { accent: 'border-blue-400',   iconBg: 'bg-blue-100',   titleColor: 'text-blue-600',   icon: '🔄', label: 'Changement'    },
+  annulation:    { accent: 'border-red-400',    iconBg: 'bg-red-100',    titleColor: 'text-red-600',    icon: '🚫', label: 'Annulation'    },
 }
 
 const STATUT_CONFIG = {
@@ -234,20 +234,27 @@ function DatePicker({ value, onChange }: { value: string; onChange: (d: string) 
 
 function InfoCard({ info }: { info: InfoBateau }) {
   const cfg = INFO_CONFIG[info.type]
+  const dateDebut = new Date(info.date_debut + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+  const dateFin   = new Date(info.date_fin   + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+  const isSameDay = info.date_debut === info.date_fin
+
   return (
-    <div className={`rounded-2xl border p-4 ${cfg.bg} ${cfg.border}`}>
-      <div className="flex items-start gap-3">
-        <span className="text-xl flex-shrink-0">{cfg.icon}</span>
+    <div className={`bg-white rounded-2xl shadow-sm overflow-hidden border-l-4 ${cfg.accent}`}>
+      <div className="px-4 py-3 flex gap-3">
+        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-xl flex-shrink-0 ${cfg.iconBg}`}>
+          {cfg.icon}
+        </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${cfg.badge}`}>{cfg.label}</span>
+          <div className="flex items-center gap-2 mb-0.5">
+            <p className={`text-sm font-bold ${cfg.titleColor}`}>{cfg.label}</p>
             {info.compagnie && (
-              <span className={`text-xs font-semibold ${cfg.text} opacity-70`}>{info.compagnie}</span>
+              <p className="text-xs text-gray-400 font-medium">{info.compagnie}</p>
             )}
           </div>
-          <p className={`text-sm font-medium ${cfg.text}`}>{info.message}</p>
-          <p className={`text-xs mt-1 opacity-60 ${cfg.text}`}>
-            Jusqu'au {new Date(info.date_fin + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
+          <p className="text-sm text-gray-700 leading-snug">{info.message}</p>
+          <p className="text-xs text-gray-400 mt-1.5 flex items-center gap-1">
+            <span>📅</span>
+            <span>{isSameDay ? dateDebut : `${dateDebut} → ${dateFin}`}</span>
           </p>
         </div>
       </div>
