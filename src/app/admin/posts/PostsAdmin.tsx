@@ -316,7 +316,12 @@ function PostCard({ post, onPublier, onDepublier, onRefuser, onEdit, onDelete }:
 
 // ─── Composant principal ──────────────────────────────────────────────────────
 
-export default function PostsAdmin() {
+interface PostsAdminProps {
+  etablissementIds?: string[] // undefined = admin (pas de filtre) ; tableau = filtre pro
+  topOffset?: string           // classe Tailwind sticky top-* (défaut: top-[104px])
+}
+
+export default function PostsAdmin({ etablissementIds, topOffset = 'top-[104px]' }: PostsAdminProps) {
   const supabase = createClient()
   const [tab, setTab] = useState<Tab>('moderation')
   const [posts, setPosts]           = useState<PostWithRelations[]>([])
@@ -332,13 +337,25 @@ export default function PostsAdmin() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const [postsRes, catRes, etabRes] = await Promise.all([
-      supabase.from('posts').select(`
+    let postsQuery = supabase.from('posts').select(`
         *,
         organisateur:organisateur_id(id,nom,photo_url),
         lieu:lieu_id(id,nom),
         categorie:categorie_code(code,nom)
-      `).order('created_at', { ascending: false }).limit(300),
+      `).order('created_at', { ascending: false }).limit(300)
+
+    // Filtre pro : seulement les posts liés aux établissements de l'utilisateur
+    if (etablissementIds !== undefined) {
+      if (etablissementIds.length === 0) {
+        postsQuery = postsQuery.eq('id', 'none') // aucun résultat
+      } else {
+        const ids = etablissementIds.join(',')
+        postsQuery = postsQuery.or(`organisateur_id.in.(${ids}),lieu_id.in.(${ids})`)
+      }
+    }
+
+    const [postsRes, catRes, etabRes] = await Promise.all([
+      postsQuery,
       supabase.from('categories').select('*').order('nom'),
       supabase.from('etablissements').select('*').order('nom'),
     ])
@@ -400,7 +417,7 @@ export default function PostsAdmin() {
   return (
     <div className="pb-10">
       {/* Sous-onglets */}
-      <div className="bg-white border-b border-gray-100 px-4 flex gap-1 overflow-x-auto sticky top-[104px] z-20" style={{ scrollbarWidth: 'none' }}>
+      <div className={`bg-white border-b border-gray-100 px-4 flex gap-1 overflow-x-auto sticky ${topOffset} z-20`} style={{ scrollbarWidth: 'none' }}>
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`flex-shrink-0 flex items-center gap-1 px-3 py-3 text-xs font-bold border-b-2 transition-colors ${
@@ -417,7 +434,7 @@ export default function PostsAdmin() {
       </div>
 
       {/* Barre outils */}
-      <div className="px-4 py-3 bg-white border-b border-gray-100 flex gap-2">
+      <div className={`px-4 py-3 bg-white border-b border-gray-100 flex gap-2`}>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher…"
           className="flex-1 bg-gray-100 rounded-xl px-3 py-2 text-sm outline-none" />
         <button onClick={() => { setEditPost(null); setShowForm(true) }}

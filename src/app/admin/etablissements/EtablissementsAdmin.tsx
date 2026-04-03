@@ -135,7 +135,12 @@ function EtabForm({
 
 // ─── Composant principal ──────────────────────────────────────────────────────
 
-export default function EtablissementsAdmin() {
+interface EtablissementsAdminProps {
+  etablissementIds?: string[] // undefined = admin (pas de filtre) ; tableau = filtre pro
+  topOffset?: string           // classe Tailwind sticky top-* (défaut: top-[104px])
+}
+
+export default function EtablissementsAdmin({ etablissementIds, topOffset = 'top-[104px]' }: EtablissementsAdminProps) {
   const supabase = createClient()
   const [etabs,   setEtabs]   = useState<Etablissement[]>([])
   const [types,   setTypes]   = useState<TypeEtablissement[]>([])
@@ -147,8 +152,19 @@ export default function EtablissementsAdmin() {
 
   const load = useCallback(async () => {
     setLoading(true)
+    let etabQuery = supabase.from('etablissements').select('*').order('nom')
+
+    // Filtre pro : seulement les établissements liés à l'utilisateur
+    if (etablissementIds !== undefined) {
+      if (etablissementIds.length === 0) {
+        etabQuery = etabQuery.eq('id', 'none')
+      } else {
+        etabQuery = etabQuery.in('id', etablissementIds)
+      }
+    }
+
     const [etabRes, typeRes] = await Promise.all([
-      supabase.from('etablissements').select('*').order('nom'),
+      etabQuery,
       supabase.from('type_etablissement').select('*').order('ordre'),
     ])
     if (etabRes.data) setEtabs(etabRes.data)
@@ -194,7 +210,7 @@ export default function EtablissementsAdmin() {
   return (
     <div className="pb-10">
       {/* Barre outils */}
-      <div className="px-4 py-3 bg-white border-b border-gray-100 flex gap-2 sticky top-[104px] z-20">
+      <div className={`px-4 py-3 bg-white border-b border-gray-100 flex gap-2 sticky ${topOffset} z-20`}>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher…"
           className="flex-1 bg-gray-100 rounded-xl px-3 py-2 text-sm outline-none" />
         <button onClick={() => { setEditEtab(null); setShowForm(true) }}

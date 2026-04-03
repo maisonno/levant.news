@@ -1,6 +1,6 @@
 // ─── Types de base ────────────────────────────────────────────────────────────
 
-export type Role = 'user' | 'pro' | 'admin'
+export type Role = 'user' | 'pro' | 'compagnie' | 'admin'
 export type NotifPref = 'toujours' | 'jamais' | 'sur_ile'
 export type ObjetType = 'PERDU' | 'TROUVE'
 
@@ -133,6 +133,13 @@ export interface Article {
   ordre: number
   created_at: string
   updated_at: string
+}
+
+// Table de liaison comptes ↔ établissements
+export interface CompteEtablissement {
+  user_id: string
+  etablissement_id: string
+  created_at: string
 }
 
 export interface ArticleMag {
