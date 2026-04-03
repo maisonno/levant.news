@@ -116,7 +116,11 @@ function AnnonceForm({
 
 // ─── Composant principal ──────────────────────────────────────────────────────
 
-export default function AnnoncesAdmin() {
+interface AnnoncesAdminProps {
+  topOffset?: string
+}
+
+export default function AnnoncesAdmin({ topOffset = 'top-[104px]' }: AnnoncesAdminProps) {
   const supabase = createClient()
   const [annonces, setAnnonces] = useState<ObjetPerdu[]>([])
   const [loading,  setLoading]  = useState(true)
@@ -164,7 +168,7 @@ export default function AnnoncesAdmin() {
   return (
     <div className="pb-10">
       {/* Barre outils */}
-      <div className="px-4 py-3 bg-white border-b border-gray-100 flex gap-2 sticky top-[104px] z-20">
+      <div className={`px-4 py-3 bg-white border-b border-gray-100 flex gap-2 sticky ${topOffset} z-20`}>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher…"
           className="flex-1 bg-gray-100 rounded-xl px-3 py-2 text-sm outline-none" />
         <button onClick={() => { setEditAnnonce(null); setShowForm(true) }}

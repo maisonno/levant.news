@@ -10,8 +10,9 @@ import TabUtilisateurs from './TabUtilisateurs'
 
 // ─── Imports dynamiques des composants admin ──────────────────────────────────
 
-interface PostsAdminProps { etablissementIds?: string[]; topOffset?: string; isAdmin?: boolean }
-interface EtabAdminProps  { etablissementIds?: string[]; topOffset?: string }
+interface PostsAdminProps   { etablissementIds?: string[]; topOffset?: string; isAdmin?: boolean }
+interface EtabAdminProps    { etablissementIds?: string[]; topOffset?: string }
+interface AnnoncesAdminProps { topOffset?: string }
 
 const PostsAdmin = dynamic<PostsAdminProps>(
   () => import('@/app/admin/posts/PostsAdmin'),
@@ -29,6 +30,10 @@ const BateauAdmin = dynamic(
   () => import('@/app/admin/bateau/BateauAdmin'),
   { loading: () => <Loader /> }
 )
+const AnnoncesAdmin = dynamic<AnnoncesAdminProps>(
+  () => import('@/app/admin/annonces/AnnoncesAdmin'),
+  { loading: () => <Loader /> }
+)
 
 function Loader() {
   return <p className="text-center text-gray-400 text-sm py-12">Chargement…</p>
@@ -36,7 +41,7 @@ function Loader() {
 
 // ─── Configuration des onglets ────────────────────────────────────────────────
 
-type TabId = 'compte' | 'annonces' | 'notifications' | 'evenements' | 'articles' | 'etablissements' | 'bateau' | 'utilisateurs'
+type TabId = 'compte' | 'annonces' | 'notifications' | 'evenements' | 'articles' | 'etablissements' | 'bateau' | 'utilisateurs' | 'obj_perdus'
 
 interface TabDef {
   id: TabId
@@ -54,6 +59,7 @@ const TABS: TabDef[] = [
   { id: 'etablissements', label: 'Établissements', icon: '🏪', roles: ['pro','admin'] },
   { id: 'bateau',         label: 'Bateau',         icon: '⛵', roles: ['compagnie','admin'] },
   { id: 'utilisateurs',   label: 'Utilisateurs',   icon: '👥', roles: ['admin'] },
+  { id: 'obj_perdus',     label: 'Obj. perdus',    icon: '📋', roles: ['admin'] },
 ]
 
 const ROLE_BADGE: Record<Role, { label: string; color: string }> = {
@@ -419,6 +425,9 @@ export default function ProfilPage() {
       )}
       {activeTab === 'utilisateurs' && (
         <TabUtilisateurs />
+      )}
+      {activeTab === 'obj_perdus' && (
+        <AnnoncesAdmin topOffset="top-[97px]" />
       )}
     </div>
   )
