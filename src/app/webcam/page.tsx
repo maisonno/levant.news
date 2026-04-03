@@ -1,6 +1,43 @@
 import PageHeader from '@/components/PageHeader'
+import WebcamPlayer from './WebcamPlayer'
 
-export default function WebcamPage() {
+// ─── Fetch du flux courant via l'API Viewsurf ─────────────────────────────────
+
+interface ViewsurfMedia {
+  id: string
+  source: string   // UUID Quanteec
+  date: string
+  thumbnail: string
+  poster: string
+}
+
+async function getCurrentStream() {
+  const today = new Date().toISOString().split('T')[0]
+  try {
+    const res = await fetch(
+      `https://pv.viewsurf.com/2390/Ile-du-Levant?a=daymedias&c=8318&day=${today}`,
+      { next: { revalidate: 600 } } // mise en cache 10 min (cadence des vidéos)
+    )
+    if (!res.ok) return null
+    const data: ViewsurfMedia[] = await res.json()
+    if (!Array.isArray(data) || data.length === 0) return null
+
+    const latest = data[data.length - 1]
+    return {
+      hlsUrl: `https://deliverys4.quanteec.com/contents/encodings/vod/${latest.source}/master.m3u8`,
+      poster: `https:${latest.poster}`,
+      date: latest.date,
+    }
+  } catch {
+    return null
+  }
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+export default async function WebcamPage() {
+  const stream = await getCurrentStream()
+
   return (
     <div className="min-h-screen bg-gray-50">
       <PageHeader photo="/images/header-webcam.jpg">
@@ -18,34 +55,18 @@ export default function WebcamPage() {
           </span>
         </div>
 
-        {/* Player webcam — remplacer EMBED_URL par l'URL fournie par Viewsurf (bouton Intégrer) */}
-        {/* URL actuelle à corriger : le paramètre i= contient "undefined" */}
-        <div className="rounded-2xl overflow-hidden shadow-sm bg-black" style={{ aspectRatio: '16/9' }}>
-          <iframe
-            src="https://v.viewsurf.com/2390"
-            className="w-full h-full border-0"
-            allow="autoplay; fullscreen"
-            allowFullScreen
-            loading="lazy"
-            title="Webcam Île du Levant"
-          />
-        </div>
+        {/* Player */}
+        <WebcamPlayer
+          hlsUrl={stream?.hlsUrl ?? null}
+          poster={stream?.poster ?? null}
+          date={stream?.date ?? null}
+        />
 
-        {/* Lien de secours si le player ne charge pas */}
-        <a
-          href="https://pv.viewsurf.com/2390/Ile-du-Levant"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl bg-white border border-gray-200 text-sm font-semibold text-gray-600 shadow-sm"
-        >
-          <span>🎥</span> Voir sur Viewsurf.com
-        </a>
-
-        {/* Source */}
+        {/* Lien source */}
         <p className="text-xs text-gray-400 text-right">
           Source :{' '}
           <a
-            href="https://pv.viewsurf.com/2390/Ile-du-Levant?i=ODMxODp1bmRlZmluZWQ"
+            href="https://pv.viewsurf.com/2390/Ile-du-Levant"
             target="_blank"
             rel="noopener noreferrer"
             className="underline hover:text-gray-600"
