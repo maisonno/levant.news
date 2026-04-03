@@ -517,19 +517,15 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[104px]'
             {tab === 'moderation' ? '✅ File de modération vide.' : 'Aucun résultat.'}
           </p>
         )}
-        {filtered.map(p => {
-          const cardProps = {
-            key: p.id, post: p, isAdmin,
-            onPublier:   () => updatePost(p.id, { publie: true, refuse: false }),
-            onDepublier: () => updatePost(p.id, { publie: false }),
-            onRefuser:   () => updatePost(p.id, { refuse: true, publie: false }),
-            onEdit:      () => { setEditPost(p); setShowForm(true) },
-            onDelete:    () => setConfirmDelete(p.id),
-          }
-          return tab === 'avenir'
-            ? <PostCardHorizontal {...cardProps} />
-            : <PostCard {...cardProps} />
-        })}
+        {filtered.map(p => (
+          <PostCardHorizontal key={p.id} post={p} isAdmin={isAdmin}
+            onPublier={()   => updatePost(p.id, { publie: true, refuse: false })}
+            onDepublier={() => updatePost(p.id, { publie: false })}
+            onRefuser={()  => updatePost(p.id, { refuse: true, publie: false })}
+            onEdit={()     => { setEditPost(p); setShowForm(true) }}
+            onDelete={()   => setConfirmDelete(p.id)}
+          />
+        ))}
       </div>
 
       {/* Formulaire slide-up */}
