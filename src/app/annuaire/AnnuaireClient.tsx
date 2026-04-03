@@ -4,7 +4,6 @@ import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { Etablissement, TypeEtablissement } from '@/types/database'
 import { useEtabSheet } from '@/contexts/EtabSheetContext'
-import { useDrawer } from '@/contexts/DrawerContext'
 import PageHeader from '@/components/PageHeader'
 
 // ─── Carte établissement ──────────────────────────────────────────────────────
@@ -83,7 +82,6 @@ interface Props {
 }
 
 export default function AnnuaireClient({ etabs, types }: Props) {
-  useDrawer()
   const [search, setSearch] = useState('')
 
   // Types présents dans les données
@@ -142,29 +140,29 @@ export default function AnnuaireClient({ etabs, types }: Props) {
   return (
     <div className="min-h-screen bg-gray-50">
 
-      <PageHeader
-        photo="/images/header-annuaire.jpg"
-        stickyContent={
-          <div className="relative px-1">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
-            <input
-              type="text"
-              placeholder="Rechercher un établissement…"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="w-full bg-white rounded-xl py-2.5 pl-9 pr-8 text-sm text-gray-800 placeholder-gray-400 outline-none shadow-sm"
-            />
-            {search && (
-              <button
-                onClick={() => setSearch('')}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg"
-              >×</button>
-            )}
-          </div>
-        }
-      >
+      <PageHeader photo="/images/header-annuaire.jpg">
         <h1 className="text-xl font-extrabold text-white tracking-tight">Annuaire</h1>
       </PageHeader>
+
+      {/* Barre de recherche (sous le header, non-sticky) */}
+      <div className="bg-white border-b border-gray-100 px-4 py-3">
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
+          <input
+            type="text"
+            placeholder="Rechercher un établissement…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full bg-gray-50 rounded-xl py-2.5 pl-9 pr-8 text-sm text-gray-800 placeholder-gray-400 outline-none border border-gray-200"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg"
+            >×</button>
+          )}
+        </div>
+      </div>
 
       {/* Contenu */}
       <div className="px-4 py-4 space-y-6">

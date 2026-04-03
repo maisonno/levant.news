@@ -38,7 +38,8 @@ export default function RootLayout({
     <html lang="fr" className={inter.variable}>
       <body className="min-h-screen bg-gray-100">
         {/* Conteneur mobile centré sur desktop */}
-        <div className="mx-auto max-w-[430px] min-h-screen bg-gray-100 relative overflow-x-hidden">
+        {/* overflow-x:clip (pas hidden) pour ne pas casser position:sticky des enfants */}
+        <div className="mx-auto max-w-[430px] min-h-screen bg-gray-100 relative" style={{ overflowX: 'clip' }}>
           <ClientLayout>
             {children}
           </ClientLayout>
