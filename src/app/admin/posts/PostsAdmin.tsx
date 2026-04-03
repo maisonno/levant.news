@@ -29,9 +29,10 @@ interface PostFormProps {
   onSave: (data: Partial<PostWithRelations>) => Promise<void>
   onClose: () => void
   isAdmin?: boolean
+  etablissementIds?: string[] // si défini : restreint organisateurs et lieux à ces IDs
 }
 
-function PostForm({ initial, categories, etablissements, onSave, onClose, isAdmin = true }: PostFormProps) {
+function PostForm({ initial, categories, etablissements, onSave, onClose, isAdmin = true, etablissementIds }: PostFormProps) {
   const [titre,        setTitre]        = useState(initial?.titre ?? '')
   const [complement,   setComplement]   = useState(initial?.complement ?? '')
   const [dateDebut,    setDateDebut]    = useState(initial?.date_debut ?? '')
@@ -48,8 +49,12 @@ function PostForm({ initial, categories, etablissements, onSave, onClose, isAdmi
   const [refuse,       setRefuse]       = useState(initial?.refuse ?? false)
   const [saving, setSaving] = useState(false)
 
-  const lieux = etablissements.filter(e => e.est_lieu)
-  const orgas = etablissements.filter(e => e.est_organisateur)
+  // Pour un pro, on restreint aux établissements liés à son compte
+  const etabsFiltered = etablissementIds
+    ? etablissements.filter(e => etablissementIds.includes(e.id))
+    : etablissements
+  const lieux = etabsFiltered.filter(e => e.est_lieu)
+  const orgas = etabsFiltered.filter(e => e.est_organisateur)
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -120,14 +125,18 @@ function PostForm({ initial, categories, etablissements, onSave, onClose, isAdmi
       {/* Toggles */}
       <div className="grid grid-cols-2 gap-2">
         {([
-          [publie, setPublie, 'Publié'],
-          [misEnAvant, setMisEnAvant, 'Mis en avant'],
-          [inscription, setInscription, 'Inscription'],
-          ...(isAdmin ? [[refuse, setRefuse, 'Refusé']] : []),
-        ] as [boolean, (v: boolean) => void, string][]).map(([val, setter, label]) => (
-          <button key={label} type="button" onClick={() => setter(!val)}
+          [publie, setPublie, 'Publié', !isAdmin],
+          [misEnAvant, setMisEnAvant, 'Mis en avant', false],
+          [inscription, setInscription, 'Inscription', false],
+          ...(isAdmin ? [[refuse, setRefuse, 'Refusé', false]] : []),
+        ] as [boolean, (v: boolean) => void, string, boolean][]).map(([val, setter, label, disabled]) => (
+          <button key={label} type="button"
+            onClick={() => !disabled && setter(!val)}
+            disabled={disabled}
             className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-semibold text-left ${
-              val ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-400'
+              disabled
+                ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
+                : val ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-400'
             }`}>
             <span className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${val ? 'border-blue-500 bg-blue-500' : 'border-gray-300'}`}>
               {val && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
@@ -265,7 +274,7 @@ interface PostsAdminProps {
 
 export default function PostsAdmin({ etablissementIds, topOffset = 'top-[104px]', isAdmin = true }: PostsAdminProps) {
   const supabase = createClient()
-  const [tab, setTab] = useState<Tab>('moderation')
+  const [tab, setTab] = useState<Tab>(isAdmin ? 'moderation' : 'avenir')
   const [posts, setPosts]           = useState<PostWithRelations[]>([])
   const [categories, setCategories] = useState<Categorie[]>([])
   const [etablissements, setEtablissements] = useState<Etablissement[]>([])
@@ -351,9 +360,9 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[104px]'
   }
 
   const TABS: { id: Tab; label: string; count: number }[] = [
-    { id: 'moderation', label: 'À modérer', count: count.moderation },
-    { id: 'avenir',     label: 'À venir',   count: count.avenir     },
-    { id: 'tous',       label: 'Tous',      count: count.tous       },
+    ...(isAdmin ? [{ id: 'moderation' as Tab, label: 'À modérer', count: count.moderation }] : []),
+    { id: 'avenir', label: 'À venir', count: count.avenir },
+    { id: 'tous',   label: 'Tous',    count: count.tous   },
   ]
 
   return (
@@ -422,6 +431,7 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[104px]'
                 onSave={savePost}
                 onClose={() => setShowForm(false)}
                 isAdmin={isAdmin}
+                etablissementIds={etablissementIds}
               />
             </div>
           </div>
