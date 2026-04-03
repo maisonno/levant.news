@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Etablissement, TypeEtablissement } from '@/types/database'
+import ImagePicker from '@/components/admin/ImagePicker'
 
 const TYPE_LABELS: Record<string, string> = {
   SERVICES:         'Services',
@@ -101,8 +102,8 @@ function EtabForm({
         <input value={adresse} onChange={e => setAdresse(e.target.value)} className={field} />
       </div>
       <div>
-        <label className="label">URL photo</label>
-        <input value={photoUrl} onChange={e => setPhotoUrl(e.target.value)} placeholder="https://…" className={field} />
+        <label className="label">Photo</label>
+        <ImagePicker value={photoUrl} onChange={setPhotoUrl} bucket="etab-images" folder="etabs" />
       </div>
       {/* Toggles */}
       <div className="grid grid-cols-3 gap-2">

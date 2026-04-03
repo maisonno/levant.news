@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Article, ThemeArticle } from '@/types/database'
+import ImagePicker from '@/components/admin/ImagePicker'
 
 // ─── Formulaire ───────────────────────────────────────────────────────────────
 
@@ -57,8 +58,8 @@ function ArticleForm({
           className={field + ' resize-none font-mono text-xs'} />
       </div>
       <div>
-        <label className="label">URL image</label>
-        <input value={imageUrl} onChange={e => setImageUrl(e.target.value)} placeholder="https://…" className={field} />
+        <label className="label">Image</label>
+        <ImagePicker value={imageUrl} onChange={setImageUrl} bucket="article-images" folder="articles" />
       </div>
       <div>
         <label className="label">URL lien</label>
