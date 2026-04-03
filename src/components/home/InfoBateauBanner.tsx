@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 
 interface InfoBateau {
   id: string
+  date_debut: string
   date_fin: string
   compagnie: string | null
   message: string
@@ -11,9 +12,13 @@ interface InfoBateau {
 }
 
 const CONFIG = {
-  avertissement: { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-800', icon: '⚠️' },
-  changement:    { bg: 'bg-blue-50',   border: 'border-blue-200',   text: 'text-blue-800',   icon: '🔄' },
-  annulation:    { bg: 'bg-red-50',    border: 'border-red-200',    text: 'text-red-800',    icon: '🚫' },
+  avertissement: { accent: 'border-orange-400', iconBg: 'bg-orange-100', titleColor: 'text-orange-600', icon: '⚠️', label: 'Avertissement' },
+  changement:    { accent: 'border-blue-400',   iconBg: 'bg-blue-100',   titleColor: 'text-blue-600',   icon: '🔄', label: 'Changement'    },
+  annulation:    { accent: 'border-red-400',    iconBg: 'bg-red-100',    titleColor: 'text-red-600',    icon: '🚫', label: 'Annulation'    },
+}
+
+function fmtDate(iso: string) {
+  return new Date(iso + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
 }
 
 export default function InfoBateauBanner() {
@@ -32,22 +37,35 @@ export default function InfoBateauBanner() {
     <div className="mx-4 mt-4 space-y-2">
       {infos.map(info => {
         const cfg = CONFIG[info.type]
+        const isSameDay = info.date_debut === info.date_fin
+        const dateLabel = isSameDay ? fmtDate(info.date_fin) : `${fmtDate(info.date_debut)} → ${fmtDate(info.date_fin)}`
         return (
           <a key={info.id} href="/bateau"
-            className={`flex items-start gap-3 rounded-2xl border px-4 py-3 ${cfg.bg} ${cfg.border}`}>
-            <span className="text-lg flex-shrink-0">{cfg.icon}</span>
-            <div className="flex-1 min-w-0">
-              {info.compagnie && (
-                <p className={`text-[10px] font-bold uppercase tracking-wider mb-0.5 ${cfg.text} opacity-70`}>
-                  {info.compagnie}
+            className={`flex gap-3 bg-white rounded-2xl shadow-sm overflow-hidden border-l-4 ${cfg.accent} active:opacity-80 transition-opacity`}
+          >
+            <div className="pl-4 py-3 flex gap-3 flex-1 min-w-0">
+              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-xl flex-shrink-0 ${cfg.iconBg}`}>
+                {cfg.icon}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <p className={`text-sm font-bold ${cfg.titleColor}`}>{cfg.label}</p>
+                  {info.compagnie && (
+                    <p className="text-xs text-gray-400 font-medium">{info.compagnie}</p>
+                  )}
+                </div>
+                <p className="text-sm text-gray-700 leading-snug line-clamp-2">{info.message}</p>
+                <p className="text-xs text-gray-400 mt-1.5 flex items-center gap-1">
+                  <span>📅</span>
+                  <span>{dateLabel}</span>
                 </p>
-              )}
-              <p className={`text-sm font-medium ${cfg.text} line-clamp-2`}>{info.message}</p>
+              </div>
             </div>
-            <svg className={`w-4 h-4 flex-shrink-0 mt-0.5 ${cfg.text} opacity-50`} viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 18l6-6-6-6"/>
-            </svg>
+            <div className="flex items-center pr-4 text-gray-300 flex-shrink-0">
+              <svg width="7" height="12" viewBox="0 0 7 12" fill="none">
+                <path d="M1 1l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
           </a>
         )
       })}
