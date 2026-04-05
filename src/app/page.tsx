@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import Hero from '@/components/home/Hero'
 import InfoBateauBanner from '@/components/home/InfoBateauBanner'
 import MisEnAvant from '@/components/home/MisEnAvant'
@@ -8,169 +9,228 @@ import { PostWithRelations } from '@/types/database'
 
 export const revalidate = 60
 
-export default async function HomePage() {
+// ─── Skeletons ────────────────────────────────────────────────────────────────
+
+function MagCarouselSkeleton() {
+  return (
+    <div className="mx-4 mt-4 flex gap-3 overflow-hidden">
+      {[...Array(3)].map((_, i) => (
+        <div key={i} className="flex-shrink-0 w-44 rounded-2xl bg-gray-100 animate-pulse" style={{ height: 200 }} />
+      ))}
+    </div>
+  )
+}
+
+function AgendaSkeleton() {
+  return (
+    <div className="mt-6 px-4 space-y-3">
+      <div className="h-6 w-24 bg-gray-100 rounded-full animate-pulse" />
+      {[...Array(3)].map((_, i) => (
+        <div key={i} className="h-24 bg-gray-100 rounded-2xl animate-pulse" />
+      ))}
+    </div>
+  )
+}
+
+// ─── Helpers communs ──────────────────────────────────────────────────────────
+
+async function buildEtabMap(supabase: any, posts: any[]) {
+  const ids = [...new Set(posts.flatMap((p: any) => [p.organisateur_id, p.lieu_id].filter(Boolean)))]
+  if (ids.length === 0) return {}
+  const { data } = await supabase.from('etablissements').select('id, nom, photo_url').in('id', ids)
+  return data ? Object.fromEntries(data.map((e: any) => [e.id, e])) : {}
+}
+
+function enrich(p: any, etabMap: Record<string, any>): PostWithRelations {
+  return {
+    ...p,
+    organisateur: p.organisateur_id ? etabMap[p.organisateur_id] ?? null : null,
+    lieu:         p.lieu_id         ? etabMap[p.lieu_id]         ?? null : null,
+  }
+}
+
+// ─── Section : Mis en avant ───────────────────────────────────────────────────
+
+async function MisEnAvantSection() {
+  const today = new Date().toISOString().split('T')[0]
+  const { createClient } = await import('@/lib/supabase/server')
+  const supabase = await createClient()
+
+  const { data: raw } = await supabase
+    .from('posts')
+    .select('*, categorie:categories(code, nom)')
+    .eq('publie', true)
+    .eq('mis_en_avant', true)
+    .or(`date_fin.gte.${today},and(date_fin.is.null,date_debut.gte.${today})`)
+    .order('date_debut', { ascending: true })
+    .order('ordre_dans_journee', { ascending: true, nullsFirst: false })
+
+  if (!raw?.length) return null
+
+  const etabMap = await buildEtabMap(supabase, raw)
+  const posts   = raw.map((p: any) => enrich(p, etabMap))
+
+  return <MisEnAvant posts={posts} />
+}
+
+// ─── Section : Levant Mag ─────────────────────────────────────────────────────
+
+async function MagCarouselSection() {
+  const { createClient } = await import('@/lib/supabase/server')
+  const supabase = await createClient()
+
+  const { data: articles } = await supabase
+    .from('articles_mag')
+    .select('*')
+    .eq('publie', true)
+    .order('date_publication', { ascending: false })
+    .limit(6)
+
+  if (!articles?.length) return null
+  return <MagCarousel articles={articles} />
+}
+
+// ─── Section : Agenda ─────────────────────────────────────────────────────────
+
+async function AgendaSection() {
   const today    = new Date().toISOString().split('T')[0]
   const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0]
   const maxDate  = new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0]
 
-  let misEnAvant:  PostWithRelations[] = []
-  let articles:    any[]               = []
-  let todayPosts:  PostWithRelations[] = []
-  let enCeMoment:  PostWithRelations[] = []
-  let aLaffiche:   PostWithRelations[] = []
-  let demainPosts: PostWithRelations[] = []
-  let autresPosts: PostWithRelations[] = []
-  let expos:       PostWithRelations[] = []
+  const { createClient } = await import('@/lib/supabase/server')
+  const supabase = await createClient()
 
-  try {
-    const { createClient } = await import('@/lib/supabase/server')
-    const supabase = await createClient()
+  const [agendaRes, ongoingRes, afficheRes, futureExpoRes] = await Promise.allSettled([
 
-    const [meaRes, magRes, agendaRes, ongoingRes, afficheRes, futureExpoRes] = await Promise.allSettled([
+    // Agenda : aujourd'hui + 15 jours
+    supabase
+      .from('posts')
+      .select('*, categorie:categories(code, nom)')
+      .eq('publie', true)
+      .eq('dans_agenda', true)
+      .gte('date_debut', today)
+      .lte('date_debut', maxDate)
+      .order('date_debut', { ascending: true })
+      .order('ordre_dans_journee', { ascending: true, nullsFirst: false }),
 
-      // Posts mis en avant (bloc MisEnAvant)
-      supabase
-        .from('posts')
-        .select('*, categorie:categories(code, nom)')
-        .eq('publie', true)
-        .eq('mis_en_avant', true)
-        .or(`date_fin.gte.${today},and(date_fin.is.null,date_debut.gte.${today})`)
-        .order('date_debut', { ascending: true })
-        .order('ordre_dans_journee', { ascending: true, nullsFirst: false }),
+    // En ce moment : événements multi-jours déjà commencés
+    supabase
+      .from('posts')
+      .select('*, categorie:categories(code, nom)')
+      .eq('publie', true)
+      .eq('dans_agenda', true)
+      .lt('date_debut', today)
+      .gte('date_fin', today)
+      .order('date_debut', { ascending: true }),
 
-      // Levant Mag
-      supabase
-        .from('articles_mag')
-        .select('*')
-        .eq('publie', true)
-        .order('date_publication', { ascending: false })
-        .limit(6),
+    // À l'affiche
+    supabase
+      .from('posts')
+      .select('*, categorie:categories(code, nom)')
+      .eq('publie', true)
+      .eq('a_laffiche', true)
+      .or(`date_fin.gte.${today},and(date_fin.is.null,date_debut.gte.${today})`)
+      .order('date_debut', { ascending: true }),
 
-      // Agenda : aujourd'hui + 7 prochains jours (inclut les EXPO, on filtrera après)
-      supabase
-        .from('posts')
-        .select('*, categorie:categories(code, nom)')
-        .eq('publie', true)
-        .eq('dans_agenda', true)
-        .gte('date_debut', today)
-        .lte('date_debut', maxDate)
-        .order('date_debut', { ascending: true })
-        .order('ordre_dans_journee', { ascending: true, nullsFirst: false }),
+    // Expos futures (sans limite de date)
+    supabase
+      .from('posts')
+      .select('*, categorie:categories(code, nom)')
+      .eq('publie', true)
+      .eq('dans_agenda', true)
+      .gte('date_debut', today)
+      .order('date_debut', { ascending: true }),
+  ])
 
-      // En ce moment : événements multi-jours déjà commencés
-      supabase
-        .from('posts')
-        .select('*, categorie:categories(code, nom)')
-        .eq('publie', true)
-        .eq('dans_agenda', true)
-        .lt('date_debut', today)
-        .gte('date_fin', today)
-        .order('date_debut', { ascending: true }),
+  const rawAgenda     = agendaRes.status     === 'fulfilled' ? (agendaRes.value.data     ?? []) : []
+  const rawOngoing    = ongoingRes.status    === 'fulfilled' ? (ongoingRes.value.data    ?? []) : []
+  const rawAffiche    = afficheRes.status    === 'fulfilled' ? (afficheRes.value.data    ?? []) : []
+  const rawFutureExpo = futureExpoRes.status === 'fulfilled' ? (futureExpoRes.value.data ?? []) : []
 
-      // À l'affiche
-      supabase
-        .from('posts')
-        .select('*, categorie:categories(code, nom)')
-        .eq('publie', true)
-        .eq('a_laffiche', true)
-        .or(`date_fin.gte.${today},and(date_fin.is.null,date_debut.gte.${today})`)
-        .order('date_debut', { ascending: true }),
+  // Un seul fetch établissements pour toutes les sections
+  const allRaw = [...rawAgenda, ...rawOngoing, ...rawAffiche, ...rawFutureExpo]
+  const etabMap = await buildEtabMap(supabase, allRaw)
 
-      // Expos à venir — sans limite de date (comme la page Agenda)
-      supabase
-        .from('posts')
-        .select('*, categorie:categories(code, nom)')
-        .eq('publie', true)
-        .eq('dans_agenda', true)
-        .gte('date_debut', today)
-        .order('date_debut', { ascending: true }),
-    ])
+  const agendaEnriched  = rawAgenda.map((p: any)     => enrich(p, etabMap))
+  const ongoingEnriched = rawOngoing.map((p: any)    => enrich(p, etabMap))
+  const afficheEnriched = rawAffiche.map((p: any)    => enrich(p, etabMap))
+  const futureEnriched  = rawFutureExpo.map((p: any) => enrich(p, etabMap))
 
-    const rawMea        = meaRes.status        === 'fulfilled' ? (meaRes.value.data        ?? []) : []
-    const rawAgenda     = agendaRes.status     === 'fulfilled' ? (agendaRes.value.data     ?? []) : []
-    const rawOngoing    = ongoingRes.status    === 'fulfilled' ? (ongoingRes.value.data    ?? []) : []
-    const rawAffiche    = afficheRes.status    === 'fulfilled' ? (afficheRes.value.data    ?? []) : []
-    const rawFutureExpo = futureExpoRes.status === 'fulfilled' ? (futureExpoRes.value.data ?? []) : []
-    if (magRes.status === 'fulfilled') articles = magRes.value.data ?? []
-
-    // Fetch tous les établissements en une seule requête
-    const allRaw = [...rawMea, ...rawAgenda, ...rawOngoing, ...rawAffiche, ...rawFutureExpo]
-    const etabIds = [...new Set(allRaw.flatMap((p: any) => [p.organisateur_id, p.lieu_id].filter(Boolean)))]
-
-    let etabMap: Record<string, any> = {}
-    if (etabIds.length > 0) {
-      const { data: etabs } = await supabase
-        .from('etablissements')
-        .select('id, nom, photo_url')
-        .in('id', etabIds)
-      if (etabs) etabMap = Object.fromEntries(etabs.map(e => [e.id, e]))
-    }
-
-    const enrich = (p: any): PostWithRelations => ({
-      ...p,
-      organisateur: p.organisateur_id ? etabMap[p.organisateur_id] ?? null : null,
-      lieu:         p.lieu_id         ? etabMap[p.lieu_id]         ?? null : null,
-    })
-
-    misEnAvant = rawMea.map(enrich)
-
-    // À l'affiche : 1 seul événement par organisateur (le plus proche),
-    // ordre aléatoire, max 10
-    const afficheEnriched = rawAffiche.map(enrich) // déjà trié date_debut asc
-    const byOrg = new Map<string, PostWithRelations>()
-    for (const post of afficheEnriched) {
-      // Comme le résultat est trié date_debut asc, le 1er par org = le plus proche
-      const key = post.organisateur_id ?? `__solo_${post.id}`
-      if (!byOrg.has(key)) byOrg.set(key, post)
-    }
-    const deduped = Array.from(byOrg.values())
-    // Fisher-Yates shuffle
-    for (let i = deduped.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [deduped[i], deduped[j]] = [deduped[j], deduped[i]]
-    }
-    aLaffiche = deduped.slice(0, 10)
-
-    // Séparer EXPO du reste pour l'agenda
-    const agendaEnriched  = rawAgenda.map(enrich)
-    const ongoingEnriched = rawOngoing.map(enrich)
-
-    const agendaNonExpo  = agendaEnriched.filter( (p: PostWithRelations) => p.categorie?.code !== 'EXPO')
-    const ongoingNonExpo = ongoingEnriched.filter((p: PostWithRelations) => p.categorie?.code !== 'EXPO')
-    const ongoingExpos   = ongoingEnriched.filter((p: PostWithRelations) => p.categorie?.code === 'EXPO')
-
-    todayPosts  = agendaNonExpo.filter(p => p.date_debut === today)
-    demainPosts = agendaNonExpo.filter(p => p.date_debut === tomorrow)
-    autresPosts = agendaNonExpo.filter(p => p.date_debut > tomorrow)
-    enCeMoment  = ongoingNonExpo
-
-    // Expos : en cours + toutes les futures sans limite de date, dédup par id
-    const futureExpos = rawFutureExpo.map(enrich).filter((p: PostWithRelations) => p.categorie?.code === 'EXPO')
-    const expoMap = new Map<string, PostWithRelations>()
-    for (const p of [...ongoingExpos, ...futureExpos]) expoMap.set(p.id, p)
-    expos = Array.from(expoMap.values()).sort((a, b) => a.date_debut.localeCompare(b.date_debut))
-
-  } catch (err) {
-    console.error('Erreur homepage:', err)
+  // À l'affiche : 1 par organisateur, ordre aléatoire, max 10
+  const byOrg = new Map<string, PostWithRelations>()
+  for (const post of afficheEnriched) {
+    const key = post.organisateur_id ?? `__solo_${post.id}`
+    if (!byOrg.has(key)) byOrg.set(key, post)
   }
+  const deduped = Array.from(byOrg.values())
+  for (let i = deduped.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [deduped[i], deduped[j]] = [deduped[j], deduped[i]]
+  }
+  const aLaffiche = deduped.slice(0, 10)
+
+  // Séparer EXPO du reste
+  const agendaNonExpo  = agendaEnriched.filter( (p: PostWithRelations) => p.categorie?.code !== 'EXPO')
+  const ongoingNonExpo = ongoingEnriched.filter((p: PostWithRelations) => p.categorie?.code !== 'EXPO')
+  const ongoingExpos   = ongoingEnriched.filter((p: PostWithRelations) => p.categorie?.code === 'EXPO')
+
+  const todayPosts  = agendaNonExpo.filter(p => p.date_debut === today)
+  const demainPosts = agendaNonExpo.filter(p => p.date_debut === tomorrow)
+  const autresPosts = agendaNonExpo.filter(p => p.date_debut > tomorrow)
+  const enCeMoment  = ongoingNonExpo
+
+  // Expos : en cours + futures, dédupliquées
+  const futureExpos = futureEnriched.filter((p: PostWithRelations) => p.categorie?.code === 'EXPO')
+  const expoMap = new Map<string, PostWithRelations>()
+  for (const p of [...ongoingExpos, ...futureExpos]) expoMap.set(p.id, p)
+  const expos = Array.from(expoMap.values()).sort((a, b) => a.date_debut.localeCompare(b.date_debut))
 
   return (
+    <AgendaHome
+      todayPosts={todayPosts}
+      enCeMoment={enCeMoment}
+      aLaffiche={aLaffiche}
+      demainPosts={demainPosts}
+      autresPosts={autresPosts}
+      expos={expos}
+      today={today}
+      tomorrow={tomorrow}
+    />
+  )
+}
+
+// ─── Page principale ──────────────────────────────────────────────────────────
+// Rendu synchrone : Hero et QuickTiles s'affichent immédiatement.
+// Les sections lentes (MisEnAvant, MagCarousel, Agenda) streament en parallèle.
+
+export default function HomePage() {
+  return (
     <main className="pb-safe">
+
+      {/* Instant — statique */}
       <Hero />
+
+      {/* Instant — données chargées côté client */}
       <InfoBateauBanner />
-      <MisEnAvant posts={misEnAvant} />
-      <MagCarousel articles={articles} />
+
+      {/* Streaming — pas de skeleton (section absente si vide) */}
+      <Suspense>
+        <MisEnAvantSection />
+      </Suspense>
+
+      {/* Streaming — skeleton horizontal pendant le chargement */}
+      <Suspense fallback={<MagCarouselSkeleton />}>
+        <MagCarouselSection />
+      </Suspense>
+
+      {/* Instant — chaque tuile charge ses données côté client */}
       <QuickTiles />
-      <AgendaHome
-        todayPosts={todayPosts}
-        enCeMoment={enCeMoment}
-        aLaffiche={aLaffiche}
-        demainPosts={demainPosts}
-        autresPosts={autresPosts}
-        expos={expos}
-        today={today}
-        tomorrow={tomorrow}
-      />
+
+      {/* Streaming — skeleton de cartes pendant le chargement */}
+      <Suspense fallback={<AgendaSkeleton />}>
+        <AgendaSection />
+      </Suspense>
+
     </main>
   )
 }
