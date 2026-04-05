@@ -288,7 +288,6 @@ interface BusDeparture {
 interface BusStop {
   stop_name: string
   stop_id: string
-  direction_id: number
   departures: BusDeparture[]
 }
 
@@ -299,34 +298,33 @@ interface BusSchedule {
   stops: BusStop[]
 }
 
-const LIGNES: { id: string; label: string; reseau: string; description: string }[] = [
+const LIGNES: { id: string; label: string; description: string }[] = [
   {
     id:          '878',
     label:       'Zou 878',
-    reseau:      'zou',
-    description: 'Toulon · Hyères Aéroport · Le Lavandou',
+    description: 'Relie la gare de Toulon au Lavandou, en passant parfois par l\'aéroport de Hyères-Toulon.',
   },
   {
     id:          '67',
     label:       'Mistral 67',
-    reseau:      'mistral',
-    description: 'Gare Hyères · Port La Gavine',
+    description: 'Relie la gare de Hyères au Port de Hyères (Port la Gavine).',
   },
 ]
 
-const DIRECTION_LABELS: Record<number, string> = {
-  0: 'Aller',
-  1: 'Retour',
-}
-
 // ─── Onglet Bus ───────────────────────────────────────────────────────────────
+
+/** Formate "08:30" → "8h30", "17:05" → "17h05" */
+function formatBusTime(t: string): string {
+  const [h, m] = t.split(':')
+  return `${parseInt(h, 10)}h${m}`
+}
 
 function BusTab() {
   const today = todayIso()
-  const [selectedDate, setSelectedDate] = useState(today)
+  const [selectedDate,  setSelectedDate]  = useState(today)
   const [selectedLigne, setSelectedLigne] = useState('878')
-  const [schedule, setSchedule] = useState<BusSchedule | null>(null)
-  const [loading,  setLoading]  = useState(true)
+  const [schedule,      setSchedule]      = useState<BusSchedule | null>(null)
+  const [loading,       setLoading]       = useState(true)
 
   useEffect(() => {
     setLoading(true)
@@ -337,15 +335,18 @@ function BusTab() {
       .finally(() => setLoading(false))
   }, [selectedDate, selectedLigne])
 
-  // Regrouper les arrêts par direction
-  const byDirection: Record<number, BusStop[]> = {}
-  for (const stop of (schedule?.stops ?? [])) {
-    if (!byDirection[stop.direction_id]) byDirection[stop.direction_id] = []
-    byDirection[stop.direction_id].push(stop)
-  }
+  const ligne = LIGNES.find(l => l.id === selectedLigne)!
 
   return (
     <div className="px-4 mt-4 space-y-4 pb-10">
+
+      {/* Sélecteur de date */}
+      <DatePicker value={selectedDate} onChange={setSelectedDate} />
+
+      {/* Titre du jour */}
+      <h2 className="text-base font-extrabold text-gray-900 capitalize">
+        {formatDate(selectedDate)}
+      </h2>
 
       {/* Sélecteur de ligne */}
       <div className="flex gap-2">
@@ -362,20 +363,14 @@ function BusTab() {
             <p className={`text-xs font-extrabold ${selectedLigne === l.id ? 'text-white' : 'text-blue-600'}`}>
               {l.label}
             </p>
-            <p className={`text-[10px] leading-tight mt-0.5 ${selectedLigne === l.id ? 'text-white/70' : 'text-gray-400'}`}>
-              {l.description}
-            </p>
           </button>
         ))}
       </div>
 
-      {/* Sélecteur de date */}
-      <DatePicker value={selectedDate} onChange={setSelectedDate} />
-
-      {/* Titre du jour */}
-      <h2 className="text-base font-extrabold text-gray-900 capitalize">
-        {formatDate(selectedDate)}
-      </h2>
+      {/* Description de la ligne */}
+      <p className="text-xs text-gray-500 leading-snug -mt-1">
+        {ligne.description}
+      </p>
 
       {/* Chargement */}
       {loading && (
@@ -393,7 +388,7 @@ function BusTab() {
       )}
 
       {/* Données pas encore importées */}
-      {!loading && !schedule?.aucun_service && schedule?.stops.length === 0 && (
+      {!loading && !schedule?.aucun_service && (schedule?.stops.length ?? 0) === 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
           <p className="text-sm font-bold text-amber-700 mb-1">⏳ Import en cours</p>
           <p className="text-xs text-amber-600">
@@ -403,40 +398,34 @@ function BusTab() {
         </div>
       )}
 
-      {/* Horaires par direction */}
+      {/* Horaires par arrêt de départ */}
       {!loading && (schedule?.stops.length ?? 0) > 0 &&
-        Object.entries(byDirection).map(([dirId, stops]) => (
-          <div key={dirId} className="space-y-2">
+        schedule!.stops.map(stop => (
+          <div key={stop.stop_id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
 
-            {/* En-tête direction */}
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-widest text-gray-400">
-                {DIRECTION_LABELS[parseInt(dirId)] ?? `Direction ${dirId}`}
-              </span>
-              {stops[0]?.departures[0]?.headsign && (
-                <span className="text-xs font-semibold text-gray-500">
-                  → {stops[0].departures[0].headsign}
-                </span>
-              )}
+            {/* En-tête arrêt */}
+            <div className="px-4 py-3 border-b border-gray-50 bg-gray-50/80">
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-500">
+                🚏 Départ de {stop.stop_name}
+              </p>
             </div>
 
-            {/* Arrêts */}
-            {stops.map(stop => (
-              <div key={stop.stop_id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-50 bg-gray-50/80">
-                  <p className="text-xs font-bold uppercase tracking-widest text-gray-500">
-                    🚏 {stop.stop_name}
-                  </p>
-                </div>
-                <div className="px-4 py-2 flex flex-wrap gap-x-3 gap-y-1">
-                  {stop.departures.map((dep, i) => (
-                    <span key={i} className="text-base font-extrabold text-gray-900 py-1.5">
-                      {dep.time}
+            {/* Liste des départs */}
+            <div className="px-4 divide-y divide-gray-50">
+              {stop.departures.map((dep, i) => (
+                <div key={i} className="flex items-center gap-3 py-2.5">
+                  <span className="text-base font-extrabold text-gray-900 w-14 flex-shrink-0">
+                    {formatBusTime(dep.time)}
+                  </span>
+                  {dep.headsign && (
+                    <span className="text-sm text-gray-500 truncate">
+                      → {dep.headsign}
                     </span>
-                  ))}
+                  )}
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+
           </div>
         ))
       }

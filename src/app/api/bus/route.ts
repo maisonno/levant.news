@@ -106,23 +106,21 @@ export async function GET(request: Request) {
     return `${String(h - 24).padStart(2, '0')}:${parts[1]}`
   }
 
-  // ── 6. Regroupement par (direction_id, stop_name) ────────────────────────────
-  type StopKey = `${number}|${string}`
-  const stopMap = new Map<StopKey, {
-    stop_name: string
-    stop_id: string
-    direction_id: number
-    min_sequence: number
-    departures: Array<{ time: string; headsign: string; raw_time: string }>
+  // ── 6. Regroupement par stop_name (toutes directions confondues) ──────────────
+  // Un groupe par arrêt physique ; les départs listent leur destination (headsign).
+  const stopMap = new Map<string, {
+    stop_name:    string
+    stop_id:      string
+    min_sequence: number  // plus petite séquence vue, pour tri indicatif
+    departures:   Array<{ time: string; headsign: string; raw_time: string }>
   }>()
 
   for (const row of allRows) {
-    const key: StopKey = `${row.direction_id}|${row.stop_name}`
+    const key = row.stop_name
     if (!stopMap.has(key)) {
       stopMap.set(key, {
         stop_name:    row.stop_name,
         stop_id:      row.stop_id,
-        direction_id: row.direction_id,
         min_sequence: row.stop_sequence,
         departures:   [],
       })
@@ -131,7 +129,7 @@ export async function GET(request: Request) {
     entry.departures.push({
       time:     normalizeTime(row.departure_time),
       headsign: row.headsign ?? '',
-      raw_time: row.departure_time, // pour tri correct (peut dépasser 24h)
+      raw_time: row.departure_time,
     })
     if (row.stop_sequence < entry.min_sequence) {
       entry.min_sequence = row.stop_sequence
@@ -141,17 +139,15 @@ export async function GET(request: Request) {
   // ── 7. Tri des départs et des arrêts ─────────────────────────────────────────
   const stops = [...stopMap.values()]
     .map(s => ({
-      ...s,
+      stop_name:  s.stop_name,
+      stop_id:    s.stop_id,
       departures: s.departures
         .sort((a, b) => a.raw_time.localeCompare(b.raw_time))
         .map(({ time, headsign }) => ({ time, headsign })),
+      _seq: s.min_sequence,
     }))
-    // Tri : direction 0 en premier, puis par séquence d'arrêt
-    .sort((a, b) => {
-      if (a.direction_id !== b.direction_id) return a.direction_id - b.direction_id
-      return a.min_sequence - b.min_sequence
-    })
-    .map(({ min_sequence: _ms, ...s }) => s) // on retire le champ interne
+    .sort((a, b) => a._seq - b._seq)
+    .map(({ _seq: _, ...s }) => s)
 
   return NextResponse.json({
     date:          rawDate,
