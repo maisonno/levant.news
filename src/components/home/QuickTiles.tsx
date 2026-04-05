@@ -2,6 +2,7 @@ import Link from 'next/link'
 import MeteoTile from './MeteoTile'
 import BateauTile from './BateauTile'
 import ObjetsTrouvesTile from './ObjetsTrouvesTile'
+import MeduseTile from './MeduseTile'
 
 const TILES = [
   {
@@ -60,6 +61,9 @@ export default function QuickTiles() {
 
         {/* Tuile dynamique objets trouvés */}
         <ObjetsTrouvesTile />
+
+        {/* Tuile Méduse Watch — pleine largeur */}
+        <MeduseTile />
       </div>
     </div>
   )
