@@ -37,7 +37,7 @@ export default function MeteoTile() {
   }, [])
 
   return (
-    <Link href="/meteo" className="bg-slate-800 rounded-2xl p-3 text-white active:scale-[0.97] transition-transform">
+    <Link href="/meteo" className="bg-blue-700 rounded-2xl p-3 text-white active:scale-[0.97] transition-transform">
       <p className="text-sm font-bold leading-tight mb-1.5">Météo</p>
       <div className="flex items-center gap-1.5">
         {emoji && <span className="text-lg leading-none">{emoji}</span>}

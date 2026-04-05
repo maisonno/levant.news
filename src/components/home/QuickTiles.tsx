@@ -10,7 +10,7 @@ const STATIC_TILES = [
   { href: '/annuaire',label: 'Annuaire',           sub: 'Horaires',        live: false },
 ]
 
-const BASE = 'bg-slate-800 rounded-2xl p-3 text-white active:scale-[0.97] transition-transform'
+const BASE = 'bg-blue-700 rounded-2xl p-3 text-white active:scale-[0.97] transition-transform'
 
 export default function QuickTiles() {
   return (

@@ -6,7 +6,6 @@ import { createClient } from '@/lib/supabase/client'
 
 export default function MeduseTile() {
   const [hasWarning, setHasWarning] = useState(false)
-  const [latestLieu, setLatestLieu] = useState<string | null>(null)
 
   useEffect(() => {
     const supabase  = createClient()
@@ -15,38 +14,25 @@ export default function MeduseTile() {
 
     supabase
       .from('meduse_signalements')
-      .select('presence, lieu, date_observation, heure_observation')
+      .select('presence', { count: 'exact', head: false })
       .gte('date_observation', yesterday.toISOString().split('T')[0])
       .neq('presence', 'aucune')
-      .order('date_observation', { ascending: false })
-      .order('heure_observation', { ascending: false })
       .limit(1)
       .then(({ data }) => {
-        if (data && data.length > 0) {
-          setHasWarning(true)
-          setLatestLieu(data[0].lieu)
-        }
+        if (data && data.length > 0) setHasWarning(true)
       })
   }, [])
 
   return (
     <Link
       href="/meduse"
-      className="col-span-3 bg-slate-800 rounded-2xl p-3 text-white flex items-center gap-3 active:scale-[0.97] transition-transform"
+      className="bg-blue-700 rounded-2xl p-3 text-white active:scale-[0.97] transition-transform"
     >
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-bold leading-tight">Méduse Watch</p>
-        <p className="text-white/50 text-xs mt-0.5 truncate">
-          {latestLieu ? `Signalé : ${latestLieu}` : 'Signaler ou consulter'}
-        </p>
-      </div>
-
-      {hasWarning && (
-        <div className="flex-shrink-0 bg-amber-400 text-amber-900 rounded-full px-2.5 py-1 flex items-center gap-1">
-          <span className="text-sm leading-none">⚠️</span>
-          <span className="text-[10px] font-extrabold">Présence</span>
-        </div>
-      )}
+      <p className="text-sm font-bold leading-tight mb-1.5">Méduse Watch</p>
+      {hasWarning
+        ? <p className="text-amber-300 text-xs font-bold">⚠️ Présence</p>
+        : <p className="text-white/50 text-xs">Signalements</p>
+      }
     </Link>
   )
 }
