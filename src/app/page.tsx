@@ -11,16 +11,6 @@ export const revalidate = 60
 
 // ─── Skeletons ────────────────────────────────────────────────────────────────
 
-function MagCarouselSkeleton() {
-  return (
-    <div className="mx-4 mt-4 flex gap-3 overflow-hidden">
-      {[...Array(3)].map((_, i) => (
-        <div key={i} className="flex-shrink-0 w-44 rounded-2xl bg-gray-100 animate-pulse" style={{ height: 200 }} />
-      ))}
-    </div>
-  )
-}
-
 function MisEnAvantSkeleton() {
   return (
     <div className="px-4 mt-4 space-y-3">
@@ -264,8 +254,8 @@ export default function HomePage() {
         <MisEnAvantSection />
       </Suspense>
 
-      {/* Streaming — skeleton horizontal pendant le chargement */}
-      <Suspense fallback={<MagCarouselSkeleton />}>
+      {/* Streaming — pas de skeleton (s'insère discrètement quand prêt) */}
+      <Suspense>
         <MagCarouselSection />
       </Suspense>
 
