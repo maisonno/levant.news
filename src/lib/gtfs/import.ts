@@ -103,13 +103,12 @@ function splitCSVLine(line: string): string[] {
   return result
 }
 
-/** Extrait et décode un fichier du ZIP en UTF-8 explicite */
+/** Extrait et décode un fichier du ZIP en UTF-8 explicite via Buffer Node.js */
 async function getZipFile(zip: JSZip, name: string): Promise<string> {
   const file = zip.file(name)
   if (!file) throw new Error(`Fichier manquant dans le ZIP : ${name}`)
-  // On force le décodage UTF-8 via TextDecoder pour éviter les interprétations Latin-1
-  const buffer = await file.async('arraybuffer')
-  return new TextDecoder('utf-8').decode(buffer)
+  const uint8 = await file.async('uint8array')
+  return Buffer.from(uint8).toString('utf8')
 }
 
 /**
