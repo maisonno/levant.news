@@ -393,10 +393,7 @@ function ExpositionsTab({ expos, today }: { expos: PostWithRelations[]; today: s
         </section>
       )}
 
-      <div className="text-center py-8 pb-safe">
-        <p className="text-2xl mb-1">🖼️</p>
-        <p className="text-gray-300 text-xs">Fin des expositions</p>
-      </div>
+      <div className="pb-safe h-8" />
     </div>
   )
 }
@@ -437,10 +434,7 @@ function AfficheTab({ posts, today }: { posts: PostWithRelations[]; today: strin
         )
       })}
 
-      <div className="text-center py-8 pb-safe">
-        <p className="text-2xl mb-1">🎬</p>
-        <p className="text-gray-300 text-xs">Fin des événements à l'affiche</p>
-      </div>
+      <div className="pb-safe h-8" />
     </div>
   )
 }

@@ -71,13 +71,13 @@ export default function PostCard({ post, grouped = false, showDate = false, igno
     : null
 
   // ── Carte PHARE ────────────────────────────────────────────────────────────
-  // Image à droite (50 % plus grande), texte à gauche aligné à droite, titre grand
+  // Image à gauche (50 % plus grande), texte à droite aligné à gauche, titre grand
   if (post.phare && !ignorePhare) {
     return (
       <button onClick={() => open(post)} className="w-full text-left">
-        <div className="flex flex-row-reverse bg-white rounded-2xl overflow-hidden shadow-md border border-blue-100 h-44 active:scale-[0.98] transition-transform">
+        <div className="flex bg-white rounded-2xl overflow-hidden shadow-md border border-blue-100 h-44 active:scale-[0.98] transition-transform">
 
-          {/* Image — droite, 50 % plus large que la normale (w-28 → w-44) */}
+          {/* Image — gauche, 50 % plus large que la normale (w-28 → w-44) */}
           <div className="w-44 flex-shrink-0 bg-gray-100">
             {post.affiche_url ? (
               <img
@@ -92,10 +92,10 @@ export default function PostCard({ post, grouped = false, showDate = false, igno
             )}
           </div>
 
-          {/* Texte — gauche, aligné à droite */}
-          <div className="flex-1 min-w-0 px-4 py-4 flex flex-col justify-center gap-1.5 text-right">
+          {/* Texte — droite de l'image, aligné à gauche */}
+          <div className="flex-1 min-w-0 px-4 py-4 flex flex-col justify-center gap-1.5">
             {cat && colors && (
-              <span className={`inline-block self-end text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${colors.bg} ${colors.text}`}>
+              <span className={`inline-block self-start text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${colors.bg} ${colors.text}`}>
                 {cat.nom}
               </span>
             )}
@@ -103,19 +103,19 @@ export default function PostCard({ post, grouped = false, showDate = false, igno
               {post.titre}
             </p>
             {showDate && (
-              <p className="text-xs text-gray-400 flex items-center justify-end gap-1">
+              <p className="text-xs text-gray-400 flex items-center gap-1">
                 <span>📅</span>
                 <span>{formatPostDate(post.date_debut, post.date_fin ?? null)}</span>
               </p>
             )}
-            <div className="flex items-center justify-end gap-2 text-xs text-gray-500 flex-wrap">
+            <div className="flex items-center gap-2 text-xs text-gray-500 flex-wrap">
+              {lieu && <span className="truncate">📍 {lieu}</span>}
+              {post.heure && <span>🕐 {post.heure}</span>}
               {placesInfo && (
                 <span className="text-[10px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
                   {placesInfo}
                 </span>
               )}
-              {lieu && <span className="truncate">📍 {lieu}</span>}
-              {post.heure && <span>🕐 {post.heure}</span>}
             </div>
           </div>
         </div>
