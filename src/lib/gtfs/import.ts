@@ -53,6 +53,27 @@ export const BUS_NETWORKS: NetworkConfig[] = [
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+/**
+ * Corrige les strings garbled UTF-8-as-Latin-1.
+ * JSZip stocke les fichiers en interne comme des "binary strings" (1 char = 1 octet),
+ * ce qui fait que les octets UTF-8 d'un caractère accentué (ex : é = 0xC3 0xA9)
+ * arrivent en JS comme deux caractères distincts ('Ã' + '©').
+ *
+ * Cette fonction détecte et corrige ce cas sans risque :
+ * - String garbled → les octets sont du UTF-8 valide → redécodage correct
+ * - String déjà OK → les bytes incluent des codes > 127 isolés → UTF-8 invalide
+ *   → exception capturée → on retourne la string originale sans modification
+ */
+function fixLatin1ToUtf8(s: string): string {
+  try {
+    const bytes = new Uint8Array(s.length)
+    for (let i = 0; i < s.length; i++) bytes[i] = s.charCodeAt(i) & 0xFF
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes)
+  } catch {
+    return s // déjà correctement encodé, on ne touche pas
+  }
+}
+
 /** Normalise une chaîne : minuscules + suppression des accents */
 function normalize(s: string): string {
   return s
@@ -77,7 +98,7 @@ function parseCSV(text: string): Record<string, string>[] {
     const values = splitCSVLine(line)
     const obj: Record<string, string> = {}
     for (let j = 0; j < headers.length; j++) {
-      obj[headers[j]] = (values[j] ?? '').trim()
+      obj[headers[j]] = fixLatin1ToUtf8((values[j] ?? '').trim())
     }
     result.push(obj)
   }
@@ -103,12 +124,11 @@ function splitCSVLine(line: string): string[] {
   return result
 }
 
-/** Extrait et décode un fichier du ZIP en UTF-8 explicite via Buffer Node.js */
+/** Extrait un fichier du ZIP (l'encoding est corrigé dans parseCSV via fixLatin1ToUtf8) */
 async function getZipFile(zip: JSZip, name: string): Promise<string> {
   const file = zip.file(name)
   if (!file) throw new Error(`Fichier manquant dans le ZIP : ${name}`)
-  const uint8 = await file.async('uint8array')
-  return Buffer.from(uint8).toString('utf8')
+  return file.async('text')
 }
 
 /**
