@@ -21,6 +21,23 @@ function MagCarouselSkeleton() {
   )
 }
 
+function MisEnAvantSkeleton() {
+  return (
+    <div className="px-4 mt-4 space-y-3">
+      {[...Array(2)].map((_, i) => (
+        <div key={i} className="flex bg-white rounded-2xl overflow-hidden border border-gray-100 h-28">
+          <div className="w-28 flex-shrink-0 bg-gray-100 animate-pulse" />
+          <div className="flex-1 px-4 py-3 flex flex-col justify-center gap-2">
+            <div className="h-3 w-16 bg-gray-100 rounded-full animate-pulse" />
+            <div className="h-4 w-3/4 bg-gray-100 rounded-full animate-pulse" />
+            <div className="h-3 w-1/2 bg-gray-100 rounded-full animate-pulse" />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function AgendaSkeleton() {
   return (
     <div className="mt-6 px-4 space-y-3">
@@ -229,8 +246,8 @@ export default function HomePage() {
       {/* Instant — données chargées côté client */}
       <InfoBateauBanner />
 
-      {/* Streaming — pas de skeleton (section absente si vide) */}
-      <Suspense>
+      {/* Streaming — skeleton de cartes pendant le chargement */}
+      <Suspense fallback={<MisEnAvantSkeleton />}>
         <MisEnAvantSection />
       </Suspense>
 
