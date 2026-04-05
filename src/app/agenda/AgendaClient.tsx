@@ -223,39 +223,6 @@ function AgendaTab({
 
   return (
     <>
-      {/* Carousel À l'affiche — masqué si filtre actif */}
-      {!isFiltering && afficheCarousel.length > 0 && (
-        <div className="bg-white border-b border-gray-100 pt-4 pb-3">
-          <div className="flex items-center gap-2 mb-3 px-4">
-            <h2 className="text-base font-extrabold text-gray-900">À l'affiche</h2>
-            <div className="flex-1 h-px bg-gray-200" />
-          </div>
-          <div
-            className="flex items-start gap-3 overflow-x-auto pb-1 snap-x snap-mandatory px-4"
-            style={{ scrollbarWidth: 'none' }}
-          >
-            {afficheCarousel.map(post => (
-              <AfficheCard key={post.id} post={post} />
-            ))}
-            {/* 6e carte — Voir tout */}
-            <button
-              onClick={onViewAllAffiche}
-              className="flex-shrink-0 snap-start w-44 rounded-2xl overflow-hidden active:scale-[0.97] transition-transform"
-            >
-              <div
-                className="w-full aspect-square flex flex-col items-center justify-center gap-3 p-5 text-center"
-                style={{ background: 'linear-gradient(135deg,#1d4ed8,#1e3a8a)' }}
-              >
-                <p className="font-extrabold text-sm text-white leading-tight">
-                  Voir tous les événements à l'affiche
-                </p>
-                <span className="text-white/60 text-xl">→</span>
-              </div>
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Barre de recherche + filtres */}
       <div className="bg-white border-b border-gray-100 px-4 py-3">
         <div className="flex gap-2">
@@ -341,6 +308,39 @@ function AgendaTab({
               className="flex-1 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold"
             >
               Appliquer
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Carousel À l'affiche — masqué si recherche ou filtre actif */}
+      {!isFiltering && afficheCarousel.length > 0 && (
+        <div className="bg-white border-b border-gray-100 pt-4 pb-3">
+          <div className="flex items-center gap-2 mb-3 px-4">
+            <h2 className="text-base font-extrabold text-gray-900">À l'affiche</h2>
+            <div className="flex-1 h-px bg-gray-200" />
+          </div>
+          <div
+            className="flex items-start gap-3 overflow-x-auto pb-1 snap-x snap-mandatory px-4"
+            style={{ scrollbarWidth: 'none' }}
+          >
+            {afficheCarousel.map(post => (
+              <AfficheCard key={post.id} post={post} />
+            ))}
+            {/* 6e carte — Voir tout */}
+            <button
+              onClick={onViewAllAffiche}
+              className="flex-shrink-0 snap-start w-44 rounded-2xl overflow-hidden active:scale-[0.97] transition-transform"
+            >
+              <div
+                className="w-full aspect-square flex flex-col items-center justify-center gap-3 p-5 text-center"
+                style={{ background: 'linear-gradient(135deg,#1d4ed8,#1e3a8a)' }}
+              >
+                <p className="font-extrabold text-sm text-white leading-tight">
+                  Voir tous les événements à l'affiche
+                </p>
+                <span className="text-white/60 text-xl">→</span>
+              </div>
             </button>
           </div>
         </div>

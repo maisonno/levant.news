@@ -132,19 +132,29 @@ async function AgendaSection() {
   const { createClient } = await import('@/lib/supabase/server')
   const supabase = await createClient()
 
-  const [agendaRes, ongoingRes, afficheRes, futureExpoRes] = await Promise.allSettled([
+  const [agendaRes, agendaFutureRes, ongoingRes, afficheRes, futureExpoRes] = await Promise.allSettled([
 
-    // Agenda : tous les événements à venir (pas de limite de date),
-    // on limite à 25 résultats — le slice à 10 en consommera au max 10
+    // Agenda aujourd'hui + demain — sans limite (haute saison = beaucoup d'événements)
     supabase
       .from('posts')
       .select('*, categorie:categories(code, nom)')
       .eq('publie', true)
       .eq('dans_agenda', true)
       .gte('date_debut', today)
+      .lte('date_debut', tomorrow)
+      .order('date_debut', { ascending: true })
+      .order('ordre_dans_journee', { ascending: true, nullsFirst: false }),
+
+    // Agenda après-demain et au-delà — limité à 10 (on en affiche au max 10-N)
+    supabase
+      .from('posts')
+      .select('*, categorie:categories(code, nom)')
+      .eq('publie', true)
+      .eq('dans_agenda', true)
+      .gt('date_debut', tomorrow)
       .order('date_debut', { ascending: true })
       .order('ordre_dans_journee', { ascending: true, nullsFirst: false })
-      .limit(25),
+      .limit(10),
 
     // En ce moment : événements multi-jours déjà commencés
     supabase
@@ -175,10 +185,13 @@ async function AgendaSection() {
       .order('date_debut', { ascending: true }),
   ])
 
-  const rawAgenda     = agendaRes.status     === 'fulfilled' ? (agendaRes.value.data     ?? []) : []
-  const rawOngoing    = ongoingRes.status    === 'fulfilled' ? (ongoingRes.value.data    ?? []) : []
-  const rawAffiche    = afficheRes.status    === 'fulfilled' ? (afficheRes.value.data    ?? []) : []
-  const rawFutureExpo = futureExpoRes.status === 'fulfilled' ? (futureExpoRes.value.data ?? []) : []
+  // Aujourd'hui + demain (sans limite) + après-demain (limité 10)
+  const rawAgendaTD     = agendaRes.status        === 'fulfilled' ? (agendaRes.value.data        ?? []) : []
+  const rawAgendaFuture = agendaFutureRes.status  === 'fulfilled' ? (agendaFutureRes.value.data  ?? []) : []
+  const rawAgenda       = [...rawAgendaTD, ...rawAgendaFuture]
+  const rawOngoing      = ongoingRes.status       === 'fulfilled' ? (ongoingRes.value.data       ?? []) : []
+  const rawAffiche      = afficheRes.status       === 'fulfilled' ? (afficheRes.value.data       ?? []) : []
+  const rawFutureExpo   = futureExpoRes.status    === 'fulfilled' ? (futureExpoRes.value.data    ?? []) : []
 
   // Un seul fetch établissements pour toutes les sections
   const allRaw = [...rawAgenda, ...rawOngoing, ...rawAffiche, ...rawFutureExpo]
