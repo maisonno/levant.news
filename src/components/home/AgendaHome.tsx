@@ -1,7 +1,6 @@
 'use client'
 
 import { PostWithRelations } from '@/types/database'
-import PostCard from '@/components/PostCard'
 import PostCardList from '@/components/PostCardList'
 import Link from 'next/link'
 import { useEventSheet } from '@/contexts/EventSheetContext'
@@ -143,6 +142,22 @@ export default function AgendaHome({
               {aLaffiche.map(post => (
                 <CarouselCard key={post.id} post={post} accentColor="text-blue-600" />
               ))}
+              {/* 6e carte : lien vers la page complète */}
+              <Link
+                href="/agenda?tab=affiche"
+                className="flex-shrink-0 snap-start w-44 rounded-2xl overflow-hidden active:scale-[0.97] transition-transform"
+              >
+                <div
+                  className="w-full aspect-square flex flex-col items-center justify-center gap-3 p-5 text-center"
+                  style={{ background: 'linear-gradient(135deg,#1d4ed8,#1e3a8a)' }}
+                >
+                  <span className="text-5xl">🎬</span>
+                  <p className="font-extrabold text-sm text-white leading-tight">
+                    Voir tous les événements à l'affiche
+                  </p>
+                  <span className="text-white/60 text-xl">→</span>
+                </div>
+              </Link>
             </div>
           </section>
         )}

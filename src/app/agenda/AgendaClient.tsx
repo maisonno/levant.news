@@ -3,32 +3,42 @@
 import { useState, useMemo } from 'react'
 import { PostWithRelations } from '@/types/database'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import PostCard from '@/components/PostCard'
 import PostCardList from '@/components/PostCardList'
 import { useEventSheet } from '@/contexts/EventSheetContext'
 import PageHeader from '@/components/PageHeader'
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type TabId = 'agenda' | 'expositions' | 'affiche'
+
+const TABS: { id: TabId; label: string }[] = [
+  { id: 'agenda',       label: 'Agenda' },
+  { id: 'expositions',  label: 'Expositions' },
+  { id: 'affiche',      label: "À l'affiche" },
+]
+
 // ─── Utilitaires ──────────────────────────────────────────────────────────────
 
-function formatDateHeader(iso: string): { jour: string; date: string } {
-  const d = new Date(iso + 'T12:00:00')
-  const aujourd = new Date()
-  aujourd.setHours(0, 0, 0, 0)
-  const demain = new Date(aujourd)
-  demain.setDate(demain.getDate() + 1)
+function formatDateHeader(iso: string, today: string): { jour: string; date: string } {
+  const d        = new Date(iso + 'T12:00:00')
+  const todayD   = new Date(today + 'T00:00:00')
+  const demainD  = new Date(today + 'T00:00:00')
+  demainD.setDate(demainD.getDate() + 1)
   const target = new Date(iso + 'T00:00:00')
 
-  if (target.getTime() === aujourd.getTime()) return { jour: "Aujourd'hui", date: '' }
-  if (target.getTime() === demain.getTime()) return { jour: 'Demain', date: '' }
+  if (target.getTime() === todayD.getTime())  return { jour: "Aujourd'hui", date: '' }
+  if (target.getTime() === demainD.getTime()) return { jour: 'Demain',       date: '' }
 
   const jour = d.toLocaleDateString('fr-FR', { weekday: 'long' })
   const date = d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
   return { jour: jour.charAt(0).toUpperCase() + jour.slice(1), date }
 }
 
-function isMultiDay(post: PostWithRelations): boolean {
-  return !!post.date_fin && post.date_fin !== post.date_debut
+function formatCarouselDate(debut: string, fin: string | null): string {
+  const d = new Date(debut + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+  if (!fin || fin === debut) return d
+  const f = new Date(fin + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+  return `${d} › ${f}`
 }
 
 const CAT_COLORS: Record<string, string> = {
@@ -46,7 +56,17 @@ const CAT_COLORS: Record<string, string> = {
   CHANT:        'bg-rose-100 text-rose-700',
 }
 
-// ─── Composants ───────────────────────────────────────────────────────────────
+// ─── Composants partagés ──────────────────────────────────────────────────────
+
+function SectionDivider({ title, subtitle }: { title: string; subtitle?: string }) {
+  return (
+    <div className="flex items-center gap-2 mb-3">
+      <h2 className="text-base font-extrabold text-gray-900">{title}</h2>
+      {subtitle && <span className="text-sm text-gray-400">{subtitle}</span>}
+      <div className="flex-1 h-px bg-gray-200" />
+    </div>
+  )
+}
 
 function CategoryBadge({ code, nom }: { code: string; nom: string }) {
   return (
@@ -58,237 +78,97 @@ function CategoryBadge({ code, nom }: { code: string; nom: string }) {
   )
 }
 
-function EventCardFull({ post }: { post: PostWithRelations }) {
-  const isPhare = post.phare
+// ─── Carte carrousel À l'affiche ──────────────────────────────────────────────
 
+function AfficheCard({ post }: { post: PostWithRelations }) {
+  const { open } = useEventSheet()
   return (
-    <Link href={`/agenda/${post.id}`} className="block">
-      <div className={`rounded-2xl overflow-hidden bg-white shadow-sm ${
-        isPhare
-          ? 'ring-2 ring-amber-400 bg-amber-50'
-          : 'border border-gray-100'
-      }`}>
-        {/* Affiche */}
-        {post.affiche_url && (
-          <div className="relative h-40 bg-gray-100">
-            <img
-              src={post.affiche_url}
-              alt={post.titre}
-              className="w-full h-full object-cover"
-            />
-            {isPhare && (
-              <div className="absolute top-3 left-3 bg-amber-400 text-amber-900 text-[11px] font-black px-2.5 py-1 rounded-full">
-                ⭐ Phare
-              </div>
-            )}
-            <div
-              className="absolute inset-0"
-              style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 50%)' }}
-            />
+    <button
+      onClick={() => open(post)}
+      className="flex-shrink-0 snap-start w-44 rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100 text-left active:scale-[0.97] transition-transform"
+    >
+      <div className="w-full aspect-square bg-gray-100">
+        {post.affiche_url ? (
+          <img src={post.affiche_url} alt={post.titre} className="w-full h-full object-cover" />
+        ) : (
+          <div
+            className="w-full h-full flex items-center justify-center text-4xl"
+            style={{ background: 'linear-gradient(135deg,#1e3a8a,#3730a3)' }}
+          >
+            {post.phare ? '⭐' : '📅'}
           </div>
         )}
-
-        <div className={`p-4 ${isPhare && !post.affiche_url ? 'border-l-4 border-amber-400' : ''}`}>
-          {/* Header */}
-          <div className="flex items-center gap-2 mb-2 flex-wrap">
-            {post.categorie && (
-              <CategoryBadge code={post.categorie.code} nom={post.categorie.nom} />
-            )}
-            {isPhare && !post.affiche_url && (
-              <span className="text-[10px] font-black text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">
-                ⭐ Phare
-              </span>
-            )}
-            {isMultiDay(post) && (
-              <span className="text-[10px] font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                Plusieurs jours
-              </span>
-            )}
-          </div>
-
-          <h3 className="font-bold text-gray-900 text-base leading-snug">{post.titre}</h3>
-
-          <div className="flex items-center gap-x-4 gap-y-1 mt-2 flex-wrap text-sm text-gray-500">
-            {post.heure && (
-              <span className="flex items-center gap-1">
-                <span>🕐</span> {post.heure}
-              </span>
-            )}
-            {post.lieu && (
-              <span className="flex items-center gap-1">
-                <span>📍</span> {post.lieu.nom}
-              </span>
-            )}
-            {post.organisateur && post.lieu?.nom !== post.organisateur.nom && (
-              <span className="flex items-center gap-1 text-gray-400">
-                <span>🏪</span> {post.organisateur.nom}
-              </span>
-            )}
-          </div>
-
-          {post.complement && (
-            <p className="text-sm text-gray-500 mt-2 line-clamp-2 leading-relaxed">
-              {post.complement}
-            </p>
-          )}
-
-          {post.inscription && (
-            <div className="mt-3 flex items-center justify-between">
-              <span className="text-sm font-semibold text-blue-600">
-                Inscription requise
-              </span>
-              <span className="text-blue-600 text-sm">→</span>
-            </div>
-          )}
-        </div>
       </div>
-    </Link>
-  )
-}
-
-function EventCardCompact({ post }: { post: PostWithRelations }) {
-  return (
-    <Link href={`/agenda/${post.id}`} className="block">
-      <div className={`flex items-center gap-3 py-3 px-4 bg-white rounded-xl border ${
-        post.phare ? 'border-amber-300 bg-amber-50' : 'border-gray-100'
-      }`}>
-        {/* Heure */}
-        <div className="w-12 flex-shrink-0 text-center">
-          {post.heure ? (
-            <span className="text-xs font-bold text-gray-700">{post.heure}</span>
-          ) : (
-            <span className="text-lg">{post.phare ? '⭐' : '•'}</span>
-          )}
-        </div>
-
-        {/* Contenu */}
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-gray-900 text-sm truncate">{post.titre}</p>
-          <p className="text-xs text-gray-500 truncate">
-            {post.lieu?.nom ?? post.organisateur?.nom ?? ''}
-          </p>
-        </div>
-
-        {/* Badge catégorie */}
-        {post.categorie && (
-          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
-            CAT_COLORS[post.categorie.code] ?? 'bg-gray-100 text-gray-600'
-          }`}>
-            {post.categorie.nom}
+      <div className="p-3">
+        <p className="text-xs font-semibold text-blue-600 mb-1">
+          {formatCarouselDate(post.date_debut, post.date_fin ?? null)}
+        </p>
+        <p className="text-sm font-bold text-gray-900 leading-tight line-clamp-2">{post.titre}</p>
+        {post.phare && (
+          <span className="inline-block mt-1 text-[10px] font-black text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">
+            ⭐ Phare
           </span>
         )}
+        {post.lieu && !post.phare && (
+          <p className="text-xs text-gray-400 mt-1 truncate">{post.lieu.nom}</p>
+        )}
       </div>
-    </Link>
+    </button>
   )
 }
 
-function formatAfficheDate(debut: string, fin: string | null): string {
-  const d = new Date(debut + 'T12:00:00')
-  const dateDebut = d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
-  if (!fin || fin === debut) return dateDebut
-  const dateFin = new Date(fin + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
-  return `${dateDebut} › ${dateFin}`
+// ─── Carte carrousel Expositions ──────────────────────────────────────────────
+
+function ExpoCard({ post }: { post: PostWithRelations }) {
+  const { open } = useEventSheet()
+  return (
+    <button
+      onClick={() => open(post)}
+      className="flex-shrink-0 snap-start w-44 rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100 text-left active:scale-[0.97] transition-transform"
+    >
+      <div className="w-full aspect-square bg-amber-50">
+        {post.affiche_url ? (
+          <img src={post.affiche_url} alt={post.titre} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-4xl">🖼️</div>
+        )}
+      </div>
+      <div className="p-3">
+        <p className="text-xs font-semibold text-amber-600 mb-1">
+          {formatCarouselDate(post.date_debut, post.date_fin ?? null)}
+        </p>
+        <p className="text-sm font-bold text-gray-900 leading-tight line-clamp-2">{post.titre}</p>
+        {post.lieu && <p className="text-xs text-gray-400 mt-1 truncate">{post.lieu.nom}</p>}
+      </div>
+    </button>
+  )
 }
 
-function AfficheCarousel({ posts }: { posts: PostWithRelations[] }) {
-  const { open } = useEventSheet()
-  if (posts.length === 0) return null
-
+function HorizontalCarousel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mb-2">
-      <div className="px-4 mb-3">
-        <h2 className="text-base font-extrabold text-gray-900">À l'affiche</h2>
-      </div>
-      <div
-        className="flex items-start gap-3 overflow-x-auto px-4 pb-2 snap-x snap-mandatory"
-        style={{ scrollbarWidth: 'none' }}
-      >
-        {posts.map(post => (
-          <button
-            key={post.id}
-            onClick={() => open(post)}
-            className="flex-shrink-0 snap-start w-44 rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100 text-left active:scale-[0.97] transition-transform"
-          >
-            <div className="w-full aspect-square bg-gray-100">
-              {post.affiche_url ? (
-                <img src={post.affiche_url} alt={post.titre} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full" style={{ background: 'linear-gradient(135deg,#1e3a8a,#3730a3)' }} />
-              )}
-            </div>
-            <div className="p-3">
-              <p className="text-xs font-semibold text-blue-600 mb-1">
-                {formatAfficheDate(post.date_debut, post.date_fin)}
-              </p>
-              <p className="text-sm font-bold text-gray-900 leading-tight line-clamp-2">
-                {post.titre}
-              </p>
-            </div>
-          </button>
-        ))}
-      </div>
+    <div
+      className="flex items-start gap-3 overflow-x-auto pb-2 snap-x snap-mandatory"
+      style={{ scrollbarWidth: 'none' }}
+    >
+      {children}
     </div>
   )
 }
 
-function ExpoCarousel({ posts }: { posts: PostWithRelations[] }) {
-  const { open } = useEventSheet()
-  if (posts.length === 0) return null
+// ─── Onglet Agenda ────────────────────────────────────────────────────────────
 
-  return (
-    <div className="mb-2">
-      <div className="flex items-center gap-2 mb-3">
-        <h2 className="text-base font-extrabold text-gray-900">Expositions</h2>
-        <div className="flex-1 h-px bg-gray-200" />
-      </div>
-      <div
-        className="flex items-start gap-3 overflow-x-auto pb-2 snap-x snap-mandatory"
-        style={{ scrollbarWidth: 'none' }}
-      >
-        {posts.map(post => (
-          <button
-            key={post.id}
-            onClick={() => open(post)}
-            className="flex-shrink-0 snap-start w-44 rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100 text-left active:scale-[0.97] transition-transform"
-          >
-            <div className="w-full aspect-square bg-amber-50">
-              {post.affiche_url ? (
-                <img src={post.affiche_url} alt={post.titre} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-4xl">🖼️</div>
-              )}
-            </div>
-            <div className="p-3">
-              <p className="text-xs font-semibold text-amber-600 mb-1">
-                {formatAfficheDate(post.date_debut, post.date_fin ?? null)}
-              </p>
-              <p className="text-sm font-bold text-gray-900 leading-tight line-clamp-2">{post.titre}</p>
-              {post.lieu && <p className="text-xs text-gray-400 mt-1 truncate">{post.lieu.nom}</p>}
-            </div>
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// ─── Composant principal ──────────────────────────────────────────────────────
-
-interface Props {
+function AgendaTab({
+  posts,
+  today,
+}: {
   posts: PostWithRelations[]
-  aLaffiche: PostWithRelations[]
-  expos: PostWithRelations[]
   today: string
-}
-
-export default function AgendaClient({ posts, aLaffiche, expos, today }: Props) {
-  const router  = useRouter()
+}) {
   const [search,      setSearch]      = useState('')
   const [filterDate,  setFilterDate]  = useState('')
   const [filterCats,  setFilterCats]  = useState<Set<string>>(new Set())
   const [showFilters, setShowFilters] = useState(false)
 
-  // Catégories disponibles (extraites des posts)
   const availableCats = useMemo(() => {
     const map = new Map<string, string>()
     for (const p of posts) {
@@ -300,9 +180,7 @@ export default function AgendaClient({ posts, aLaffiche, expos, today }: Props) 
   }, [posts])
 
   const hasActiveFilters = filterDate !== '' || filterCats.size > 0
-
   const resetFilters = () => { setFilterDate(''); setFilterCats(new Set()) }
-
   const toggleCat = (code: string) => {
     setFilterCats(prev => {
       const next = new Set(prev)
@@ -311,7 +189,6 @@ export default function AgendaClient({ posts, aLaffiche, expos, today }: Props) 
     })
   }
 
-  // Filtrage : recherche + date + catégories
   const filtered = useMemo(() => {
     let result = posts
     if (search.trim()) {
@@ -323,37 +200,26 @@ export default function AgendaClient({ posts, aLaffiche, expos, today }: Props) 
         p.categorie?.nom.toLowerCase().includes(q)
       )
     }
-    if (filterDate) {
-      result = result.filter(p => p.date_debut >= filterDate)
-    }
-    if (filterCats.size > 0) {
-      result = result.filter(p => p.categorie && filterCats.has(p.categorie.code))
-    }
+    if (filterDate) result = result.filter(p => p.date_debut >= filterDate)
+    if (filterCats.size > 0) result = result.filter(p => p.categorie && filterCats.has(p.categorie.code))
     return result
   }, [posts, search, filterDate, filterCats])
 
-  // Grouper par date
   const grouped = useMemo(() => {
     const map = new Map<string, PostWithRelations[]>()
     for (const post of filtered) {
-      const key = post.date_debut
-      if (!map.has(key)) map.set(key, [])
-      map.get(key)!.push(post)
+      if (!map.has(post.date_debut)) map.set(post.date_debut, [])
+      map.get(post.date_debut)!.push(post)
     }
     return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b))
   }, [filtered])
 
   const isFiltering = search.trim() !== '' || hasActiveFilters
-  const todayPosts = filtered.filter(p => p.date_debut <= today && (!p.date_fin || p.date_fin >= today))
-  const todayKey = today
+  const todayPosts  = filtered.filter(p => p.date_debut <= today && (!p.date_fin || p.date_fin >= today))
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <PageHeader photo="/images/header-agenda.jpg">
-        <h1 className="text-xl font-extrabold text-white tracking-tight">Agenda</h1>
-      </PageHeader>
-
-      {/* Barre de recherche + filtres (sous le header, non-sticky) */}
+    <>
+      {/* Barre de recherche + filtres */}
       <div className="bg-white border-b border-gray-100 px-4 py-3">
         <div className="flex gap-2">
           <div className="relative flex-1">
@@ -389,11 +255,9 @@ export default function AgendaClient({ posts, aLaffiche, expos, today }: Props) 
         </div>
       </div>
 
-      {/* Panneau de filtres avancés */}
+      {/* Filtres avancés */}
       {showFilters && (
         <div className="bg-white border-b border-gray-200 px-4 py-4 space-y-4">
-
-          {/* Date de début */}
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
               À partir du
@@ -406,8 +270,6 @@ export default function AgendaClient({ posts, aLaffiche, expos, today }: Props) 
               className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-800 outline-none"
             />
           </div>
-
-          {/* Catégories */}
           {availableCats.length > 0 && (
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
@@ -430,8 +292,6 @@ export default function AgendaClient({ posts, aLaffiche, expos, today }: Props) 
               </div>
             </div>
           )}
-
-          {/* Actions */}
           <div className="flex gap-2 pt-1">
             <button
               onClick={resetFilters}
@@ -450,10 +310,6 @@ export default function AgendaClient({ posts, aLaffiche, expos, today }: Props) 
       )}
 
       <div className="px-4 py-4 space-y-6">
-        {/* À l'affiche (si pas de filtre actif) */}
-        {!isFiltering && <AfficheCarousel posts={aLaffiche} />}
-
-        {/* Résultats vides */}
         {filtered.length === 0 && (
           <div className="text-center py-12">
             <p className="text-4xl mb-3">🔍</p>
@@ -471,36 +327,25 @@ export default function AgendaClient({ posts, aLaffiche, expos, today }: Props) 
         {/* Aujourd'hui */}
         {!filterDate && todayPosts.length > 0 && (
           <section>
-            <div className="flex items-center gap-2 mb-3">
-              <h2 className="text-base font-extrabold text-gray-900">Aujourd'hui</h2>
-              <span className="text-sm text-gray-400">
-                {new Date(today + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
-              </span>
-              <div className="flex-1 h-px bg-gray-200" />
-            </div>
+            <SectionDivider
+              title="Aujourd'hui"
+              subtitle={new Date(today + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
+            />
             <PostCardList posts={todayPosts} />
           </section>
         )}
 
-        {/* Expositions (carrousel, hors filtre actif) */}
-        {!isFiltering && <ExpoCarousel posts={expos} />}
-
         {/* Jours suivants */}
-        {(isFiltering ? grouped : grouped.filter(([d]) => d > todayKey)).map(([date, datePosts]) => {
-          const { jour, date: dateStr } = formatDateHeader(date)
+        {(isFiltering ? grouped : grouped.filter(([d]) => d > today)).map(([date, datePosts]) => {
+          const { jour, date: dateStr } = formatDateHeader(date, today)
           return (
             <section key={date}>
-              <div className="flex items-center gap-2 mb-3">
-                <h2 className="text-base font-extrabold text-gray-900">{jour}</h2>
-                {dateStr && <span className="text-sm text-gray-400">{dateStr}</span>}
-                <div className="flex-1 h-px bg-gray-200" />
-              </div>
+              <SectionDivider title={jour} subtitle={dateStr || undefined} />
               <PostCardList posts={datePosts} />
             </section>
           )
         })}
 
-        {/* Fin de liste */}
         {grouped.length > 0 && (
           <div className="text-center py-8 pb-safe">
             <p className="text-2xl mb-1">⚓</p>
@@ -508,6 +353,142 @@ export default function AgendaClient({ posts, aLaffiche, expos, today }: Props) 
           </div>
         )}
       </div>
+    </>
+  )
+}
+
+// ─── Onglet Expositions ───────────────────────────────────────────────────────
+
+function ExpositionsTab({ expos, today }: { expos: PostWithRelations[]; today: string }) {
+  const enCours = expos.filter(p => p.date_debut < today)
+  const aVenir  = expos.filter(p => p.date_debut >= today)
+
+  if (expos.length === 0) {
+    return (
+      <div className="px-4 py-16 text-center">
+        <p className="text-4xl mb-3">🖼️</p>
+        <p className="text-gray-500 font-medium">Aucune exposition en ce moment</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="px-4 py-4 space-y-6">
+
+      {enCours.length > 0 && (
+        <section>
+          <SectionDivider title="En ce moment" />
+          <HorizontalCarousel>
+            {enCours.map(post => <ExpoCard key={post.id} post={post} />)}
+          </HorizontalCarousel>
+        </section>
+      )}
+
+      {aVenir.length > 0 && (
+        <section>
+          <SectionDivider title="À venir" />
+          <HorizontalCarousel>
+            {aVenir.map(post => <ExpoCard key={post.id} post={post} />)}
+          </HorizontalCarousel>
+        </section>
+      )}
+
+      <div className="text-center py-8 pb-safe">
+        <p className="text-2xl mb-1">🖼️</p>
+        <p className="text-gray-300 text-xs">Fin des expositions</p>
+      </div>
+    </div>
+  )
+}
+
+// ─── Onglet À l'affiche ───────────────────────────────────────────────────────
+
+function AfficheTab({ posts, today }: { posts: PostWithRelations[]; today: string }) {
+  // Grouper par date_debut
+  const grouped = useMemo(() => {
+    const map = new Map<string, PostWithRelations[]>()
+    for (const post of posts) {
+      if (!map.has(post.date_debut)) map.set(post.date_debut, [])
+      map.get(post.date_debut)!.push(post)
+    }
+    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b))
+  }, [posts])
+
+  if (posts.length === 0) {
+    return (
+      <div className="px-4 py-16 text-center">
+        <p className="text-4xl mb-3">🎬</p>
+        <p className="text-gray-500 font-medium">Aucun événement à l'affiche</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="px-4 py-4 space-y-6">
+      {grouped.map(([date, datePosts]) => {
+        const { jour, date: dateStr } = formatDateHeader(date, today)
+        return (
+          <section key={date}>
+            <SectionDivider title={jour} subtitle={dateStr || undefined} />
+            <HorizontalCarousel>
+              {datePosts.map(post => <AfficheCard key={post.id} post={post} />)}
+            </HorizontalCarousel>
+          </section>
+        )
+      })}
+
+      <div className="text-center py-8 pb-safe">
+        <p className="text-2xl mb-1">🎬</p>
+        <p className="text-gray-300 text-xs">Fin des événements à l'affiche</p>
+      </div>
+    </div>
+  )
+}
+
+// ─── Composant principal ──────────────────────────────────────────────────────
+
+interface Props {
+  posts:       PostWithRelations[]
+  afficheTab:  PostWithRelations[]
+  expos:       PostWithRelations[]
+  today:       string
+  initialTab?: TabId
+}
+
+export default function AgendaClient({ posts, afficheTab, expos, today, initialTab = 'agenda' }: Props) {
+  const [activeTab, setActiveTab] = useState<TabId>(initialTab)
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+
+      <PageHeader photo="/images/header-agenda.jpg">
+        <h1 className="text-xl font-extrabold text-white tracking-tight">Agenda</h1>
+      </PageHeader>
+
+      {/* Barre d'onglets — sticky */}
+      <div className="sticky top-0 z-20 bg-white border-b border-gray-100 shadow-sm">
+        <div className="flex">
+          {TABS.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 py-3.5 text-sm font-bold transition-colors ${
+                activeTab === tab.id
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-500'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Contenu des onglets */}
+      {activeTab === 'agenda'      && <AgendaTab      posts={posts}      today={today} />}
+      {activeTab === 'expositions' && <ExpositionsTab expos={expos}      today={today} />}
+      {activeTab === 'affiche'     && <AfficheTab     posts={afficheTab} today={today} />}
+
     </div>
   )
 }

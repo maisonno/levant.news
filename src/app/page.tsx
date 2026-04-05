@@ -92,6 +92,22 @@ async function MagCarouselSection() {
 
 // ─── Section : Agenda ─────────────────────────────────────────────────────────
 
+/**
+ * Shuffle pondéré : plus la date est proche, plus la probabilité de passer
+ * en tête est élevée. Algorithme : priority = -ln(U) / weight, sort asc.
+ */
+function weightedShuffle(posts: PostWithRelations[], todayStr: string): PostWithRelations[] {
+  const todayMs = new Date(todayStr + 'T12:00:00').getTime()
+  const scored = posts.map(post => {
+    const daysUntil = Math.max(0, (new Date(post.date_debut + 'T12:00:00').getTime() - todayMs) / 86400000)
+    const weight    = 1 / (daysUntil + 1)
+    const priority  = -Math.log(Math.max(Math.random(), 1e-9)) / weight
+    return { post, priority }
+  })
+  scored.sort((a, b) => a.priority - b.priority)
+  return scored.map(s => s.post)
+}
+
 async function AgendaSection() {
   const today    = new Date().toISOString().split('T')[0]
   const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0]
@@ -123,7 +139,7 @@ async function AgendaSection() {
       .gte('date_fin', today)
       .order('date_debut', { ascending: true }),
 
-    // À l'affiche
+    // À l'affiche : trié par date_debut ASC pour avoir le prochain event par org
     supabase
       .from('posts')
       .select('*, categorie:categories(code, nom)')
@@ -156,18 +172,14 @@ async function AgendaSection() {
   const afficheEnriched = rawAffiche.map((p: any)    => enrich(p, etabMap))
   const futureEnriched  = rawFutureExpo.map((p: any) => enrich(p, etabMap))
 
-  // À l'affiche : 1 par organisateur, ordre aléatoire, max 10
+  // À l'affiche : 1 post le plus tôt à venir par organisateur (date_debut ASC déjà trié),
+  // shuffle pondéré par proximité de date, max 5
   const byOrg = new Map<string, PostWithRelations>()
   for (const post of afficheEnriched) {
     const key = post.organisateur_id ?? `__solo_${post.id}`
     if (!byOrg.has(key)) byOrg.set(key, post)
   }
-  const deduped = Array.from(byOrg.values())
-  for (let i = deduped.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [deduped[i], deduped[j]] = [deduped[j], deduped[i]]
-  }
-  const aLaffiche = deduped.slice(0, 10)
+  const aLaffiche = weightedShuffle(Array.from(byOrg.values()), today).slice(0, 5)
 
   // Séparer EXPO du reste
   const agendaNonExpo  = agendaEnriched.filter( (p: PostWithRelations) => p.categorie?.code !== 'EXPO')
@@ -178,6 +190,10 @@ async function AgendaSection() {
   const demainPosts = agendaNonExpo.filter(p => p.date_debut === tomorrow)
   const autresPosts = agendaNonExpo.filter(p => p.date_debut > tomorrow)
   const enCeMoment  = ongoingNonExpo
+
+  // Autres jours : limiter à (10 - N) événements supplémentaires
+  const N = todayPosts.length + demainPosts.length
+  const autresLimites = autresPosts.slice(0, Math.max(0, 10 - N))
 
   // Expos : en cours + futures, dédupliquées
   const futureExpos = futureEnriched.filter((p: PostWithRelations) => p.categorie?.code === 'EXPO')
@@ -191,7 +207,7 @@ async function AgendaSection() {
       enCeMoment={enCeMoment}
       aLaffiche={aLaffiche}
       demainPosts={demainPosts}
-      autresPosts={autresPosts}
+      autresPosts={autresLimites}
       expos={expos}
       today={today}
       tomorrow={tomorrow}

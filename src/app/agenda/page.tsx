@@ -4,18 +4,28 @@ import { PostWithRelations } from '@/types/database'
 
 export const revalidate = 60
 
-export default async function AgendaPage() {
+export default async function AgendaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>
+}) {
   const supabase = await createClient()
-  const today = new Date().toISOString().split('T')[0]
+  const today    = new Date().toISOString().split('T')[0]
+  const params   = await searchParams
+  const initialTab = (['agenda', 'expositions', 'affiche'] as const).includes(
+    params?.tab as any
+  )
+    ? (params.tab as 'agenda' | 'expositions' | 'affiche')
+    : 'agenda'
 
-  let posts:     PostWithRelations[] = []
-  let aLaffiche: PostWithRelations[] = []
-  let expos:     PostWithRelations[] = []
+  let posts:      PostWithRelations[] = []
+  let afficheTab: PostWithRelations[] = []
+  let expos:      PostWithRelations[] = []
 
   try {
     const [postsRes, afficheRes, ongoingExpoRes] = await Promise.allSettled([
 
-      // Liste complète de l'agenda (toutes catégories, on filtrera côté JS)
+      // Liste complète de l'agenda (hors EXPO, on filtrera côté JS)
       supabase
         .from('posts')
         .select('*, categorie:categories(code, nom)')
@@ -25,14 +35,15 @@ export default async function AgendaPage() {
         .order('date_debut', { ascending: true })
         .order('ordre_dans_journee', { ascending: true, nullsFirst: false }),
 
-      // À l'affiche
+      // Onglet À l'affiche : tous les posts a_laffiche OU phare, à venir
       supabase
         .from('posts')
         .select('*, categorie:categories(code, nom)')
         .eq('publie', true)
-        .eq('a_laffiche', true)
+        .or('a_laffiche.eq.true,phare.eq.true')
         .or(`date_fin.gte.${today},and(date_fin.is.null,date_debut.gte.${today})`)
-        .order('date_debut', { ascending: true }),
+        .order('date_debut', { ascending: true })
+        .order('ordre_dans_journee', { ascending: true, nullsFirst: false }),
 
       // Expos en cours (démarrées avant aujourd'hui, pas encore terminées)
       supabase
@@ -50,8 +61,8 @@ export default async function AgendaPage() {
     const rawOngoingExpo = ongoingExpoRes.status === 'fulfilled' ? (ongoingExpoRes.value.data ?? []) : []
 
     // Fetch tous les établissements en une seule requête
-    const allRaw = [...rawPosts, ...rawAffiche, ...rawOngoingExpo]
-    const etabIds = [...new Set(allRaw.flatMap((p: any) => [p.organisateur_id, p.lieu_id].filter(Boolean)))]
+    const allRaw   = [...rawPosts, ...rawAffiche, ...rawOngoingExpo]
+    const etabIds  = [...new Set(allRaw.flatMap((p: any) => [p.organisateur_id, p.lieu_id].filter(Boolean)))]
 
     let etabMap: Record<string, any> = {}
     if (etabIds.length > 0) {
@@ -68,30 +79,23 @@ export default async function AgendaPage() {
       lieu:         p.lieu_id         ? etabMap[p.lieu_id]         ?? null : null,
     })
 
-    // Séparer EXPO du fil principal
+    // Agenda (hors EXPO)
     const allPosts = rawPosts.map(enrich)
     posts = allPosts.filter((p: PostWithRelations) => p.categorie?.code !== 'EXPO')
 
-    // Expos : en cours + à venir (dédoublonnées par id)
+    // Onglet À l'affiche : a_laffiche + phare, dédoublonnés par id
+    const afficheMap = new Map<string, PostWithRelations>()
+    for (const p of rawAffiche.map(enrich)) afficheMap.set(p.id, p)
+    afficheTab = Array.from(afficheMap.values()).sort((a, b) =>
+      a.date_debut.localeCompare(b.date_debut)
+    )
+
+    // Onglet Expositions : en cours + à venir, dédoublonnés
     const upcomingExpos = allPosts.filter((p: PostWithRelations) => p.categorie?.code === 'EXPO')
     const ongoingExpos  = rawOngoingExpo.map(enrich).filter((p: PostWithRelations) => p.categorie?.code === 'EXPO')
     const expoMap = new Map<string, PostWithRelations>()
     for (const p of [...ongoingExpos, ...upcomingExpos]) expoMap.set(p.id, p)
     expos = Array.from(expoMap.values()).sort((a, b) => a.date_debut.localeCompare(b.date_debut))
-
-    // À l'affiche : 1 par organisateur, shuffle, max 10
-    const afficheEnriched = rawAffiche.map(enrich)
-    const byOrg = new Map<string, PostWithRelations>()
-    for (const post of afficheEnriched) {
-      const key = post.organisateur_id ?? `__solo_${post.id}`
-      if (!byOrg.has(key)) byOrg.set(key, post)
-    }
-    const deduped = Array.from(byOrg.values())
-    for (let i = deduped.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [deduped[i], deduped[j]] = [deduped[j], deduped[i]]
-    }
-    aLaffiche = deduped.slice(0, 10)
 
   } catch (err) {
     console.error('Erreur agenda:', err)
@@ -100,9 +104,10 @@ export default async function AgendaPage() {
   return (
     <AgendaClient
       posts={posts}
-      aLaffiche={aLaffiche}
+      afficheTab={afficheTab}
       expos={expos}
       today={today}
+      initialTab={initialTab}
     />
   )
 }
