@@ -249,6 +249,9 @@ export default function HomePage() {
       {/* Instant — données chargées côté client */}
       <InfoBateauBanner />
 
+      {/* Instant — chaque tuile charge ses données côté client */}
+      <QuickTiles />
+
       {/* Streaming — skeleton de cartes pendant le chargement */}
       <Suspense fallback={<MisEnAvantSkeleton />}>
         <MisEnAvantSection />
@@ -258,9 +261,6 @@ export default function HomePage() {
       <Suspense>
         <MagCarouselSection />
       </Suspense>
-
-      {/* Instant — chaque tuile charge ses données côté client */}
-      <QuickTiles />
 
       {/* Streaming — skeleton de cartes pendant le chargement */}
       <Suspense fallback={<AgendaSkeleton />}>

@@ -15,7 +15,7 @@ const WMO_EMOJI: Record<number, string> = {
 }
 
 export default function MeteoTile() {
-  const [emoji, setEmoji] = useState('☀️')
+  const [emoji, setEmoji] = useState<string | null>(null)
   const [temp,  setTemp]  = useState<number | null>(null)
 
   useEffect(() => {
@@ -27,34 +27,25 @@ export default function MeteoTile() {
         const codes = json.wind?.hourly?.weather_code as number[]
         const temps = json.wind?.hourly?.temperature_2m as number[]
         if (!times || !codes || !temps) return
-
         const now = new Date()
         const idx = times.findIndex((t: string) => new Date(t) >= now)
         const i   = idx >= 0 ? idx : 0
-
         setEmoji(WMO_EMOJI[codes[i]] ?? '🌡️')
         setTemp(Math.round(temps[i]))
       })
-      .catch(() => {/* silent fail, garde les valeurs par défaut */})
+      .catch(() => {})
   }, [])
 
   return (
-    <Link
-      href="/meteo"
-      className="relative bg-gradient-to-br from-sky-400 to-blue-600 rounded-2xl p-3 text-white overflow-hidden"
-    >
-      <div className="text-2xl mb-1">{emoji}</div>
-      <p className="font-bold text-xs leading-tight">Météo</p>
-      {temp !== null
-        ? <p className="text-white font-extrabold text-xl mt-0.5 leading-none">{temp}°C</p>
-        : <p className="text-white/70 text-[10px] mt-0.5">Levant</p>
-      }
-
-      {/* Glow décoratif */}
-      <div
-        className="absolute -bottom-4 -right-4 w-20 h-20 rounded-full opacity-20"
-        style={{ background: 'rgba(255,255,255,0.5)', filter: 'blur(15px)' }}
-      />
+    <Link href="/meteo" className="bg-slate-800 rounded-2xl p-3 text-white active:scale-[0.97] transition-transform">
+      <p className="text-sm font-bold leading-tight mb-1.5">Météo</p>
+      <div className="flex items-center gap-1.5">
+        {emoji && <span className="text-lg leading-none">{emoji}</span>}
+        {temp !== null
+          ? <span className="font-extrabold text-lg leading-none">{temp}°</span>
+          : <span className="text-white/50 text-xs">Levant</span>
+        }
+      </div>
     </Link>
   )
 }
