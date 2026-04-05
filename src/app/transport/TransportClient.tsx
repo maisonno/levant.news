@@ -282,7 +282,7 @@ function BateauxTab() {
 
 interface BusDeparture {
   time: string
-  headsign: string
+  destination: string // prochain arrêt pertinent sur la ligne
 }
 
 interface BusStop {
@@ -317,6 +317,25 @@ const LIGNES: { id: string; label: string; description: string }[] = [
 function formatBusTime(t: string): string {
   const [h, m] = t.split(':')
   return `${parseInt(h, 10)}h${m}`
+}
+
+/** Normalise un nom d'arrêt en label lisible */
+const STOP_LABELS: Array<{ pattern: string; label: string }> = [
+  // Plus spécifiques en premier
+  { pattern: 'aeroport promenade',    label: 'Aéroport — Promenade'           },
+  { pattern: 'square des heros',      label: 'Le Lavandou (Square des Héros)' },
+  { pattern: 'gare routiere',         label: 'Gare Routière de Toulon'        },
+  { pattern: 'aeroport',             label: 'Aéroport Hyères-Toulon'         },
+  { pattern: 'gare (hy',             label: 'Gare de Hyères'                 },
+  { pattern: 'port la gavine',        label: 'Port La Gavine'                 },
+]
+
+function stopLabel(name: string): string {
+  const n = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  for (const { pattern, label } of STOP_LABELS) {
+    if (n.includes(pattern)) return label
+  }
+  return name
 }
 
 function BusTab() {
@@ -406,7 +425,7 @@ function BusTab() {
             {/* En-tête arrêt */}
             <div className="px-4 py-3 border-b border-gray-50 bg-gray-50/80">
               <p className="text-xs font-bold uppercase tracking-widest text-gray-500">
-                🚏 Départ de {stop.stop_name}
+                🚏 Départ de {stopLabel(stop.stop_name)}
               </p>
             </div>
 
@@ -417,9 +436,9 @@ function BusTab() {
                   <span className="text-base font-extrabold text-gray-900 w-14 flex-shrink-0">
                     {formatBusTime(dep.time)}
                   </span>
-                  {dep.headsign && (
+                  {dep.destination && (
                     <span className="text-sm text-gray-500 truncate">
-                      → {dep.headsign}
+                      → {stopLabel(dep.destination)}
                     </span>
                   )}
                 </div>
