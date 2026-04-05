@@ -21,8 +21,9 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 export interface NetworkConfig {
   reseau: 'mistral' | 'zou'
   url: string
-  lignes: string[]          // route_short_name dans le GTFS
-  stopPatterns: string[]    // sous-chaînes (normalisées) des noms d'arrêts à conserver
+  lignes: string[]            // route_short_name dans le GTFS
+  stopPatterns: string[]      // sous-chaînes (normalisées) des noms d'arrêts à conserver
+  excludePatterns?: string[]  // sous-chaînes à EXCLURE (prioritaire sur stopPatterns)
 }
 
 export const BUS_NETWORKS: NetworkConfig[] = [
@@ -31,9 +32,8 @@ export const BUS_NETWORKS: NetworkConfig[] = [
     url: 'https://s3.eu-west-1.amazonaws.com/files.orchestra.ratpdev.com/networks/rd-toulon/exports/gtfs-complet.zip',
     lignes: ['67'],
     stopPatterns: [
-      'lavandou',
-      'gavine',
-      'hyeres',   // captures "Hyères", "Gare de Hyères", etc.
+      'la gavine',  // "Port La Gavine"
+      'gare (hy',   // "Gare (Hyères)" — assez spécifique pour éviter les autres stops Hyères
     ],
   },
   {
@@ -43,10 +43,13 @@ export const BUS_NETWORKS: NetworkConfig[] = [
     url: 'https://www.datasud.fr/fr/dataset/datasets/3745/resource/5016/download/',
     lignes: ['878'],
     stopPatterns: [
-      'des heros',  // "Square des Héros" (Le Lavandou) — plus spécifique que "square"
-      'lavandou',
-      'aeroport',   // "Aéroport Hyères"
-      'toulon',     // endpoints côté Toulon
+      'des heros',      // "Square des Heros Le Lavandou"
+      'aeroport',       // "Aéroport Hyères"
+      'gare routiere',  // "Gare Routière" (terminus Toulon)
+    ],
+    excludePatterns: [
+      'le lavandou',    // exclut "Gare Routiere Le Lavandou"
+      'saint-tropez',   // exclut "Gare Routiere Saint-Tropez"
     ],
   },
 ]
@@ -233,9 +236,12 @@ export async function importNetwork(
 
   // 5. Arrêts pertinents (par pattern normalisé dans stop_name)
   const normalizedPatterns = config.stopPatterns.map(normalize)
-  const relevantStops = stops.filter(s =>
-    normalizedPatterns.some(p => normalize(s.stop_name).includes(p))
-  )
+  const excludePatterns    = (config.excludePatterns ?? []).map(normalize)
+  const relevantStops = stops.filter(s => {
+    const n = normalize(s.stop_name)
+    if (excludePatterns.some(p => n.includes(p))) return false
+    return normalizedPatterns.some(p => n.includes(p))
+  })
   const relevantStopIds  = new Set(relevantStops.map(s => s.stop_id))
   const stopNameById     = new Map(relevantStops.map(s => [s.stop_id, s.stop_name]))
   const stopsFound       = relevantStops.map(s => s.stop_name)
