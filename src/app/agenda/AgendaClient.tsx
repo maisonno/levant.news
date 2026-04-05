@@ -160,9 +160,13 @@ function HorizontalCarousel({ children }: { children: React.ReactNode }) {
 function AgendaTab({
   posts,
   today,
+  afficheCarousel,
+  onViewAllAffiche,
 }: {
-  posts: PostWithRelations[]
-  today: string
+  posts:            PostWithRelations[]
+  today:            string
+  afficheCarousel:  PostWithRelations[]
+  onViewAllAffiche: () => void
 }) {
   const [search,      setSearch]      = useState('')
   const [filterDate,  setFilterDate]  = useState('')
@@ -219,6 +223,39 @@ function AgendaTab({
 
   return (
     <>
+      {/* Carousel À l'affiche — masqué si filtre actif */}
+      {!isFiltering && afficheCarousel.length > 0 && (
+        <div className="bg-white border-b border-gray-100 pt-4 pb-3">
+          <div className="flex items-center gap-2 mb-3 px-4">
+            <h2 className="text-base font-extrabold text-gray-900">À l'affiche</h2>
+            <div className="flex-1 h-px bg-gray-200" />
+          </div>
+          <div
+            className="flex items-start gap-3 overflow-x-auto pb-1 snap-x snap-mandatory px-4"
+            style={{ scrollbarWidth: 'none' }}
+          >
+            {afficheCarousel.map(post => (
+              <AfficheCard key={post.id} post={post} />
+            ))}
+            {/* 6e carte — Voir tout */}
+            <button
+              onClick={onViewAllAffiche}
+              className="flex-shrink-0 snap-start w-44 rounded-2xl overflow-hidden active:scale-[0.97] transition-transform"
+            >
+              <div
+                className="w-full aspect-square flex flex-col items-center justify-center gap-3 p-5 text-center"
+                style={{ background: 'linear-gradient(135deg,#1d4ed8,#1e3a8a)' }}
+              >
+                <p className="font-extrabold text-sm text-white leading-tight">
+                  Voir tous les événements à l'affiche
+                </p>
+                <span className="text-white/60 text-xl">→</span>
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Barre de recherche + filtres */}
       <div className="bg-white border-b border-gray-100 px-4 py-3">
         <div className="flex gap-2">
@@ -442,14 +479,15 @@ function AfficheTab({ posts, today }: { posts: PostWithRelations[]; today: strin
 // ─── Composant principal ──────────────────────────────────────────────────────
 
 interface Props {
-  posts:       PostWithRelations[]
-  afficheTab:  PostWithRelations[]
-  expos:       PostWithRelations[]
-  today:       string
-  initialTab?: TabId
+  posts:            PostWithRelations[]
+  afficheCarousel:  PostWithRelations[]
+  afficheTab:       PostWithRelations[]
+  expos:            PostWithRelations[]
+  today:            string
+  initialTab?:      TabId
 }
 
-export default function AgendaClient({ posts, afficheTab, expos, today, initialTab = 'agenda' }: Props) {
+export default function AgendaClient({ posts, afficheCarousel, afficheTab, expos, today, initialTab = 'agenda' }: Props) {
   const [activeTab, setActiveTab] = useState<TabId>(initialTab)
 
   return (
@@ -479,7 +517,7 @@ export default function AgendaClient({ posts, afficheTab, expos, today, initialT
       </div>
 
       {/* Contenu des onglets */}
-      {activeTab === 'agenda'      && <AgendaTab      posts={posts}      today={today} />}
+      {activeTab === 'agenda'      && <AgendaTab      posts={posts}      today={today} afficheCarousel={afficheCarousel} onViewAllAffiche={() => setActiveTab('affiche')} />}
       {activeTab === 'expositions' && <ExpositionsTab expos={expos}      today={today} />}
       {activeTab === 'affiche'     && <AfficheTab     posts={afficheTab} today={today} />}
 

@@ -151,7 +151,6 @@ export default function AgendaHome({
                   className="w-full aspect-square flex flex-col items-center justify-center gap-3 p-5 text-center"
                   style={{ background: 'linear-gradient(135deg,#1d4ed8,#1e3a8a)' }}
                 >
-                  <span className="text-5xl">🎬</span>
                   <p className="font-extrabold text-sm text-white leading-tight">
                     Voir tous les événements à l'affiche
                   </p>

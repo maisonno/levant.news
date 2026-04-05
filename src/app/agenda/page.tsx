@@ -4,6 +4,19 @@ import { PostWithRelations } from '@/types/database'
 
 export const revalidate = 60
 
+/** Même algo que la page d'accueil : priority = −ln(U) / weight, weight = 1/(jours+1) */
+function weightedShuffle(posts: PostWithRelations[], todayStr: string): PostWithRelations[] {
+  const todayMs = new Date(todayStr + 'T12:00:00').getTime()
+  const scored = posts.map(post => {
+    const daysUntil = Math.max(0, (new Date(post.date_debut + 'T12:00:00').getTime() - todayMs) / 86400000)
+    const weight   = 1 / (daysUntil + 1)
+    const priority = -Math.log(Math.max(Math.random(), 1e-9)) / weight
+    return { post, priority }
+  })
+  scored.sort((a, b) => a.priority - b.priority)
+  return scored.map(s => s.post)
+}
+
 export default async function AgendaPage({
   searchParams,
 }: {
@@ -18,9 +31,10 @@ export default async function AgendaPage({
     ? (params.tab as 'agenda' | 'expositions' | 'affiche')
     : 'agenda'
 
-  let posts:      PostWithRelations[] = []
-  let afficheTab: PostWithRelations[] = []
-  let expos:      PostWithRelations[] = []
+  let posts:            PostWithRelations[] = []
+  let afficheTab:       PostWithRelations[] = []
+  let afficheCarousel:  PostWithRelations[] = []
+  let expos:            PostWithRelations[] = []
 
   try {
     const [postsRes, afficheRes, ongoingExpoRes] = await Promise.allSettled([
@@ -84,11 +98,20 @@ export default async function AgendaPage({
     posts = allPosts.filter((p: PostWithRelations) => p.categorie?.code !== 'EXPO')
 
     // Onglet À l'affiche : a_laffiche + phare, dédoublonnés par id
+    const afficheEnriched = rawAffiche.map(enrich)
     const afficheMap = new Map<string, PostWithRelations>()
-    for (const p of rawAffiche.map(enrich)) afficheMap.set(p.id, p)
+    for (const p of afficheEnriched) afficheMap.set(p.id, p)
     afficheTab = Array.from(afficheMap.values()).sort((a, b) =>
       a.date_debut.localeCompare(b.date_debut)
     )
+
+    // Carousel (identique page d'accueil) : a_laffiche seulement, 1 par org, weighted shuffle, max 5
+    const byOrg = new Map<string, PostWithRelations>()
+    for (const p of afficheEnriched.filter((p: PostWithRelations) => p.a_laffiche)) {
+      const key = p.organisateur_id ?? `__solo_${p.id}`
+      if (!byOrg.has(key)) byOrg.set(key, p)
+    }
+    afficheCarousel = weightedShuffle(Array.from(byOrg.values()), today).slice(0, 5)
 
     // Onglet Expositions : en cours + à venir, dédoublonnés
     const upcomingExpos = allPosts.filter((p: PostWithRelations) => p.categorie?.code === 'EXPO')
@@ -104,6 +127,7 @@ export default async function AgendaPage({
   return (
     <AgendaClient
       posts={posts}
+      afficheCarousel={afficheCarousel}
       afficheTab={afficheTab}
       expos={expos}
       today={today}
