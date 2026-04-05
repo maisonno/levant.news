@@ -27,11 +27,21 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  // Vérification des variables d'environnement requises
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceKey  = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!supabaseUrl || !serviceKey) {
+    return NextResponse.json({
+      error: 'Variables manquantes',
+      missing: [
+        !supabaseUrl ? 'NEXT_PUBLIC_SUPABASE_URL' : null,
+        !serviceKey  ? 'SUPABASE_SERVICE_ROLE_KEY' : null,
+      ].filter(Boolean),
+    }, { status: 500 })
+  }
+
   // Client Supabase avec clé service_role (pour contourner les RLS en écriture)
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
+  const supabase = createClient(supabaseUrl, serviceKey)
 
   const { searchParams } = new URL(request.url)
   const logStops = searchParams.get('log_stops') === 'true' // mode découverte

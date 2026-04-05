@@ -43,11 +43,10 @@ export const BUS_NETWORKS: NetworkConfig[] = [
     url: 'https://www.datasud.fr/fr/dataset/datasets/3745/resource/5016/download/',
     lignes: ['878'],
     stopPatterns: [
+      'des heros',  // "Square des Héros" (Le Lavandou) — plus spécifique que "square"
       'lavandou',
-      'square',   // "Square des Héros"
-      'toulon',
-      'aeroport', // "Aéroport Hyères"
-      'hyeres',
+      'aeroport',   // "Aéroport Hyères"
+      'toulon',     // endpoints côté Toulon
     ],
   },
 ]
@@ -104,11 +103,13 @@ function splitCSVLine(line: string): string[] {
   return result
 }
 
-/** Extrait et décode un fichier du ZIP */
+/** Extrait et décode un fichier du ZIP en UTF-8 explicite */
 async function getZipFile(zip: JSZip, name: string): Promise<string> {
   const file = zip.file(name)
   if (!file) throw new Error(`Fichier manquant dans le ZIP : ${name}`)
-  return file.async('text')
+  // On force le décodage UTF-8 via TextDecoder pour éviter les interprétations Latin-1
+  const buffer = await file.async('arraybuffer')
+  return new TextDecoder('utf-8').decode(buffer)
 }
 
 /**
