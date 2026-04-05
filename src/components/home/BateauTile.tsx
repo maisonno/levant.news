@@ -48,7 +48,7 @@ export default function BateauTile() {
   }, [])
 
   return (
-    <Link href="/bateau" className="bg-blue-700 rounded-2xl p-3 text-white active:scale-[0.97] transition-transform">
+    <Link href="/transport" className="bg-blue-700 rounded-2xl p-3 text-white active:scale-[0.97] transition-transform">
       <p className="text-sm font-bold leading-tight mb-1.5">Bateau</p>
       {label !== null
         ? <>

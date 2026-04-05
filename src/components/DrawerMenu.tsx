@@ -13,7 +13,7 @@ const MODULES = [
   { href: '/infos',     icon: 'ℹ️', label: 'Infos pratiques' },
   { href: '/webcam',    icon: '📷', label: 'Webcam' },
   { href: '/meteo',     icon: '☀️', label: 'Météo' },
-  { href: '/bateau',    icon: '⛵', label: 'Bateau' },
+  { href: '/transport', icon: '⛵', label: 'Transport' },
 ]
 
 export default function DrawerMenu() {
