@@ -278,13 +278,169 @@ function BateauxTab() {
   )
 }
 
+// ─── Types Bus ────────────────────────────────────────────────────────────────
+
+interface BusDeparture {
+  time: string
+  headsign: string
+}
+
+interface BusStop {
+  stop_name: string
+  stop_id: string
+  direction_id: number
+  departures: BusDeparture[]
+}
+
+interface BusSchedule {
+  date: string
+  ligne: string
+  aucun_service: boolean
+  stops: BusStop[]
+}
+
+const LIGNES: { id: string; label: string; reseau: string; description: string }[] = [
+  {
+    id:          '878',
+    label:       'Zou 878',
+    reseau:      'zou',
+    description: 'Toulon · Hyères Aéroport · Le Lavandou',
+  },
+  {
+    id:          '67',
+    label:       'Mistral 67',
+    reseau:      'mistral',
+    description: 'Gare Hyères · Port La Gavine',
+  },
+]
+
+const DIRECTION_LABELS: Record<number, string> = {
+  0: 'Aller',
+  1: 'Retour',
+}
+
 // ─── Onglet Bus ───────────────────────────────────────────────────────────────
 
 function BusTab() {
+  const today = todayIso()
+  const [selectedDate, setSelectedDate] = useState(today)
+  const [selectedLigne, setSelectedLigne] = useState('878')
+  const [schedule, setSchedule] = useState<BusSchedule | null>(null)
+  const [loading,  setLoading]  = useState(true)
+
+  useEffect(() => {
+    setLoading(true)
+    setSchedule(null)
+    fetch(`/api/bus?date=${selectedDate}&ligne=${selectedLigne}`)
+      .then(r => r.json())
+      .then((data: BusSchedule) => setSchedule(data))
+      .finally(() => setLoading(false))
+  }, [selectedDate, selectedLigne])
+
+  // Regrouper les arrêts par direction
+  const byDirection: Record<number, BusStop[]> = {}
+  for (const stop of (schedule?.stops ?? [])) {
+    if (!byDirection[stop.direction_id]) byDirection[stop.direction_id] = []
+    byDirection[stop.direction_id].push(stop)
+  }
+
   return (
-    <div className="px-4 py-16 text-center">
-      <p className="text-4xl mb-3">🚌</p>
-      <p className="text-gray-500 font-medium">Bientôt disponible</p>
+    <div className="px-4 mt-4 space-y-4 pb-10">
+
+      {/* Sélecteur de ligne */}
+      <div className="flex gap-2">
+        {LIGNES.map(l => (
+          <button
+            key={l.id}
+            onClick={() => setSelectedLigne(l.id)}
+            className={`flex-1 rounded-2xl py-2.5 px-3 text-left transition-all ${
+              selectedLigne === l.id
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'bg-white border border-gray-100 text-gray-700'
+            }`}
+          >
+            <p className={`text-xs font-extrabold ${selectedLigne === l.id ? 'text-white' : 'text-blue-600'}`}>
+              {l.label}
+            </p>
+            <p className={`text-[10px] leading-tight mt-0.5 ${selectedLigne === l.id ? 'text-white/70' : 'text-gray-400'}`}>
+              {l.description}
+            </p>
+          </button>
+        ))}
+      </div>
+
+      {/* Sélecteur de date */}
+      <DatePicker value={selectedDate} onChange={setSelectedDate} />
+
+      {/* Titre du jour */}
+      <h2 className="text-base font-extrabold text-gray-900 capitalize">
+        {formatDate(selectedDate)}
+      </h2>
+
+      {/* Chargement */}
+      {loading && (
+        <div className="flex justify-center py-10">
+          <div className="w-7 h-7 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+        </div>
+      )}
+
+      {/* Aucun service */}
+      {!loading && schedule?.aucun_service && (
+        <div className="bg-white rounded-2xl border border-gray-100 p-6 text-center">
+          <p className="text-2xl mb-2">🚌</p>
+          <p className="text-gray-500 text-sm font-medium">Pas de service ce jour</p>
+        </div>
+      )}
+
+      {/* Données pas encore importées */}
+      {!loading && !schedule?.aucun_service && schedule?.stops.length === 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+          <p className="text-sm font-bold text-amber-700 mb-1">⏳ Import en cours</p>
+          <p className="text-xs text-amber-600">
+            Les horaires sont importés chaque nuit. Si c&apos;est la première mise en service,
+            déclencher l&apos;import manuellement via <code className="bg-amber-100 px-1 rounded">/api/cron/import-bus</code>.
+          </p>
+        </div>
+      )}
+
+      {/* Horaires par direction */}
+      {!loading && (schedule?.stops.length ?? 0) > 0 &&
+        Object.entries(byDirection).map(([dirId, stops]) => (
+          <div key={dirId} className="space-y-2">
+
+            {/* En-tête direction */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                {DIRECTION_LABELS[parseInt(dirId)] ?? `Direction ${dirId}`}
+              </span>
+              {stops[0]?.departures[0]?.headsign && (
+                <span className="text-xs font-semibold text-gray-500">
+                  → {stops[0].departures[0].headsign}
+                </span>
+              )}
+            </div>
+
+            {/* Arrêts */}
+            {stops.map(stop => (
+              <div key={stop.stop_id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-50 bg-gray-50/80">
+                  <p className="text-xs font-bold uppercase tracking-widest text-gray-500">
+                    🚏 {stop.stop_name}
+                  </p>
+                </div>
+                <div className="px-4 py-2 flex flex-wrap gap-x-3 gap-y-1">
+                  {stop.departures.map((dep, i) => (
+                    <span key={i} className="text-base font-extrabold text-gray-900 py-1.5">
+                      {dep.time}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ))
+      }
+
     </div>
   )
 }
