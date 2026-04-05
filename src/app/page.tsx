@@ -128,23 +128,23 @@ function weightedShuffle(posts: PostWithRelations[], todayStr: string): PostWith
 async function AgendaSection() {
   const today    = new Date().toISOString().split('T')[0]
   const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0]
-  const maxDate  = new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0]
 
   const { createClient } = await import('@/lib/supabase/server')
   const supabase = await createClient()
 
   const [agendaRes, ongoingRes, afficheRes, futureExpoRes] = await Promise.allSettled([
 
-    // Agenda : aujourd'hui + 15 jours
+    // Agenda : tous les événements à venir (pas de limite de date),
+    // on limite à 25 résultats — le slice à 10 en consommera au max 10
     supabase
       .from('posts')
       .select('*, categorie:categories(code, nom)')
       .eq('publie', true)
       .eq('dans_agenda', true)
       .gte('date_debut', today)
-      .lte('date_debut', maxDate)
       .order('date_debut', { ascending: true })
-      .order('ordre_dans_journee', { ascending: true, nullsFirst: false }),
+      .order('ordre_dans_journee', { ascending: true, nullsFirst: false })
+      .limit(25),
 
     // En ce moment : événements multi-jours déjà commencés
     supabase
