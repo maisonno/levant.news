@@ -424,13 +424,6 @@ function BusTab() {
         {ligne.description}
       </p>
 
-      {/* Badge EN DIRECT quand des données RT sont disponibles */}
-      {liveData && (
-        <div className="flex items-center gap-1.5 -mt-1">
-          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
-          <p className="text-xs font-semibold text-green-600">En direct</p>
-        </div>
-      )}
 
       {/* Chargement */}
       {loading && (
@@ -464,38 +457,55 @@ function BusTab() {
           <div key={stop.stop_id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
 
             {/* En-tête arrêt : "Départ de [stop] → [destination]" */}
-            <div className="px-4 py-3 border-b border-gray-50 bg-gray-50/80">
+            <div className="px-4 py-3 border-b border-gray-50 bg-gray-50/80 flex items-center justify-between">
               <p className="text-xs font-bold uppercase tracking-widest text-gray-500">
                 🚏 {stopLabel(stop.stop_name)}
                 {stop.destination && (
                   <span className="font-normal"> → {stop.destination}</span>
                 )}
               </p>
+              {liveData && (
+                <span className="flex items-center gap-1 ml-2 flex-shrink-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                  <span className="text-xs font-semibold text-green-600">Live</span>
+                </span>
+              )}
             </div>
 
             {/* Liste des départs */}
             <div className="px-4 divide-y divide-gray-50">
               {stop.departures.map((dep, i) => {
-                const delaySec = delayMap.get(`${stop.stop_id}|${dep.time}`) ?? null
+                const liveKey  = `${stop.stop_id}|${dep.time}`
+                const hasLive  = delayMap.has(liveKey)
+                const delaySec = hasLive ? (delayMap.get(liveKey) ?? 0) : null
                 const delayMin = delaySec != null ? Math.round(delaySec / 60) : null
+                const isLate   = delayMin != null && delayMin > 1
+                const isEarly  = delayMin != null && delayMin < -1
+                const isOnTime = hasLive && !isLate && !isEarly
                 return (
-                  <div key={i} className="flex items-center gap-3 py-2.5">
+                  <div key={i} className="flex items-center gap-2.5 py-2.5">
+                    {/* Heure théorique — orange si retard significatif */}
                     <span className={`text-base font-extrabold w-14 flex-shrink-0 ${
-                      delaySec != null && delaySec > 60 ? 'text-orange-500' : 'text-gray-900'
+                      isLate ? 'text-orange-500' : 'text-gray-900'
                     }`}>
                       {formatBusTime(dep.time)}
                     </span>
-                    {/* Badge de retard / avance */}
-                    {delayMin != null && delayMin > 1 && (
-                      <span className="text-xs font-bold text-orange-500 flex-shrink-0">
+
+                    {/* Indicateur live par ligne */}
+                    {isOnTime && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0" title="À l'heure" />
+                    )}
+                    {isLate && (
+                      <span className="text-xs font-bold text-white bg-orange-500 px-1.5 py-0.5 rounded-full flex-shrink-0 leading-none">
                         +{delayMin} min
                       </span>
                     )}
-                    {delayMin != null && delayMin < -1 && (
-                      <span className="text-xs font-bold text-green-600 flex-shrink-0">
+                    {isEarly && (
+                      <span className="text-xs font-bold text-white bg-green-500 px-1.5 py-0.5 rounded-full flex-shrink-0 leading-none">
                         {delayMin} min
                       </span>
                     )}
+
                     <span className="flex-1" />
                     {dep.travel_time_min != null && (
                       <span className="text-xs text-gray-400 flex-shrink-0 tabular-nums">
