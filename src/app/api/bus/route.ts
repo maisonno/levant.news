@@ -4,6 +4,10 @@
  * Retourne les horaires de la ligne demandée pour la date donnée,
  * en appliquant la logique calendaire GTFS (jours de service + exceptions).
  *
+ * La table bus_horaires ne contient qu'une ligne par (trip × arrêt de départ) :
+ * la destination et la durée sont déjà calculées à l'import, pas besoin de les
+ * recomputer ici.
+ *
  * Réponse :
  * {
  *   date: string,
@@ -12,8 +16,11 @@
  *   stops: Array<{
  *     stop_name: string,
  *     stop_id: string,
- *     direction_id: 0 | 1,
- *     departures: Array<{ time: string, headsign: string }>
+ *     departures: Array<{
+ *       time: string,           // 'HH:MM' normalisé
+ *       destination: string,    // label destination
+ *       travel_time_min: number | null
+ *     }>
  *   }>
  * }
  */
@@ -21,7 +28,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
-export const revalidate = 300 // 5 min de cache (les horaires ne changent pas souvent)
+export const revalidate = 300 // 5 min de cache
 
 // Correspondance JS getDay() → colonne Supabase
 const DOW_COLUMNS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'] as const
@@ -31,7 +38,6 @@ export async function GET(request: Request) {
   const rawDate = searchParams.get('date') ?? new Date().toISOString().split('T')[0]
   const ligne   = searchParams.get('ligne') ?? '878'
 
-  // Date en format GTFS (YYYYMMDD)
   const dateGtfs = rawDate.replace(/-/g, '')
   const d        = new Date(rawDate + 'T00:00:00')
   const dowCol   = DOW_COLUMNS[d.getDay()]
@@ -41,7 +47,7 @@ export async function GET(request: Request) {
   // ── 1. Horaires du calendrier régulier ──────────────────────────────────────
   const { data: regularRows, error: e1 } = await supabase
     .from('bus_horaires')
-    .select('id, trip_id, service_id, stop_id, stop_name, stop_sequence, departure_time')
+    .select('id, service_id, stop_id, stop_name, stop_sequence, departure_time, destination, travel_time_min')
     .eq('ligne', ligne)
     .eq(dowCol, true)
     .lte('date_debut', dateGtfs)
@@ -72,7 +78,7 @@ export async function GET(request: Request) {
   if (addedServiceIds.length > 0) {
     const { data } = await supabase
       .from('bus_horaires')
-      .select('id, trip_id, service_id, stop_id, stop_name, stop_sequence, departure_time')
+      .select('id, service_id, stop_id, stop_name, stop_sequence, departure_time, destination, travel_time_min')
       .eq('ligne', ligne)
       .in('service_id', addedServiceIds)
     addedRows = data ?? []
@@ -90,12 +96,7 @@ export async function GET(request: Request) {
   })
 
   if (allRows.length === 0) {
-    return NextResponse.json({
-      date:          rawDate,
-      ligne,
-      aucun_service: true,
-      stops:         [],
-    })
+    return NextResponse.json({ date: rawDate, ligne, aucun_service: true, stops: [] })
   }
 
   // ── 5. Normaliser l'heure (GTFS peut avoir 24:xx ou 25:xx pour les services de nuit)
@@ -106,37 +107,16 @@ export async function GET(request: Request) {
     return `${String(h - 24).padStart(2, '0')}:${parts[1]}`
   }
 
-  // ── 6. Calcul du "prochain arrêt pertinent" pour chaque départ ──────────────
-  // Pour chaque (trip_id, stop), on cherche quel arrêt suivi vient ensuite dans
-  // le même trip (selon stop_sequence). Si aucun → le bus arrive à son terminus
-  // pour les arrêts qu'on suit → on masque ce départ (c'est une arrivée).
-  const tripRowsMap = new Map<string, Array<{ id: string; stop_name: string; stop_sequence: number }>>()
-  for (const row of allRows) {
-    if (!tripRowsMap.has(row.trip_id)) tripRowsMap.set(row.trip_id, [])
-    tripRowsMap.get(row.trip_id)!.push({ id: row.id, stop_name: row.stop_name, stop_sequence: row.stop_sequence })
-  }
-
-  const nextStopMap = new Map<string, string>() // id → nom du prochain arrêt pertinent
-  for (const [, rows] of tripRowsMap) {
-    const sorted = [...rows].sort((a, b) => a.stop_sequence - b.stop_sequence)
-    for (let i = 0; i < sorted.length - 1; i++) {
-      nextStopMap.set(sorted[i].id, sorted[i + 1].stop_name)
-    }
-    // Le dernier arrêt n'a pas de "next" → pas d'entrée → départ filtré plus bas
-  }
-
-  // ── 7. Regroupement par stop_name ────────────────────────────────────────────
+  // ── 6. Regroupement par stop_name ─────────────────────────────────────────
+  // Chaque ligne de la table est déjà un départ (destination calculée à l'import).
   const stopMap = new Map<string, {
     stop_name:    string
     stop_id:      string
     min_sequence: number
-    departures:   Array<{ time: string; destination: string; raw_time: string }>
+    departures:   Array<{ time: string; destination: string; travel_time_min: number | null; raw_time: string }>
   }>()
 
   for (const row of allRows) {
-    const destination = nextStopMap.get(row.id)
-    if (!destination) continue // arrivée au terminus : on masque
-
     const key = row.stop_name
     if (!stopMap.has(key)) {
       stopMap.set(key, {
@@ -148,30 +128,26 @@ export async function GET(request: Request) {
     }
     const entry = stopMap.get(key)!
     entry.departures.push({
-      time:        normalizeTime(row.departure_time),
-      destination,
-      raw_time:    row.departure_time,
+      time:            normalizeTime(row.departure_time),
+      destination:     row.destination ?? '',
+      travel_time_min: row.travel_time_min ?? null,
+      raw_time:        row.departure_time,
     })
     if (row.stop_sequence < entry.min_sequence) entry.min_sequence = row.stop_sequence
   }
 
-  // ── 8. Tri des départs et des arrêts ─────────────────────────────────────────
+  // ── 7. Tri des départs et des arrêts ──────────────────────────────────────
   const stops = [...stopMap.values()]
     .map(s => ({
       stop_name:  s.stop_name,
       stop_id:    s.stop_id,
       departures: s.departures
         .sort((a, b) => a.raw_time.localeCompare(b.raw_time))
-        .map(({ time, destination }) => ({ time, destination })),
+        .map(({ time, destination, travel_time_min }) => ({ time, destination, travel_time_min })),
       _seq: s.min_sequence,
     }))
     .sort((a, b) => a._seq - b._seq)
     .map(({ _seq: _, ...s }) => s)
 
-  return NextResponse.json({
-    date:          rawDate,
-    ligne,
-    aucun_service: false,
-    stops,
-  })
+  return NextResponse.json({ date: rawDate, ligne, aucun_service: false, stops })
 }

@@ -282,7 +282,8 @@ function BateauxTab() {
 
 interface BusDeparture {
   time: string
-  destination: string // prochain arrêt pertinent sur la ligne
+  destination: string
+  travel_time_min: number | null
 }
 
 interface BusStop {
@@ -436,9 +437,12 @@ function BusTab() {
                   <span className="text-base font-extrabold text-gray-900 w-14 flex-shrink-0">
                     {formatBusTime(dep.time)}
                   </span>
-                  {dep.destination && (
-                    <span className="text-sm text-gray-500 truncate">
-                      → {stopLabel(dep.destination)}
+                  <span className="flex-1 text-sm text-gray-600 truncate">
+                    {dep.destination && `→ ${stopLabel(dep.destination)}`}
+                  </span>
+                  {dep.travel_time_min != null && (
+                    <span className="text-xs text-gray-400 flex-shrink-0 tabular-nums">
+                      {dep.travel_time_min} min
                     </span>
                   )}
                 </div>
