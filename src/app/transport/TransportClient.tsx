@@ -299,6 +299,18 @@ interface BusSchedule {
   stops: BusStop[]
 }
 
+interface LiveDelay {
+  stop_id:        string
+  scheduled_time: string   // 'HH:MM'
+  delay_seconds:  number
+}
+
+interface LiveData {
+  updated_at: string
+  ligne: string
+  delays: LiveDelay[]
+}
+
 const LIGNES: { id: string; label: string; description: string }[] = [
   {
     id:          '878',
@@ -345,7 +357,9 @@ function BusTab() {
   const [selectedLigne, setSelectedLigne] = useState('878')
   const [schedule,      setSchedule]      = useState<BusSchedule | null>(null)
   const [loading,       setLoading]       = useState(true)
+  const [liveData,      setLiveData]      = useState<LiveData | null>(null)
 
+  // Charge les horaires statiques
   useEffect(() => {
     setLoading(true)
     setSchedule(null)
@@ -354,6 +368,24 @@ function BusTab() {
       .then((data: BusSchedule) => setSchedule(data))
       .finally(() => setLoading(false))
   }, [selectedDate, selectedLigne])
+
+  // Charge les données temps réel (seulement pour aujourd'hui)
+  useEffect(() => {
+    setLiveData(null)
+    if (selectedDate !== today) return
+    fetch(`/api/bus/live?date=${selectedDate}&ligne=${selectedLigne}`)
+      .then(r => r.ok ? r.json() : null)
+      .then((data: LiveData | null) => {
+        if (data && data.delays.length > 0) setLiveData(data)
+      })
+      .catch(() => { /* flux indisponible, on continue sans RT */ })
+  }, [selectedDate, selectedLigne, today])
+
+  // Map de lookup : `${stop_id}|${time}` → delay_seconds
+  const delayMap = new Map<string, number>()
+  for (const d of liveData?.delays ?? []) {
+    delayMap.set(`${d.stop_id}|${d.scheduled_time}`, d.delay_seconds)
+  }
 
   const ligne = LIGNES.find(l => l.id === selectedLigne)!
 
@@ -391,6 +423,14 @@ function BusTab() {
       <p className="text-xs text-gray-500 leading-snug -mt-1">
         {ligne.description}
       </p>
+
+      {/* Badge EN DIRECT quand des données RT sont disponibles */}
+      {liveData && (
+        <div className="flex items-center gap-1.5 -mt-1">
+          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
+          <p className="text-xs font-semibold text-green-600">En direct</p>
+        </div>
+      )}
 
       {/* Chargement */}
       {loading && (
@@ -435,19 +475,36 @@ function BusTab() {
 
             {/* Liste des départs */}
             <div className="px-4 divide-y divide-gray-50">
-              {stop.departures.map((dep, i) => (
-                <div key={i} className="flex items-center gap-3 py-2.5">
-                  <span className="text-base font-extrabold text-gray-900 w-14 flex-shrink-0">
-                    {formatBusTime(dep.time)}
-                  </span>
-                  <span className="flex-1" />
-                  {dep.travel_time_min != null && (
-                    <span className="text-xs text-gray-400 flex-shrink-0 tabular-nums">
-                      {dep.travel_time_min} min
+              {stop.departures.map((dep, i) => {
+                const delaySec = delayMap.get(`${stop.stop_id}|${dep.time}`) ?? null
+                const delayMin = delaySec != null ? Math.round(delaySec / 60) : null
+                return (
+                  <div key={i} className="flex items-center gap-3 py-2.5">
+                    <span className={`text-base font-extrabold w-14 flex-shrink-0 ${
+                      delaySec != null && delaySec > 60 ? 'text-orange-500' : 'text-gray-900'
+                    }`}>
+                      {formatBusTime(dep.time)}
                     </span>
-                  )}
-                </div>
-              ))}
+                    {/* Badge de retard / avance */}
+                    {delayMin != null && delayMin > 1 && (
+                      <span className="text-xs font-bold text-orange-500 flex-shrink-0">
+                        +{delayMin} min
+                      </span>
+                    )}
+                    {delayMin != null && delayMin < -1 && (
+                      <span className="text-xs font-bold text-green-600 flex-shrink-0">
+                        {delayMin} min
+                      </span>
+                    )}
+                    <span className="flex-1" />
+                    {dep.travel_time_min != null && (
+                      <span className="text-xs text-gray-400 flex-shrink-0 tabular-nums">
+                        {dep.travel_time_min} min
+                      </span>
+                    )}
+                  </div>
+                )
+              })}
             </div>
 
           </div>
