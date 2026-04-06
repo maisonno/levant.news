@@ -278,6 +278,76 @@ function BateauxTab() {
   )
 }
 
+// ─── Jours fériés français ────────────────────────────────────────────────────
+
+/**
+ * Calcule la date de Pâques (dimanche) pour une année donnée.
+ * Algorithme de Butcher/Anonymous Gregorian.
+ */
+function easterSunday(year: number): Date {
+  const a = year % 19
+  const b = Math.floor(year / 100)
+  const c = year % 100
+  const d = Math.floor(b / 4)
+  const e = b % 4
+  const f = Math.floor((b + 8) / 25)
+  const g = Math.floor((b - f + 1) / 3)
+  const h = (19 * a + b - d - g + 15) % 30
+  const i = Math.floor(c / 4)
+  const k = c % 4
+  const l = (32 + 2 * e + 2 * i - h - k) % 7
+  const m = Math.floor((a + 11 * h + 22 * l) / 451)
+  const month = Math.floor((h + l - 7 * m + 114) / 31) - 1  // 0-indexed
+  const day   = ((h + l - 7 * m + 114) % 31) + 1
+  return new Date(year, month, day)
+}
+
+function addDaysToDate(d: Date, n: number): Date {
+  const r = new Date(d)
+  r.setDate(r.getDate() + n)
+  return r
+}
+
+/**
+ * Retourne true si la date ISO (YYYY-MM-DD) est un jour férié français.
+ * Couvre les fériés métropole (hors Alsace-Moselle).
+ */
+function isFrenchHoliday(iso: string): { holiday: boolean; name: string } {
+  const [y, m, dd] = iso.split('-').map(Number)
+  const month = m - 1  // 0-indexed pour les comparaisons
+
+  // Fériés fixes
+  const fixed: Array<[number, number, string]> = [
+    [0,  1,  "Jour de l'An"],
+    [4,  1,  'Fête du Travail'],
+    [4,  8,  'Victoire 1945'],
+    [6,  14, 'Fête Nationale'],
+    [7,  15, 'Assomption'],
+    [10, 1,  'Toussaint'],
+    [10, 11, 'Armistice'],
+    [11, 25, 'Noël'],
+  ]
+  for (const [fm, fd, name] of fixed) {
+    if (month === fm && dd === fd) return { holiday: true, name }
+  }
+
+  // Fériés mobiles (basés sur Pâques)
+  const easter = easterSunday(y)
+  const moveable: Array<[number, string]> = [
+    [1,  'Lundi de Pâques'],
+    [39, 'Ascension'],
+    [50, 'Lundi de Pentecôte'],
+  ]
+  for (const [offset, name] of moveable) {
+    const d = addDaysToDate(easter, offset)
+    if (d.getFullYear() === y && d.getMonth() === month && d.getDate() === dd) {
+      return { holiday: true, name }
+    }
+  }
+
+  return { holiday: false, name: '' }
+}
+
 // ─── Types Bus ────────────────────────────────────────────────────────────────
 
 interface BusDeparture {
@@ -388,6 +458,7 @@ function BusTab() {
   }
 
   const ligne = LIGNES.find(l => l.id === selectedLigne)!
+  const { holiday, name: holidayName } = isFrenchHoliday(selectedDate)
 
   return (
     <div className="px-4 mt-4 space-y-4 pb-10">
@@ -423,6 +494,21 @@ function BusTab() {
       <p className="text-xs text-gray-500 leading-snug -mt-1">
         {ligne.description}
       </p>
+
+      {/* Avertissement jours fériés */}
+      {holiday && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 flex gap-3 items-start">
+          <span className="text-lg flex-shrink-0">🗓️</span>
+          <div>
+            <p className="text-sm font-bold text-amber-700">{holidayName}</p>
+            <p className="text-xs text-amber-600 mt-0.5 leading-snug">
+              Les horaires affichés sont ceux du calendrier habituel.
+              En jour férié, le service peut suivre les horaires du dimanche
+              ou être suspendu — vérifiez auprès de l&apos;opérateur.
+            </p>
+          </div>
+        </div>
+      )}
 
 
       {/* Chargement */}
