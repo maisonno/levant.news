@@ -579,7 +579,9 @@ function BusTab() {
 
                     {/* Indicateur live par ligne */}
                     {isOnTime && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0" title="À l'heure" />
+                      <span className="text-xs font-semibold text-green-600 flex-shrink-0">
+                        À l&apos;heure
+                      </span>
                     )}
                     {isLate && (
                       <span className="text-xs font-bold text-white bg-orange-500 px-1.5 py-0.5 rounded-full flex-shrink-0 leading-none">
@@ -587,8 +589,8 @@ function BusTab() {
                       </span>
                     )}
                     {isEarly && (
-                      <span className="text-xs font-bold text-white bg-green-500 px-1.5 py-0.5 rounded-full flex-shrink-0 leading-none">
-                        {delayMin} min
+                      <span className="text-xs font-bold text-white bg-red-500 px-1.5 py-0.5 rounded-full flex-shrink-0 leading-none">
+                        En avance ({-delayMin!} min)
                       </span>
                     )}
 

@@ -2,31 +2,36 @@
 
 > Fonctionnalité Bus de la page `/transport`.
 > Affiche les horaires des lignes Zou 878 et Mistral 67 à partir de données GTFS importées chaque nuit.
+> Enrichit les horaires avec des données temps réel GTFS-RT (retards, avances) quand disponibles.
 
 ---
 
 ## Vue d'ensemble
 
 ```
-GTFS (ZIP externe)
+GTFS statique (ZIP externe)
     ↓  [Vercel Cron 4h00]
 /api/cron/import-bus
     ↓  src/lib/gtfs/import.ts
 Supabase (bus_horaires + bus_calendar_exceptions)
     ↓  [requête utilisateur]
-/api/bus?date=YYYY-MM-DD&ligne=878
+/api/bus?date=YYYY-MM-DD&ligne=878          ← horaires statiques (cache 5 min)
     ↓
 TransportClient.tsx → onglet Bus
+    ↑
+/api/bus/live?date=YYYY-MM-DD&ligne=878     ← retards temps réel (cache 30 s, aujourd'hui uniquement)
+    ↑
+Flux GTFS-RT (protobuf, externe)
 ```
 
 ---
 
 ## Lignes couvertes
 
-| Réseau  | Ligne | Trajet                                              | Source GTFS |
-|---------|-------|-----------------------------------------------------|-------------|
-| Mistral | 67    | Gare de Hyères ↔ Port La Gavine                    | `s3.eu-west-1.amazonaws.com/.../gtfs-complet.zip` |
-| Zou     | 878   | Gare Routière de Toulon ↔ Le Lavandou (via Aéroport Hyères sur certains trips) | `datasud.fr` (redirection GTFS Région SUD) |
+| Réseau  | Ligne | Trajet                                              | Source GTFS statique | Source GTFS-RT |
+|---------|-------|-----------------------------------------------------|----------------------|----------------|
+| Mistral | 67    | Gare de Hyères ↔ Port La Gavine                    | `s3.eu-west-1.amazonaws.com/.../gtfs-complet.zip` | `feed-rdtpm-toulon.ratpdev.com/TripUpdate/GTFS-RT` |
+| Zou     | 878   | Gare Routière de Toulon ↔ Le Lavandou (via Aéroport Hyères sur certains trips) | `datasud.fr` (redirection GTFS Région SUD) | `proxy.transport.data.gouv.fr/resource/region-sud-zou-express-gtfs-rt-trip-update` |
 
 ---
 
@@ -247,6 +252,56 @@ curl -H "Authorization: Bearer {CRON_SECRET}" \
 
 ---
 
+## API temps réel (`/api/bus/live`)
+
+### Requête
+
+```
+GET /api/bus/live?date=YYYY-MM-DD&ligne=878
+```
+
+| Paramètre | Défaut      | Description                 |
+|-----------|-------------|-----------------------------|
+| `date`    | aujourd'hui | Date au format `YYYY-MM-DD` |
+| `ligne`   | `878`       | `878` ou `67`               |
+
+### Fonctionnement
+
+1. Récupère les trips actifs pour la date depuis `bus_horaires` (même logique calendaire que `/api/bus`)
+2. Construit un index `trip_id → [{ stop_id, departure_time }]`
+3. Télécharge le flux GTFS-RT (protobuf, timeout 8 s)
+4. Décode avec `gtfs-realtime-bindings`
+5. Pour chaque `TripUpdate` dont le `trip_id` est dans notre index, extrait le délai sur nos `stop_id` suivis
+6. Retourne la liste des délais
+
+Le matching se fait par **`trip_id` exact** (même source GTFS statique), puis par **`stop_id` exact** — aucune approximation par heure.
+
+Cache serveur de **30 secondes** (`revalidate = 30`).
+
+### Réponse
+
+```typescript
+{
+  updated_at: string        // ISO timestamp de la récupération du flux
+  ligne:      string        // '878' | '67'
+  delays: Array<{
+    stop_id:        string  // stop_id du GTFS statique
+    scheduled_time: string  // 'HH:MM' (heure théorique normalisée)
+    delay_seconds:  number  // positif = retard, négatif = avance
+  }>
+}
+```
+
+Erreurs possibles : `400` (ligne non supportée), `503` (flux indisponible).
+
+### Format du flux GTFS-RT Zou
+
+Le flux Zou Express couvre **toutes les lignes** du réseau (pas uniquement le 878). Les `trip_id` suivent le format `{route_interne}|{date}|{index}` (ex: `"80A5|20260316|30"`). Ce format est identique au GTFS statique, le matching par `trip_id` fonctionne directement.
+
+À un instant donné, les trips 878 ne sont présents dans le flux que si un bus est effectivement en circulation. En dehors des heures de service, la liste `delays` est vide.
+
+---
+
 ## API horaires (`/api/bus`)
 
 ### Requête
@@ -287,6 +342,8 @@ GET /api/bus?date=YYYY-MM-DD&ligne=878
 
 Les `stops` sont triés par `stop_sequence` minimum. Les `departures` sont triées par heure. Cache de 5 minutes (`revalidate = 300`).
 
+La réponse n'inclut **pas** `destination` dans chaque départ (il est au niveau du `stop`, qui est déjà segmenté par destination). Le champ `id` interne (`_seq`) est retiré de la réponse finale.
+
 ---
 
 ## Frontend (`src/app/transport/TransportClient.tsx`)
@@ -307,6 +364,42 @@ const STOP_LABELS = [
 ```
 
 Les `destination` stockées en base sont déjà des labels propres (`'Le Lavandou'`, `'Gare Routière de Toulon'`…) : `stopLabel()` les retourne identiques. Elle est néanmoins appelée systématiquement pour homogénéité.
+
+### Données temps réel
+
+`BusTab` effectue deux requêtes en parallèle :
+
+- `/api/bus` → horaires statiques (toujours)
+- `/api/bus/live` → retards (uniquement si `selectedDate === today`)
+
+Les délais sont indexés dans une `Map<string, number>` avec la clé `${stop_id}|${HH:MM}`. Pour chaque départ, l'indicateur live est :
+
+| État | Condition | Rendu |
+|------|-----------|-------|
+| À l'heure | live disponible, `\|delay\| ≤ 1 min` | petit point vert `●` |
+| Retard | live disponible, delay > 1 min | badge orange `+X min` |
+| Avance | live disponible, delay < -1 min | badge vert `-X min` |
+| Pas de données | live absent ou trip non encore en route | rien |
+
+L'en-tête de section affiche un badge `● Live` pulsant quand au moins un délai est disponible pour la ligne.
+
+### Jours fériés
+
+La fonction `isFrenchHoliday(date: string)` détecte les jours fériés français (métropole) à partir de la date ISO :
+
+- **8 fériés fixes** : 1er janvier, 1er et 8 mai, 14 juillet, 15 août, 1er et 11 novembre, 25 décembre
+- **3 fériés mobiles** calculés depuis Pâques (algorithme Butcher/Gregorian) : Lundi de Pâques (+1), Ascension (+39), Lundi de Pentecôte (+50)
+
+Si la date sélectionnée est un jour férié, un bandeau d'avertissement s'affiche :
+
+```
+🗓️  Lundi de Pâques
+    Les horaires affichés sont ceux du calendrier habituel.
+    En jour férié, le service peut suivre les horaires du dimanche
+    ou être suspendu — vérifiez auprès de l'opérateur.
+```
+
+**Comportement GTFS** : si l'opérateur a encodé le jour férié dans `calendar_dates.txt` (exception type 2 = suppression du service régulier, type 1 = ajout d'un service spécial), notre logique calendaire l'applique automatiquement. Sinon, le service du jour de la semaine est affiché tel quel — d'où l'avertissement.
 
 ### Format des horaires
 
@@ -363,7 +456,8 @@ Les URLs GTFS sont susceptibles de changer (surtout Zou/datasud.fr). En cas de 4
 
 ## Dépendances
 
-| Package                 | Version   | Usage                                                              |
-|-------------------------|-----------|--------------------------------------------------------------------|
-| `jszip`                 | `^3.10.1` | Extraction des fichiers ZIP GTFS                                   |
-| `@supabase/supabase-js` | —         | Client Supabase avec `service_role` dans le cron (pas `@supabase/ssr`) |
+| Package                    | Version   | Usage                                                              |
+|----------------------------|-----------|--------------------------------------------------------------------|
+| `jszip`                    | `^3.10.1` | Extraction des fichiers ZIP GTFS                                   |
+| `gtfs-realtime-bindings`   | `^1.1.1`  | Décodage du flux GTFS-RT (protobuf) dans `/api/bus/live`           |
+| `@supabase/supabase-js`    | —         | Client Supabase avec `service_role` dans le cron (pas `@supabase/ssr`) |
