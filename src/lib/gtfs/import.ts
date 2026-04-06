@@ -136,12 +136,12 @@ export const BUS_NETWORKS: NetworkConfig[] = [
             destinationLabel:  'Aéroport Hyères-Toulon',
             requiredPattern:   'hyeres _ aeroport',
           },
-          // Bus direct : Le Lavandou → Toulon (sans arrêt Aéroport)
+          // Tous les bus Le Lavandou → Toulon (directs ET via Aéroport)
+          // Les trips via Aéroport génèrent ainsi deux lignes : une → Aéroport, une → Toulon
           {
             departurePattern:  'le lavandou _ square',
             destinationPattern: 'toulon _ gare routiere',
             destinationLabel:  'Gare Routière de Toulon',
-            onlyIfNoStop:      'hyeres _ aeroport',
           },
         ],
       },
@@ -453,7 +453,10 @@ export async function importNetwork(
       const cal = calendarMap.get(trip.service_id)
 
       busHoraires.push({
-        id:              `${config.reseau}|${trip_id}|${depStop.stop_id}`,
+        // La PK inclut le destinationPattern pour distinguer les deux lignes
+        // créées pour un même trip quand le bus passe par l'Aéroport
+        // (ex : Le Lavandou → Aéroport ET Le Lavandou → Gare Routière, même trip_id + stop_id)
+        id:              `${config.reseau}|${trip_id}|${depStop.stop_id}|${depConfig.destinationPattern}`,
         reseau:          config.reseau,
         ligne:           routeShortName.get(trip.route_id) ?? '',
         trip_id,

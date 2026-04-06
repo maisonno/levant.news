@@ -107,21 +107,26 @@ export async function GET(request: Request) {
     return `${String(h - 24).padStart(2, '0')}:${parts[1]}`
   }
 
-  // ── 6. Regroupement par stop_name ─────────────────────────────────────────
-  // Chaque ligne de la table est déjà un départ (destination calculée à l'import).
+  // ── 6. Regroupement par (stop_name, destination) ──────────────────────────
+  // On groupe par le couple (stop_name, destination) pour créer des sections
+  // distinctes quand un même arrêt de départ dessert plusieurs destinations
+  // (ex : Le Lavandou → Gare Routière de Toulon  ET  Le Lavandou → Aéroport).
   const stopMap = new Map<string, {
     stop_name:    string
     stop_id:      string
+    destination:  string
     min_sequence: number
-    departures:   Array<{ time: string; destination: string; travel_time_min: number | null; raw_time: string }>
+    departures:   Array<{ time: string; travel_time_min: number | null; raw_time: string }>
   }>()
 
   for (const row of allRows) {
-    const key = row.stop_name
+    const dest = row.destination ?? ''
+    const key  = `${row.stop_name}|${dest}`
     if (!stopMap.has(key)) {
       stopMap.set(key, {
         stop_name:    row.stop_name,
         stop_id:      row.stop_id,
+        destination:  dest,
         min_sequence: row.stop_sequence,
         departures:   [],
       })
@@ -129,7 +134,6 @@ export async function GET(request: Request) {
     const entry = stopMap.get(key)!
     entry.departures.push({
       time:            normalizeTime(row.departure_time),
-      destination:     row.destination ?? '',
       travel_time_min: row.travel_time_min ?? null,
       raw_time:        row.departure_time,
     })
@@ -137,16 +141,22 @@ export async function GET(request: Request) {
   }
 
   // ── 7. Tri des départs et des arrêts ──────────────────────────────────────
+  // Tri principal : stop_sequence (ordre géographique du parcours)
+  // Tri secondaire : nombre de départs décroissant (la destination principale en premier)
   const stops = [...stopMap.values()]
     .map(s => ({
-      stop_name:  s.stop_name,
-      stop_id:    s.stop_id,
-      departures: s.departures
+      stop_name:   s.stop_name,
+      stop_id:     s.stop_id,
+      destination: s.destination,
+      departures:  s.departures
         .sort((a, b) => a.raw_time.localeCompare(b.raw_time))
-        .map(({ time, destination, travel_time_min }) => ({ time, destination, travel_time_min })),
-      _seq: s.min_sequence,
+        .map(({ time, travel_time_min }) => ({ time, travel_time_min })),
+      _seq:        s.min_sequence,
     }))
-    .sort((a, b) => a._seq - b._seq)
+    .sort((a, b) => {
+      if (a._seq !== b._seq) return a._seq - b._seq
+      return b.departures.length - a.departures.length  // plus de départs = affiché en premier
+    })
     .map(({ _seq: _, ...s }) => s)
 
   return NextResponse.json({ date: rawDate, ligne, aucun_service: false, stops })

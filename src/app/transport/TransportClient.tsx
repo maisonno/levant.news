@@ -282,14 +282,14 @@ function BateauxTab() {
 
 interface BusDeparture {
   time: string
-  destination: string
   travel_time_min: number | null
 }
 
 interface BusStop {
-  stop_name: string
-  stop_id: string
-  departures: BusDeparture[]
+  stop_name:   string
+  stop_id:     string
+  destination: string
+  departures:  BusDeparture[]
 }
 
 interface BusSchedule {
@@ -423,10 +423,13 @@ function BusTab() {
         schedule!.stops.map(stop => (
           <div key={stop.stop_id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
 
-            {/* En-tête arrêt */}
+            {/* En-tête arrêt : "Départ de [stop] → [destination]" */}
             <div className="px-4 py-3 border-b border-gray-50 bg-gray-50/80">
               <p className="text-xs font-bold uppercase tracking-widest text-gray-500">
-                🚏 Départ de {stopLabel(stop.stop_name)}
+                🚏 {stopLabel(stop.stop_name)}
+                {stop.destination && (
+                  <span className="font-normal"> → {stop.destination}</span>
+                )}
               </p>
             </div>
 
@@ -437,9 +440,7 @@ function BusTab() {
                   <span className="text-base font-extrabold text-gray-900 w-14 flex-shrink-0">
                     {formatBusTime(dep.time)}
                   </span>
-                  <span className="flex-1 text-sm text-gray-600 truncate">
-                    {dep.destination && `→ ${stopLabel(dep.destination)}`}
-                  </span>
+                  <span className="flex-1" />
                   {dep.travel_time_min != null && (
                     <span className="text-xs text-gray-400 flex-shrink-0 tabular-nums">
                       {dep.travel_time_min} min
