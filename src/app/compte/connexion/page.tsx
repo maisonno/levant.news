@@ -55,20 +55,6 @@ function ConnexionContent() {
         </div>
       )}
 
-      {/* Boutons sociaux */}
-      <div className="space-y-3">
-        <SocialButton icon={<GoogleIcon />}   label="Continuer avec Google"   loading={loading === 'google'}   onClick={() => signInWithProvider('google')} />
-        <SocialButton icon={<AppleIcon />}    label="Continuer avec Apple"    loading={loading === 'apple'}    onClick={() => signInWithProvider('apple')} />
-        <SocialButton icon={<FacebookIcon />} label="Continuer avec Facebook" loading={loading === 'facebook'} onClick={() => signInWithProvider('facebook')} />
-      </div>
-
-      {/* Séparateur */}
-      <div className="flex items-center gap-3">
-        <div className="flex-1 h-px bg-gray-200" />
-        <span className="text-xs text-gray-400 font-medium">ou</span>
-        <div className="flex-1 h-px bg-gray-200" />
-      </div>
-
       {/* Formulaire email/mdp */}
       <form onSubmit={signInWithEmail} className="space-y-3">
         <div>

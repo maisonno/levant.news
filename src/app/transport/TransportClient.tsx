@@ -5,12 +5,11 @@ import PageHeader from '@/components/PageHeader'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type TabId = 'bateaux' | 'bus' | 'covoiturage'
+type TabId = 'bateaux' | 'bus'
 
 const TABS: { id: TabId; label: string }[] = [
-  { id: 'bateaux',      label: 'Bateaux'      },
-  { id: 'bus',          label: 'Bus'           },
-  { id: 'covoiturage',  label: 'Covoiturage'  },
+  { id: 'bateaux', label: 'Bateaux' },
+  { id: 'bus',     label: 'Bus'     },
 ]
 
 interface Horaire {
@@ -634,7 +633,7 @@ export default function TransportClient({ initialTab = 'bateaux' }: { initialTab
 
       <PageHeader photo="/images/header-bateau.jpg">
         <h1 className="text-2xl font-extrabold text-white tracking-tight">Transport</h1>
-        <p className="text-white/50 text-xs mt-0.5">Bateaux · Bus · Covoiturage</p>
+        <p className="text-white/50 text-xs mt-0.5">Bateaux · Bus</p>
       </PageHeader>
 
       {/* Barre d'onglets — sticky */}
@@ -657,9 +656,8 @@ export default function TransportClient({ initialTab = 'bateaux' }: { initialTab
       </div>
 
       {/* Contenu des onglets */}
-      {activeTab === 'bateaux'     && <BateauxTab />}
-      {activeTab === 'bus'         && <BusTab />}
-      {activeTab === 'covoiturage' && <CovoiturageTab />}
+      {activeTab === 'bateaux' && <BateauxTab />}
+      {activeTab === 'bus'     && <BusTab />}
 
     </div>
   )
