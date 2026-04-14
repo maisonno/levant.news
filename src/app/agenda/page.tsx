@@ -97,13 +97,25 @@ export default async function AgendaPage({
     const allPosts = rawPosts.map(enrich)
     posts = allPosts.filter((p: PostWithRelations) => p.categorie?.code !== 'EXPO')
 
-    // Onglet À l'affiche : a_laffiche + phare, dédoublonnés par id
+    // Onglet À l'affiche : a_laffiche + phare, dédoublonnés, triés par date
+    // Limite : max 3 prochains événements non-phare par organisateur
+    // Les événements phares ne comptent pas dans cette limite
+    // Les événements sans organisateur ne sont pas publiés à l'affiche
     const afficheEnriched = rawAffiche.map(enrich)
-    const afficheMap = new Map<string, PostWithRelations>()
-    for (const p of afficheEnriched) afficheMap.set(p.id, p)
-    afficheTab = Array.from(afficheMap.values()).sort((a, b) =>
-      a.date_debut.localeCompare(b.date_debut)
-    )
+    const afficheDeduped  = Array.from(
+      new Map(afficheEnriched.map(p => [p.id, p])).values()
+    ).sort((a, b) => a.date_debut.localeCompare(b.date_debut))
+
+    const orgCount = new Map<string, number>()
+    afficheTab = afficheDeduped.filter(p => {
+      if (!p.organisateur_id) return false  // sans organisateur : exclu
+      if (p.phare === true)   return true   // phare : toujours affiché, ne compte pas
+      const n = orgCount.get(p.organisateur_id) ?? 0
+      if (n >= 3)             return false
+      orgCount.set(p.organisateur_id, n + 1)
+      return true
+    })
+
 
     // Carousel (identique page d'accueil) : a_laffiche seulement, 1 par org, weighted shuffle, max 5
     const byOrg = new Map<string, PostWithRelations>()

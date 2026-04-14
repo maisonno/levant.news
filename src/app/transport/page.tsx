@@ -1,7 +1,7 @@
 import TransportClient from './TransportClient'
 
-type TabId = 'bateaux' | 'bus' | 'covoiturage'
-const VALID_TABS: TabId[] = ['bateaux', 'bus', 'covoiturage']
+type TabId = 'bateaux' | 'bus'
+const VALID_TABS: TabId[] = ['bateaux', 'bus']
 
 export default async function TransportPage({
   searchParams,

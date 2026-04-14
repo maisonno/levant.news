@@ -5,12 +5,11 @@ import PageHeader from '@/components/PageHeader'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type TabId = 'bateaux' | 'bus' | 'covoiturage'
+type TabId = 'bateaux' | 'bus'
 
 const TABS: { id: TabId; label: string }[] = [
-  { id: 'bateaux',      label: 'Bateaux'      },
-  { id: 'bus',          label: 'Bus'           },
-  { id: 'covoiturage',  label: 'Covoiturage'  },
+  { id: 'bateaux', label: 'Bateaux' },
+  { id: 'bus',     label: 'Bus'     },
 ]
 
 interface Horaire {
@@ -274,6 +273,33 @@ function BateauxTab() {
           </div>
         </div>
       ))}
+
+      {/* Disclaimer + liens compagnies */}
+      <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 space-y-2">
+        <p className="text-xs text-blue-700 leading-snug">
+          ℹ️ Les horaires sont donnés à titre indicatif. Consultez directement les compagnies pour confirmer les départs.
+        </p>
+        {(() => {
+          const companies = [...new Set(horaires.map(h => h.compagnie).filter(Boolean))]
+          const withUrl = companies.filter(c => COMPAGNIES_BATEAU_URLS[c])
+          if (withUrl.length === 0) return null
+          return (
+            <div className="flex flex-wrap gap-2 pt-0.5">
+              {withUrl.map(c => (
+                <a
+                  key={c}
+                  href={COMPAGNIES_BATEAU_URLS[c]}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 bg-white border border-blue-200 rounded-full px-3 py-1 hover:bg-blue-600 hover:text-white transition-colors"
+                >
+                  {c} →
+                </a>
+              ))}
+            </div>
+          )
+        })()}
+      </div>
     </div>
   )
 }
@@ -381,16 +407,32 @@ interface LiveData {
   delays: LiveDelay[]
 }
 
-const LIGNES: { id: string; label: string; description: string }[] = [
+// ─── Compagnies ───────────────────────────────────────────────────────────────
+
+/**
+ * URLs des compagnies de bateaux — clé = valeur du champ `compagnie` en base.
+ * Ajouter autant d'entrées que nécessaire.
+ */
+const COMPAGNIES_BATEAU_URLS: Record<string, string> = {
+  'TLV':                   'https://www.tlv-tvm.com',
+  'TLV-TVM':               'https://www.tlv-tvm.com',
+  'Vedettes des îles d\'or': 'https://www.vedettesilesdor.fr',
+  'Vedettes des îles':     'https://www.vedettesilesdor.fr',
+  'Vedettes Iles d\'Or':   'https://www.vedettesilesdor.fr',
+}
+
+const LIGNES: { id: string; label: string; description: string; url: string }[] = [
   {
     id:          '878',
     label:       'Zou 878',
     description: 'Relie la gare de Toulon au Lavandou, en passant parfois par l\'aéroport de Hyères-Toulon.',
+    url:         'https://zou.maregionsud.fr',
   },
   {
     id:          '67',
     label:       'Mistral 67',
     description: 'Relie la gare de Hyères au Port de Hyères (Port la Gavine).',
+    url:         'https://www.varlib.fr',
   },
 ]
 
@@ -537,6 +579,21 @@ function BusTab() {
         </div>
       )}
 
+      {/* Disclaimer + lien compagnie */}
+      <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 space-y-2">
+        <p className="text-xs text-blue-700 leading-snug">
+          ℹ️ Les horaires sont donnés à titre indicatif. Consultez directement la compagnie pour confirmer les horaires.
+        </p>
+        <a
+          href={ligne.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 bg-white border border-blue-200 rounded-full px-3 py-1 hover:bg-blue-600 hover:text-white transition-colors"
+        >
+          {ligne.label} →
+        </a>
+      </div>
+
       {/* Horaires par arrêt de départ */}
       {!loading && (schedule?.stops.length ?? 0) > 0 &&
         schedule!.stops.map(stop => (
@@ -634,7 +691,7 @@ export default function TransportClient({ initialTab = 'bateaux' }: { initialTab
 
       <PageHeader photo="/images/header-bateau.jpg">
         <h1 className="text-2xl font-extrabold text-white tracking-tight">Transport</h1>
-        <p className="text-white/50 text-xs mt-0.5">Bateaux · Bus · Covoiturage</p>
+        <p className="text-white/50 text-xs mt-0.5">Bateaux · Bus</p>
       </PageHeader>
 
       {/* Barre d'onglets — sticky */}
@@ -657,9 +714,8 @@ export default function TransportClient({ initialTab = 'bateaux' }: { initialTab
       </div>
 
       {/* Contenu des onglets */}
-      {activeTab === 'bateaux'     && <BateauxTab />}
-      {activeTab === 'bus'         && <BusTab />}
-      {activeTab === 'covoiturage' && <CovoiturageTab />}
+      {activeTab === 'bateaux' && <BateauxTab />}
+      {activeTab === 'bus'     && <BusTab />}
 
     </div>
   )
