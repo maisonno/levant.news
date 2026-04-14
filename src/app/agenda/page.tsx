@@ -100,6 +100,7 @@ export default async function AgendaPage({
     // Onglet À l'affiche : a_laffiche + phare, dédoublonnés, triés par date
     // Limite : max 3 prochains événements non-phare par organisateur
     // Les événements phares ne comptent pas dans cette limite
+    // Les événements sans organisateur ne sont pas publiés à l'affiche
     const afficheEnriched = rawAffiche.map(enrich)
     const afficheDeduped  = Array.from(
       new Map(afficheEnriched.map(p => [p.id, p])).values()
@@ -107,8 +108,8 @@ export default async function AgendaPage({
 
     const orgCount = new Map<string, number>()
     afficheTab = afficheDeduped.filter(p => {
-      if (p.phare)            return true  // phare : toujours affiché, ne compte pas
-      if (!p.organisateur_id) return true  // sans organisateur : pas de limite
+      if (!p.organisateur_id) return false  // sans organisateur : exclu
+      if (p.phare)            return true   // phare : toujours affiché, ne compte pas
       const n = orgCount.get(p.organisateur_id) ?? 0
       if (n >= 3)             return false
       orgCount.set(p.organisateur_id, n + 1)
