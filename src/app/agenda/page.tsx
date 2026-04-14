@@ -109,12 +109,18 @@ export default async function AgendaPage({
     const orgCount = new Map<string, number>()
     afficheTab = afficheDeduped.filter(p => {
       if (!p.organisateur_id) return false  // sans organisateur : exclu
-      if (p.phare)            return true   // phare : toujours affiché, ne compte pas
+      if (p.phare === true)   return true   // phare : toujours affiché, ne compte pas
       const n = orgCount.get(p.organisateur_id) ?? 0
       if (n >= 3)             return false
       orgCount.set(p.organisateur_id, n + 1)
       return true
     })
+
+    // DEBUG — à supprimer après vérification
+    console.error('[affiche-debug] total après filtre:', afficheTab.length)
+    for (const p of afficheDeduped) {
+      console.error(`  id=${p.id} | phare=${JSON.stringify(p.phare)} (${typeof p.phare}) | org=${p.organisateur_id} | inclus=${afficheTab.some(x => x.id === p.id)}`)
+    }
 
     // Carousel (identique page d'accueil) : a_laffiche seulement, 1 par org, weighted shuffle, max 5
     const byOrg = new Map<string, PostWithRelations>()
