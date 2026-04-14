@@ -414,9 +414,11 @@ interface LiveData {
  * Ajouter autant d'entrées que nécessaire.
  */
 const COMPAGNIES_BATEAU_URLS: Record<string, string> = {
-  'TLV':            'https://www.tlv-tvm.com',
-  'TLV-TVM':        'https://www.tlv-tvm.com',
-  'Vedettes des îles': 'https://www.vedettesdesiles.fr',
+  'TLV':                   'https://www.tlv-tvm.com',
+  'TLV-TVM':               'https://www.tlv-tvm.com',
+  'Vedettes des îles d\'or': 'https://www.vedettesilesdor.fr',
+  'Vedettes des îles':     'https://www.vedettesilesdor.fr',
+  'Vedettes Iles d\'Or':   'https://www.vedettesilesdor.fr',
 }
 
 const LIGNES: { id: string; label: string; description: string; url: string }[] = [

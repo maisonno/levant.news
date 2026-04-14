@@ -116,11 +116,6 @@ export default async function AgendaPage({
       return true
     })
 
-    // DEBUG — à supprimer après vérification
-    console.error('[affiche-debug] total après filtre:', afficheTab.length)
-    for (const p of afficheDeduped) {
-      console.error(`  id=${p.id} | phare=${JSON.stringify(p.phare)} (${typeof p.phare}) | org=${p.organisateur_id} | inclus=${afficheTab.some(x => x.id === p.id)}`)
-    }
 
     // Carousel (identique page d'accueil) : a_laffiche seulement, 1 par org, weighted shuffle, max 5
     const byOrg = new Map<string, PostWithRelations>()
