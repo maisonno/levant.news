@@ -33,14 +33,27 @@ interface PostFormProps {
 }
 
 function PostForm({ initial, categories, etablissements, onSave, onClose, isAdmin = true, etablissementIds }: PostFormProps) {
+  // Établissements de l'utilisateur (pour pré-sélection et liste organisateurs)
+  const etabsUser = etablissementIds
+    ? etablissements.filter(e => etablissementIds.includes(e.id))
+    : etablissements
+
   const [titre,        setTitre]        = useState(initial?.titre ?? '')
   const [complement,   setComplement]   = useState(initial?.complement ?? '')
   const [dateDebut,    setDateDebut]    = useState(initial?.date_debut ?? '')
   const [dateFin,      setDateFin]      = useState(initial?.date_fin ?? '')
   const [heure,        setHeure]        = useState(initial?.heure ?? '')
   const [categorieCode,setCategorieCode]= useState(initial?.categorie_code ?? '')
-  const [organisateurId,setOrganisateurId] = useState(initial?.organisateur_id ?? '')
-  const [lieuId,       setLieuId]       = useState(initial?.lieu_id ?? '')
+  const [organisateurId,setOrganisateurId] = useState(() => {
+    if (initial?.organisateur_id) return initial.organisateur_id
+    if (!initial && etablissementIds) return etabsUser.find(e => e.est_organisateur)?.id ?? ''
+    return ''
+  })
+  const [lieuId,       setLieuId]       = useState(() => {
+    if (initial?.lieu_id) return initial.lieu_id
+    if (!initial && etablissementIds) return etabsUser.find(e => e.est_lieu)?.id ?? ''
+    return ''
+  })
   const [publie,       setPublie]       = useState(initial?.publie ?? false)
   const [misEnAvant,   setMisEnAvant]   = useState(initial?.mis_en_avant ?? false)
   const [afficheUrl,   setAfficheUrl]   = useState(initial?.affiche_url ?? '')
@@ -51,12 +64,10 @@ function PostForm({ initial, categories, etablissements, onSave, onClose, isAdmi
   const [aLaffiche,    setALaffiche]    = useState(initial?.a_laffiche ?? false)
   const [saving, setSaving] = useState(false)
 
-  // Pour un pro, on restreint aux établissements liés à son compte
-  const etabsFiltered = etablissementIds
-    ? etablissements.filter(e => etablissementIds.includes(e.id))
-    : etablissements
-  const lieux = etabsFiltered.filter(e => e.est_lieu)
-  const orgas = etabsFiltered.filter(e => e.est_organisateur)
+  // Lieux : tous les établissements (le pro peut choisir n'importe quel lieu)
+  const lieux = etablissements.filter(e => e.est_lieu)
+  // Organisateurs : uniquement les établissements de l'utilisateur
+  const orgas = etabsUser.filter(e => e.est_organisateur)
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -128,8 +139,8 @@ function PostForm({ initial, categories, etablissements, onSave, onClose, isAdmi
       {/* Toggles */}
       <div className="grid grid-cols-2 gap-2">
         {([
-          [publie, setPublie, 'Publié', !isAdmin],
-          [misEnAvant, setMisEnAvant, 'Mis en avant', false],
+          ...(isAdmin ? [[publie, setPublie, 'Publié', false]] : []),
+          ...(isAdmin ? [[misEnAvant, setMisEnAvant, 'Mis en avant', false]] : []),
           [aLaffiche, setALaffiche, '⭐ À l\'affiche', false],
           [inscription, setInscription, 'Inscription', false],
           ...(isAdmin ? [[refuse, setRefuse, 'Refusé', false]] : []),
@@ -201,6 +212,9 @@ function PostCard({ post, onPublier, onDepublier, onRefuser, onEdit, onDelete, i
             <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${catColor} mr-1`}>
               {cat.nom}
             </span>
+          )}
+          {!post.publie && !post.refuse && (
+            <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 mr-1">À valider</span>
           )}
           {post.refuse && (
             <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-red-100 text-red-600 mr-1">Refusé</span>
@@ -294,6 +308,9 @@ function PostCardHorizontal({ post, onEdit, onPublier, onDepublier, onRefuser, o
             <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${catColor}`}>
               {cat.nom}
             </span>
+          )}
+          {!post.publie && !post.refuse && (
+            <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">À valider</span>
           )}
           {post.mis_en_avant && (
             <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">⭐ Avant</span>
