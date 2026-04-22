@@ -508,8 +508,14 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[104px]'
       }
       await load()
     } else {
+      const { data: { user } } = await supabase.auth.getUser()
+      const authorId = user?.id ?? userId
+      if (!authorId) {
+        setSaveError('❌ Utilisateur non authentifié — reconnectez-vous.')
+        return
+      }
       const { error } = await supabase
-        .from('posts').insert({ ...data, dans_agenda: true, auteur_id: userId })
+        .from('posts').insert({ ...data, dans_agenda: true, auteur_id: authorId })
       if (error) {
         setSaveError(`Erreur Supabase : ${error.message} (${error.code})`)
         return
@@ -577,6 +583,9 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[104px]'
     const headers = lines[0].split(',').map(h => h.trim().toLowerCase())
     const rows = lines.slice(1)
 
+    const { data: { user } } = await supabase.auth.getUser()
+    const authorId = user?.id ?? userId
+
     let ok = 0, errors = 0
     for (const rowStr of rows) {
       const cols = parseCSVRow(rowStr)
@@ -612,7 +621,7 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[104px]'
         nb_inscriptions_max: null,
         refuse: false,
         phare: false,
-        auteur_id: userId,
+        auteur_id: authorId,
       })
       if (error) errors++; else ok++
     }
