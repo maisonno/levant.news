@@ -3,8 +3,6 @@ import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 function row(label: string, value: string | null | undefined) {
   if (!value) return ''
   return `
@@ -44,6 +42,12 @@ function emailHtml(subject: string, tableRows: string, editUrl: string) {
 }
 
 export async function POST(request: Request) {
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey) {
+    return NextResponse.json({ error: 'RESEND_API_KEY not configured' }, { status: 500 })
+  }
+  const resend = new Resend(apiKey)
+
   // Vérifier que l'appelant est authentifié
   const serverClient = await createServerClient()
   const { data: { user } } = await serverClient.auth.getUser()
