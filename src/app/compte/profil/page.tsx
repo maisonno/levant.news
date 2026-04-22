@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
-import { ObjetPerdu, NotifPref, Role } from '@/types/database'
+import { ObjetPerdu, Role } from '@/types/database'
 import TabUtilisateurs from './TabUtilisateurs'
 
 // ─── Imports dynamiques des composants admin ──────────────────────────────────
@@ -41,7 +41,7 @@ function Loader() {
 
 // ─── Configuration des onglets ────────────────────────────────────────────────
 
-type TabId = 'compte' | 'annonces' | 'notifications' | 'evenements' | 'articles' | 'etablissements' | 'bateau' | 'utilisateurs' | 'obj_perdus'
+type TabId = 'compte' | 'annonces' | 'newsletter' | 'evenements' | 'articles' | 'etablissements' | 'bateau' | 'utilisateurs' | 'obj_perdus'
 
 interface TabDef {
   id: TabId
@@ -53,7 +53,7 @@ interface TabDef {
 const TABS: TabDef[] = [
   { id: 'compte',         label: 'Mon compte',     icon: '👤', roles: ['user','pro','compagnie','admin'] },
   { id: 'annonces',       label: 'Mes annonces',   icon: '🔍', roles: ['user','pro','compagnie','admin'] },
-  { id: 'notifications',  label: 'Notifications',  icon: '🔔', roles: ['user','pro','compagnie','admin'] },
+  { id: 'newsletter',     label: 'Newsletter',     icon: '📬', roles: ['user','pro','compagnie','admin'] },
   { id: 'evenements',     label: 'Événements',     icon: '📅', roles: ['pro','admin'] },
   { id: 'articles',       label: 'Articles',       icon: '📖', roles: ['admin'] },
   { id: 'etablissements', label: 'Établissements', icon: '🏪', roles: ['pro','admin'] },
@@ -215,54 +215,59 @@ function SectionAnnonces() {
   )
 }
 
-// ─── Section : Notifications ──────────────────────────────────────────────────
+// ─── Section : Newsletter ─────────────────────────────────────────────────────
 
-const NOTIF_OPTIONS: { value: NotifPref; label: string; desc: string; icon: string }[] = [
-  { value: 'toujours',   label: 'Toujours',             desc: 'Toutes les notifications, où que tu sois',    icon: '🔔' },
-  { value: 'sur_ile',    label: "Sur l'île seulement",  desc: "Uniquement quand tu es à l'Île du Levant",    icon: '🏝️' },
-  { value: 'jamais',     label: 'Jamais',               desc: 'Aucune notification',                         icon: '🔕' },
-]
-
-function SectionNotifications() {
+function SectionNewsletter() {
   const { user, profile } = useAuth()
   const supabase = createClient()
-  const [pref,   setPref]   = useState<NotifPref>(profile?.notification_pref ?? 'sur_ile')
+  const [subscribed, setSubscribed] = useState<boolean>(profile?.newsletter ?? false)
   const [saving, setSaving] = useState(false)
   const [saved,  setSaved]  = useState(false)
 
-  async function save(value: NotifPref) {
-    setPref(value)
+  useEffect(() => {
+    if (profile) setSubscribed(profile.newsletter)
+  }, [profile])
+
+  async function toggle() {
+    const next = !subscribed
+    setSubscribed(next)
     setSaving(true)
-    await supabase.from('profiles').update({ notification_pref: value }).eq('id', user!.id)
+    const { error } = await supabase.from('profiles').update({ newsletter: next }).eq('id', user!.id)
     setSaving(false)
+    if (error) {
+      setSubscribed(!next) // rollback
+      return
+    }
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
 
   return (
-    <div className="space-y-2">
-      {NOTIF_OPTIONS.map(opt => (
-        <button key={opt.value} onClick={() => save(opt.value)}
-          className={`w-full flex items-center gap-3 p-4 rounded-2xl border text-left transition-colors ${
-            pref === opt.value
-              ? 'border-blue-400 bg-blue-50'
-              : 'border-gray-200 bg-white active:bg-gray-50'
-          }`}>
-          <span className="text-xl">{opt.icon}</span>
-          <div className="flex-1 min-w-0">
-            <p className={`text-sm font-bold ${pref === opt.value ? 'text-blue-700' : 'text-gray-900'}`}>
-              {opt.label}
-            </p>
-            <p className="text-xs text-gray-400">{opt.desc}</p>
-          </div>
-          {pref === opt.value && (
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-blue-600 flex-shrink-0">
-              <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5"/>
-              <path d="M5 8l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <div className="space-y-3">
+      <button onClick={toggle} disabled={saving}
+        className={`w-full flex items-center gap-3 p-4 rounded-2xl border text-left transition-colors ${
+          subscribed
+            ? 'border-blue-400 bg-blue-50'
+            : 'border-gray-200 bg-white active:bg-gray-50'
+        }`}>
+        <span className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+          subscribed ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
+        }`}>
+          {subscribed && (
+            <svg width="12" height="10" viewBox="0 0 10 8" fill="none">
+              <path d="M1 4l3 3 5-6" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           )}
-        </button>
-      ))}
+        </span>
+        <div className="flex-1 min-w-0">
+          <p className={`text-sm font-bold ${subscribed ? 'text-blue-700' : 'text-gray-900'}`}>
+            S'abonner à la Newsletter Levant.news
+          </p>
+          <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+            Restez au courant de l'actualité du Levant. Jamais plus d'un email par mois, promis !
+          </p>
+        </div>
+      </button>
       {saving && <p className="text-xs text-gray-400 text-center">Enregistrement…</p>}
       {saved  && <p className="text-xs text-blue-600 text-center">✓ Préférence enregistrée</p>}
     </div>
@@ -397,9 +402,9 @@ export default function ProfilPage() {
           <SectionAnnonces />
         </div>
       )}
-      {activeTab === 'notifications' && (
+      {activeTab === 'newsletter' && (
         <div className="px-4 py-5 max-w-sm mx-auto">
-          <SectionNotifications />
+          <SectionNewsletter />
         </div>
       )}
 

@@ -25,7 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
 
-  async function fetchProfile(userId: string) {
+  async function fetchProfile(userId: string, authUser?: User | null) {
     console.log('[Auth] fetchProfile → userId:', userId)
     const { data, error } = await supabase
       .from('profiles')
@@ -33,6 +33,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .eq('id', userId)
       .single()
     console.log('[Auth] fetchProfile ← data:', data, '| error:', error)
+
+    // Synchro newsletter depuis user_metadata (inscription) — une seule fois
+    const wantsNewsletter = authUser?.user_metadata?.newsletter
+    if (data && wantsNewsletter === true && data.newsletter === false) {
+      const { error: syncErr } = await supabase
+        .from('profiles')
+        .update({ newsletter: true })
+        .eq('id', userId)
+      if (!syncErr) {
+        data.newsletter = true
+        await supabase.auth.updateUser({ data: { newsletter: null } })
+      }
+    }
+
     setProfile(data ?? null)
   }
 
@@ -41,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('[Auth] getSession → user:', session?.user?.email ?? 'null')
       setSession(session)
       setUser(session?.user ?? null)
-      if (session?.user) fetchProfile(session.user.id)
+      if (session?.user) fetchProfile(session.user.id, session.user)
       setLoading(false)
     })
 
@@ -49,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('[Auth] onAuthStateChange →', event, '| user:', session?.user?.email ?? 'null')
       setSession(session)
       setUser(session?.user ?? null)
-      if (session?.user) fetchProfile(session.user.id)
+      if (session?.user) fetchProfile(session.user.id, session.user)
       else setProfile(null)
       setLoading(false)
     })

@@ -14,6 +14,7 @@ export interface Profile {
   role: Role
   suspendu: boolean
   notification_pref: NotifPref
+  newsletter: boolean
   created_at: string
   updated_at: string
 }
