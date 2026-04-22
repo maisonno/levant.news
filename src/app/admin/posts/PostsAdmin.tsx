@@ -435,9 +435,14 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[104px]'
   useEffect(() => { load() }, [load])
 
   // Filtres selon onglet
+  // Pour un pro : "À venir" = tous ses events futurs (publiés ou non)
+  // Pour l'admin : "À venir" = uniquement les events publiés (les non-publiés sont en Modération)
+  const avenirFilter = (p: PostWithRelations) =>
+    p.date_debut >= today && !p.refuse && (isAdmin ? p.publie : true)
+
   const filtered = posts.filter(p => {
     if (tab === 'moderation') return !p.publie && !p.refuse
-    if (tab === 'avenir')     return p.publie && p.date_debut >= today
+    if (tab === 'avenir')     return avenirFilter(p)
     return true
   }).filter(p => {
     const q = search.toLowerCase()
@@ -452,7 +457,7 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[104px]'
 
   const count = {
     moderation: posts.filter(p => !p.publie && !p.refuse).length,
-    avenir:     posts.filter(p => p.publie && p.date_debut >= today).length,
+    avenir:     posts.filter(avenirFilter).length,
     tous:       posts.length,
   }
 
