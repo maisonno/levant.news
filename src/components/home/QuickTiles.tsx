@@ -13,7 +13,14 @@ export default function QuickTiles() {
   return (
     <div className="mt-3 px-4 flex flex-col gap-2">
 
-      {/* Ligne 1 : boutons gris — Annuaire, Infos, Webcam */}
+      {/* Ligne 1 : Bateaux, Méduse Watch, Objets trouvés */}
+      <div className="grid grid-cols-3 gap-2">
+        <BateauTile />
+        <MeduseTile />
+        <ObjetsTrouvesTile />
+      </div>
+
+      {/* Ligne 2 : boutons gris — Annuaire, Infos, Webcam */}
       <div className="grid grid-cols-3 gap-2">
         {GRAY_TILES.map(({ href, label }) => (
           <Link
@@ -24,13 +31,6 @@ export default function QuickTiles() {
             {label}
           </Link>
         ))}
-      </div>
-
-      {/* Ligne 2 : Bateaux, Méduse Watch, Objets trouvés */}
-      <div className="grid grid-cols-3 gap-2">
-        <BateauTile />
-        <MeduseTile />
-        <ObjetsTrouvesTile />
       </div>
 
     </div>
