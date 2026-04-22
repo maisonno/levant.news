@@ -66,7 +66,10 @@ const STATUT_CONFIG: Record<'annule' | 'change', { badge: string; label: string 
   change: { badge: 'bg-orange-100 text-orange-700',                label: 'Changé' },
 }
 
-const LEVANT = 'Île du Levant'
+function isLevant(port: string): boolean {
+  const n = port.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  return n.includes('levant')
+}
 
 function compagnieLabel(c: string): string {
   const n = c.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -243,8 +246,8 @@ function BateauxTab() {
   }, [selectedDate])
 
   const byHeure = (a: Horaire, b: Horaire) => a.heure.localeCompare(b.heure)
-  const versLevant   = horaires.filter(h => h.port_arrivee === LEVANT).sort(byHeure)
-  const depuisLevant = horaires.filter(h => h.port_depart   === LEVANT).sort(byHeure)
+  const versLevant   = horaires.filter(h => isLevant(h.port_arrivee)).sort(byHeure)
+  const depuisLevant = horaires.filter(h => isLevant(h.port_depart)).sort(byHeure)
   const visibles     = direction === 'vers' ? versLevant : depuisLevant
 
   return (
