@@ -291,9 +291,9 @@ function PostCardHorizontal({ post, onEdit, onPublier, onDepublier, onRefuser, o
   const catColor = cat ? (CAT_COLORS[cat.code] ?? 'bg-gray-100 text-gray-600') : null
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex">
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex">
       {/* Image gauche */}
-      <div className="w-20 flex-shrink-0 bg-gray-100 relative">
+      <div className="w-20 flex-shrink-0 bg-gray-100 relative overflow-hidden rounded-l-2xl">
         {post.affiche_url
           ? <img src={post.affiche_url} alt={post.titre} className="w-full h-full object-cover absolute inset-0" />
           : <div className="w-full h-full flex items-center justify-center text-2xl text-gray-200">📅</div>
@@ -341,6 +341,15 @@ function PostCardHorizontal({ post, onEdit, onPublier, onDepublier, onRefuser, o
           >
             ✏️ Modifier
           </button>
+
+          {!post.publie && !post.refuse && (
+            <button
+              onClick={onPublier}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-green-50 text-green-700 text-xs font-bold"
+            >
+              ✅ Publier
+            </button>
+          )}
 
           {/* Menu ··· */}
           <div className="relative ml-auto">
