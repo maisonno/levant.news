@@ -104,12 +104,7 @@ function AfficheCard({ post }: { post: PostWithRelations }) {
           {formatCarouselDate(post.date_debut, post.date_fin ?? null)}
         </p>
         <p className="text-sm font-bold text-gray-900 leading-tight line-clamp-2">{post.titre}</p>
-        {post.phare && (
-          <span className="inline-block mt-1 text-[10px] font-black text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">
-            ⭐ Phare
-          </span>
-        )}
-        {post.lieu && !post.phare && (
+        {post.lieu && (
           <p className="text-xs text-gray-400 mt-1 truncate">{post.lieu.nom}</p>
         )}
       </div>
