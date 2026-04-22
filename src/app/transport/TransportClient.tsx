@@ -293,21 +293,11 @@ function BateauxTab() {
                 <a
                   key={nom}
                   href={url}
-          const companies = [...new Set(horaires.map(h => h.compagnie).filter(Boolean))]
-          const withUrl = companies.filter(c => COMPAGNIES_BATEAU_URLS[c])
-          if (withUrl.length === 0) return null
-          return (
-            <div className="flex flex-wrap gap-2 pt-0.5">
-              {withUrl.map(c => (
-                <a
-                  key={c}
-                  href={COMPAGNIES_BATEAU_URLS[c]}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 bg-white border border-blue-200 rounded-full px-3 py-1 hover:bg-blue-600 hover:text-white transition-colors"
                 >
                   {nom} →
-                  {c} →
                 </a>
               ))}
             </div>
