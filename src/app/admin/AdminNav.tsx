@@ -4,17 +4,30 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useDrawer } from '@/contexts/DrawerContext'
 
-const TABS = [
-  { href: '/admin/posts',          label: 'Posts',         icon: '📅' },
-  { href: '/admin/articles',       label: 'Articles',      icon: '📄' },
-  { href: '/admin/etablissements', label: 'Établissements',icon: '🏪' },
-  { href: '/admin/annonces',       label: 'Annonces',      icon: '🔍' },
-  { href: '/admin/bateau',         label: 'Bateaux',       icon: '⛵' },
+const ADMIN_TABS = [
+  { href: '/admin/posts',          label: 'Posts',          icon: '📅' },
+  { href: '/admin/articles',       label: 'Articles',       icon: '📄' },
+  { href: '/admin/etablissements', label: 'Établissements', icon: '🏪' },
+  { href: '/admin/annonces',       label: 'Annonces',       icon: '🔍' },
+  { href: '/admin/bateau',         label: 'Bateaux',        icon: '⛵' },
 ]
 
-export default function AdminNav({ displayName }: { displayName: string }) {
+const MODERATION_TAB = { href: '/admin/moderation', label: 'Modération', icon: '🛡️' }
+
+interface AdminNavProps {
+  displayName: string
+  isAdmin?: boolean
+  isModerator?: boolean
+}
+
+export default function AdminNav({ displayName, isAdmin = true, isModerator = false }: AdminNavProps) {
   const pathname = usePathname()
   const { toggle } = useDrawer()
+
+  const tabs = [
+    ...(isModerator ? [MODERATION_TAB] : []),
+    ...(isAdmin ? ADMIN_TABS : []),
+  ]
 
   return (
     <div
@@ -38,34 +51,31 @@ export default function AdminNav({ displayName }: { displayName: string }) {
         className="relative z-10 flex items-center justify-between px-4 pb-1"
         style={{ paddingTop: 'calc(env(safe-area-inset-top) + 6px)' }}
       >
-
-        {/* ← Retour accueil */}
         <Link href="/" aria-label="Retour à l'accueil" className="w-10 h-10 flex items-center justify-center -ml-2">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M15 18l-6-6 6-6" />
           </svg>
         </Link>
 
-        {/* Levant.news admin */}
         <div className="text-center">
           <div className="text-[13px] font-extrabold text-white tracking-tight leading-tight">
             Levant<span className="opacity-40">.news</span>
           </div>
-          <div className="text-[10px] font-bold uppercase tracking-widest text-white/40">admin · {displayName}</div>
+          <div className="text-[10px] font-bold uppercase tracking-widest text-white/40">
+            {isModerator && !isAdmin ? 'modération' : 'admin'} · {displayName}
+          </div>
         </div>
 
-        {/* ☰ Burger */}
         <button onClick={toggle} aria-label="Menu" className="w-10 h-10 flex flex-col items-center justify-center gap-[5px] -mr-2">
           <span className="w-5 h-0.5 bg-white rounded-full" />
           <span className="w-5 h-0.5 bg-white rounded-full" />
           <span className="w-5 h-0.5 bg-white rounded-full" />
         </button>
-
       </div>
 
       {/* Onglets */}
       <div className="relative z-10 flex overflow-x-auto px-2 pb-0" style={{ scrollbarWidth: 'none' }}>
-        {TABS.map(tab => {
+        {tabs.map(tab => {
           const active = pathname.startsWith(tab.href)
           return (
             <Link

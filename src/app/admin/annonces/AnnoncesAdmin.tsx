@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { ObjetPerdu, ObjetType } from '@/types/database'
+import { notifyModerators } from '@/lib/notifyModerators'
 
 function fmtDate(iso: string) {
   return new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -159,6 +160,7 @@ export default function AnnoncesAdmin({ topOffset = 'top-[104px]' }: AnnoncesAdm
       await supabase.from('objets_perdus').update(data).eq('id', editAnnonce.id)
     } else {
       await supabase.from('objets_perdus').insert(data)
+      void notifyModerators('annonce', { ...data })
     }
     await load()
     setShowForm(false)

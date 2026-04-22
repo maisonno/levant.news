@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { PostWithRelations, Categorie, Etablissement } from '@/types/database'
 import ImagePicker from '@/components/admin/ImagePicker'
+import { notifyModerators } from '@/lib/notifyModerators'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -521,6 +522,7 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[104px]'
         return
       }
       await load()
+      void notifyModerators('post', { ...data })
     }
     setSaveSuccess(true)
     setTimeout(() => closeForm(), 800)

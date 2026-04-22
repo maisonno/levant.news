@@ -14,17 +14,24 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, prenom, nom')
+    .select('role, prenom, nom, moderateur')
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'admin') {
+  const isAdmin     = profile?.role === 'admin'
+  const isModerator = profile?.moderateur === true
+
+  if (!isAdmin && !isModerator) {
     redirect('/')
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AdminNav displayName={`${profile.prenom} ${profile.nom}`} />
+      <AdminNav
+        displayName={`${profile.prenom} ${profile.nom}`}
+        isAdmin={isAdmin}
+        isModerator={isModerator}
+      />
       <div className="pt-0">
         {children}
       </div>
