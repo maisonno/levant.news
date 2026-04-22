@@ -484,15 +484,10 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[104px]'
       }
       await load()
     } else {
-      const { data: inserted, error } = await supabase
-        .from('posts').insert({ ...data, dans_agenda: true, auteur_id: userId }).select()
-      console.log('[PostsAdmin] insert →', { inserted, error })
+      const { error } = await supabase
+        .from('posts').insert({ ...data, dans_agenda: true, auteur_id: userId })
       if (error) {
         setSaveError(`Erreur Supabase : ${error.message} (${error.code})`)
-        return
-      }
-      if (!inserted || inserted.length === 0) {
-        setSaveError('❌ Droits insuffisants (RLS) — exécute le fichier docs/levant-news/posts-rls-policies.sql dans Supabase.')
         return
       }
       await load()
