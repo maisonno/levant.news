@@ -25,7 +25,7 @@ export default function AdminNav({ displayName, isAdmin = true, isModerator = fa
   const { toggle } = useDrawer()
 
   const tabs = [
-    ...(isModerator ? [MODERATION_TAB] : []),
+    ...(isAdmin || isModerator ? [MODERATION_TAB] : []),
     ...(isAdmin ? ADMIN_TABS : []),
   ]
 
