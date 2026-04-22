@@ -6,14 +6,14 @@ import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 
 const MODULES = [
-  { href: '/',          icon: '🏠', label: 'Accueil' },
   { href: '/agenda',    icon: '📅', label: 'Agenda' },
-  { href: '/annuaire',  icon: '🗂️', label: 'Annuaire' },
-  { href: '/perdu',     icon: '🔍', label: 'Perdu / Trouvé' },
-  { href: '/infos',     icon: 'ℹ️', label: 'Infos pratiques' },
-  { href: '/webcam',    icon: '📷', label: 'Webcam' },
   { href: '/meteo',     icon: '☀️', label: 'Météo' },
   { href: '/transport', icon: '⛵', label: 'Transport' },
+  { href: '/meduse',    icon: '🪼', label: 'Méduse Watch' },
+  { href: '/perdu',     icon: '🔍', label: 'Perdu / Trouvé' },
+  { href: '/annuaire',  icon: '🗂️', label: 'Annuaire' },
+  { href: '/infos',     icon: 'ℹ️', label: 'Infos pratiques' },
+  { href: '/webcam',    icon: '📷', label: 'Webcam' },
 ]
 
 export default function DrawerMenu() {
@@ -41,9 +41,9 @@ export default function DrawerMenu() {
           md:rounded-none md:shadow-none md:border-r md:border-gray-100 md:transition-none
         `}
       >
-        {/* Header — fond blanc, titre en bleu */}
-        <div className="px-5 pb-4 pt-14 bg-white border-b border-gray-100">
-          <Link href="/" onClick={close} className="block text-[22px] font-extrabold tracking-tight mb-1">
+        {/* Header — logo remonté, lien vers l'accueil */}
+        <div className="px-5 pb-3 pt-10 bg-white border-b border-gray-100">
+          <Link href="/" onClick={close} className="block text-[22px] font-extrabold tracking-tight mb-0.5">
             <span className="text-blue-700">Levant</span><span className="text-blue-400">.news</span>
           </Link>
           <div className="text-[11px] font-semibold text-gray-400 tracking-widest italic">
@@ -52,10 +52,7 @@ export default function DrawerMenu() {
         </div>
 
         {/* Liens de navigation */}
-        <div className="flex-1 overflow-y-auto py-2">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 px-5 pt-3 pb-1">
-            Navigation
-          </p>
+        <div className="flex-1 overflow-y-auto py-1">
           {MODULES.map(({ href, icon, label }) => {
             const active = pathname === href
             return (
@@ -63,14 +60,14 @@ export default function DrawerMenu() {
                 key={href}
                 href={href}
                 onClick={close}
-                className={`flex items-center gap-3 px-5 py-3 transition-colors ${
+                className={`flex items-center gap-2.5 px-4 py-2 transition-colors ${
                   active
                     ? 'bg-blue-50 text-blue-700'
                     : 'text-gray-700 hover:bg-gray-50'
                 }`}
               >
                 <span
-                  className={`w-9 h-9 rounded-xl flex items-center justify-center text-base flex-shrink-0 ${
+                  className={`w-7 h-7 rounded-lg flex items-center justify-center text-sm flex-shrink-0 ${
                     active ? 'bg-blue-600 text-white' : 'bg-gray-100'
                   }`}
                 >
