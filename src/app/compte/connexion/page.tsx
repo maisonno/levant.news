@@ -63,6 +63,12 @@ function ConnexionContent() {
         </button>
       </form>
 
+      <p className="text-center text-sm">
+        <Link href="/compte/mot-de-passe-oublie" className="text-gray-500 hover:text-blue-600">
+          Mot de passe oublié ?
+        </Link>
+      </p>
+
       <p className="text-center text-sm text-gray-500">
         Pas encore de compte ?{' '}
         <Link href="/compte/inscription" className="text-blue-600 font-semibold">Créer un compte</Link>
