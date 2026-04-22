@@ -81,6 +81,28 @@ export default function DrawerMenu() {
           })}
         </div>
 
+        {/* Espace admin / modération */}
+        {(profile?.role === 'admin' || profile?.moderateur) && (
+          <div className="border-t border-gray-100 px-4 py-2">
+            <Link
+              href={profile?.role === 'admin' ? '/admin/posts' : '/admin/moderation'}
+              onClick={close}
+              className={`flex items-center gap-2.5 px-0 py-2 transition-colors ${
+                pathname.startsWith('/admin') ? 'text-blue-700' : 'text-gray-700 hover:text-blue-700'
+              }`}
+            >
+              <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-sm flex-shrink-0 ${
+                pathname.startsWith('/admin') ? 'bg-blue-600 text-white' : 'bg-gray-100'
+              }`}>
+                {profile?.role === 'admin' ? '⚙️' : '🛡️'}
+              </span>
+              <span className={`text-sm ${pathname.startsWith('/admin') ? 'font-bold' : 'font-medium'}`}>
+                {profile?.role === 'admin' ? 'Espace admin' : 'Modération'}
+              </span>
+            </Link>
+          </div>
+        )}
+
         {/* Mon Compte — tout en bas */}
         <div className="border-t border-gray-100 px-4 py-4">
           {user ? (
