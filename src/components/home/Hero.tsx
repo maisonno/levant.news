@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useState, useEffect } from 'react'
 import { useDrawer } from '@/contexts/DrawerContext'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -8,14 +9,45 @@ import { useAuth } from '@/contexts/AuthContext'
 // (ou hero-bg.png / hero-bg.webp) et change la constante ci-dessous.
 const HERO_BG = '/hero-bg.jpg'
 
+const WMO_EMOJI: Record<number, string> = {
+  0: '☀️', 1: '🌤️', 2: '⛅', 3: '🌥️',
+  45: '🌫️', 48: '🌫️',
+  51: '🌦️', 53: '🌦️', 55: '🌧️',
+  61: '🌧️', 63: '🌧️', 65: '🌧️',
+  71: '❄️', 73: '❄️', 75: '❄️',
+  80: '🌦️', 81: '🌧️', 82: '⛈️',
+  85: '❄️', 86: '❄️',
+  95: '⛈️', 96: '⛈️', 99: '⛈️',
+}
+
 export default function Hero() {
   const { toggle } = useDrawer()
   const { user, profile } = useAuth()
+  const [emoji, setEmoji] = useState<string | null>(null)
+  const [temp,  setTemp]  = useState<number | null>(null)
 
   const accountHref    = user ? '/compte/profil' : '/compte/connexion'
   const accountInitial = profile?.prenom?.charAt(0).toUpperCase()
                       ?? user?.email?.charAt(0).toUpperCase()
                       ?? null
+
+  useEffect(() => {
+    fetch('/api/meteo')
+      .then(r => r.ok ? r.json() : null)
+      .then(json => {
+        if (!json) return
+        const times = json.wind?.hourly?.time as string[]
+        const codes = json.wind?.hourly?.weather_code as number[]
+        const temps = json.wind?.hourly?.temperature_2m as number[]
+        if (!times || !codes || !temps) return
+        const now = new Date()
+        const idx = times.findIndex((t: string) => new Date(t) >= now)
+        const i   = idx >= 0 ? idx : 0
+        setEmoji(WMO_EMOJI[codes[i]] ?? '🌡️')
+        setTemp(Math.round(temps[i]))
+      })
+      .catch(() => {})
+  }, [])
 
   return (
     <div
@@ -83,6 +115,18 @@ export default function Hero() {
           </div>
         </div>
       </div>
+
+      {/* Pastille météo — bas gauche */}
+      {(emoji || temp !== null) && (
+        <Link
+          href="/meteo"
+          className="absolute bottom-3 left-4 z-10 flex items-center gap-1.5 bg-white/25 backdrop-blur-sm rounded-full px-3 py-1.5 active:scale-[0.96] transition-transform"
+        >
+          {emoji && <span className="text-base leading-none">{emoji}</span>}
+          {temp !== null && <span className="text-white font-extrabold text-sm leading-none">{temp}°</span>}
+        </Link>
+      )}
     </div>
   )
 }
+

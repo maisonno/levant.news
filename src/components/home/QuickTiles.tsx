@@ -1,39 +1,38 @@
 import Link from 'next/link'
-import MeteoTile from './MeteoTile'
 import BateauTile from './BateauTile'
 import ObjetsTrouvesTile from './ObjetsTrouvesTile'
 import MeduseTile from './MeduseTile'
 
-const STATIC_TILES = [
-  { href: '/webcam',  label: 'Webcam',            sub: 'Live',            live: true  },
-  { href: '/infos',   label: 'Infos pratiques',   sub: null,              live: false },
-  { href: '/annuaire',label: 'Annuaire',           sub: 'Horaires',        live: false },
+const GRAY_TILES = [
+  { href: '/annuaire', label: 'Annuaire' },
+  { href: '/infos',    label: 'Infos'    },
+  { href: '/webcam',   label: 'Webcam'   },
 ]
-
-const BASE = 'bg-blue-700 rounded-2xl p-3 text-white active:scale-[0.97] transition-transform'
 
 export default function QuickTiles() {
   return (
-    <div className="mt-4 px-4">
+    <div className="mt-3 px-4 flex flex-col gap-2">
+
+      {/* Ligne 1 : boutons gris — Annuaire, Infos, Webcam */}
       <div className="grid grid-cols-3 gap-2">
-
-        <MeteoTile />
-        <BateauTile />
-
-        {STATIC_TILES.map(({ href, label, sub, live }) => (
-          <Link key={href} href={href} className={BASE}>
-            <p className="text-sm font-bold leading-tight mb-1">{label}</p>
-            <div className="flex items-center gap-1.5">
-              {live && <span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse flex-shrink-0" />}
-              {sub && <p className="text-white/50 text-xs">{sub}</p>}
-            </div>
+        {GRAY_TILES.map(({ href, label }) => (
+          <Link
+            key={href}
+            href={href}
+            className="bg-gray-100 rounded-2xl py-3 text-center text-sm font-semibold text-gray-700 active:scale-[0.97] transition-transform"
+          >
+            {label}
           </Link>
         ))}
-
-        <ObjetsTrouvesTile />
-        <MeduseTile />
-
       </div>
+
+      {/* Ligne 2 : Bateaux, Méduse Watch, Objets trouvés */}
+      <div className="grid grid-cols-3 gap-2">
+        <BateauTile />
+        <MeduseTile />
+        <ObjetsTrouvesTile />
+      </div>
+
     </div>
   )
 }
