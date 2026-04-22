@@ -120,10 +120,10 @@ export default function Hero() {
       {(emoji || temp !== null) && (
         <Link
           href="/meteo"
-          className="absolute bottom-3 left-4 z-10 flex items-center gap-1.5 bg-white/25 backdrop-blur-sm rounded-full px-3 py-1.5 active:scale-[0.96] transition-transform"
+          className="absolute bottom-4 left-4 z-10 flex items-center gap-2 bg-white/25 backdrop-blur-sm rounded-full px-4 py-2 active:scale-[0.96] transition-transform"
         >
-          {emoji && <span className="text-base leading-none">{emoji}</span>}
-          {temp !== null && <span className="text-white font-extrabold text-sm leading-none">{temp}°</span>}
+          {emoji && <span className="text-2xl leading-none">{emoji}</span>}
+          {temp !== null && <span className="text-white font-extrabold text-lg leading-none">{temp}°</span>}
         </Link>
       )}
     </div>

@@ -19,7 +19,7 @@ export default function QuickTiles() {
           <Link
             key={href}
             href={href}
-            className="bg-gray-100 rounded-2xl py-3 text-center text-sm font-semibold text-gray-700 active:scale-[0.97] transition-transform"
+            className="bg-gray-200 rounded-2xl py-3 text-center text-sm font-semibold text-gray-700 active:scale-[0.97] transition-transform"
           >
             {label}
           </Link>

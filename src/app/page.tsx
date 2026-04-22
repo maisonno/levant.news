@@ -246,11 +246,11 @@ export default function HomePage() {
       {/* Instant — statique */}
       <Hero />
 
-      {/* Instant — données chargées côté client */}
-      <InfoBateauBanner />
-
       {/* Instant — chaque tuile charge ses données côté client */}
       <QuickTiles />
+
+      {/* Instant — données chargées côté client */}
+      <InfoBateauBanner />
 
       {/* Streaming — skeleton de cartes pendant le chargement */}
       <Suspense fallback={<MisEnAvantSkeleton />}>
