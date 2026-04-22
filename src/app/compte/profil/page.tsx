@@ -11,7 +11,7 @@ import TabUtilisateurs from './TabUtilisateurs'
 // ─── Imports dynamiques des composants admin ──────────────────────────────────
 
 interface PostsAdminProps   { etablissementIds?: string[]; topOffset?: string; isAdmin?: boolean }
-interface EtabAdminProps    { etablissementIds?: string[]; topOffset?: string }
+interface EtabAdminProps    { etablissementIds?: string[]; topOffset?: string; isAdmin?: boolean }
 interface AnnoncesAdminProps { topOffset?: string }
 
 const PostsAdmin = dynamic<PostsAdminProps>(
@@ -418,6 +418,7 @@ export default function ProfilPage() {
         <EtablissementsAdmin
           etablissementIds={role === 'admin' ? undefined : userEtabIds}
           topOffset="top-[97px]"
+          isAdmin={role === 'admin'}
         />
       )}
       {activeTab === 'bateau' && (

@@ -33,14 +33,27 @@ interface PostFormProps {
 }
 
 function PostForm({ initial, categories, etablissements, onSave, onClose, isAdmin = true, etablissementIds }: PostFormProps) {
+  // Établissements de l'utilisateur (pour pré-sélection et liste organisateurs)
+  const etabsUser = etablissementIds
+    ? etablissements.filter(e => etablissementIds.includes(e.id))
+    : etablissements
+
   const [titre,        setTitre]        = useState(initial?.titre ?? '')
   const [complement,   setComplement]   = useState(initial?.complement ?? '')
   const [dateDebut,    setDateDebut]    = useState(initial?.date_debut ?? '')
   const [dateFin,      setDateFin]      = useState(initial?.date_fin ?? '')
   const [heure,        setHeure]        = useState(initial?.heure ?? '')
   const [categorieCode,setCategorieCode]= useState(initial?.categorie_code ?? '')
-  const [organisateurId,setOrganisateurId] = useState(initial?.organisateur_id ?? '')
-  const [lieuId,       setLieuId]       = useState(initial?.lieu_id ?? '')
+  const [organisateurId,setOrganisateurId] = useState(() => {
+    if (initial?.organisateur_id) return initial.organisateur_id
+    if (!initial && etablissementIds) return etabsUser.find(e => e.est_organisateur)?.id ?? ''
+    return ''
+  })
+  const [lieuId,       setLieuId]       = useState(() => {
+    if (initial?.lieu_id) return initial.lieu_id
+    if (!initial && etablissementIds) return etabsUser.find(e => e.est_lieu)?.id ?? ''
+    return ''
+  })
   const [publie,       setPublie]       = useState(initial?.publie ?? false)
   const [misEnAvant,   setMisEnAvant]   = useState(initial?.mis_en_avant ?? false)
   const [afficheUrl,   setAfficheUrl]   = useState(initial?.affiche_url ?? '')
@@ -51,12 +64,10 @@ function PostForm({ initial, categories, etablissements, onSave, onClose, isAdmi
   const [aLaffiche,    setALaffiche]    = useState(initial?.a_laffiche ?? false)
   const [saving, setSaving] = useState(false)
 
-  // Pour un pro, on restreint aux établissements liés à son compte
-  const etabsFiltered = etablissementIds
-    ? etablissements.filter(e => etablissementIds.includes(e.id))
-    : etablissements
-  const lieux = etabsFiltered.filter(e => e.est_lieu)
-  const orgas = etabsFiltered.filter(e => e.est_organisateur)
+  // Lieux : tous les établissements (le pro peut choisir n'importe quel lieu)
+  const lieux = etablissements.filter(e => e.est_lieu)
+  // Organisateurs : uniquement les établissements de l'utilisateur
+  const orgas = etabsUser.filter(e => e.est_organisateur)
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -128,8 +139,8 @@ function PostForm({ initial, categories, etablissements, onSave, onClose, isAdmi
       {/* Toggles */}
       <div className="grid grid-cols-2 gap-2">
         {([
-          [publie, setPublie, 'Publié', !isAdmin],
-          [misEnAvant, setMisEnAvant, 'Mis en avant', false],
+          ...(isAdmin ? [[publie, setPublie, 'Publié', false]] : []),
+          ...(isAdmin ? [[misEnAvant, setMisEnAvant, 'Mis en avant', false]] : []),
           [aLaffiche, setALaffiche, '⭐ À l\'affiche', false],
           [inscription, setInscription, 'Inscription', false],
           ...(isAdmin ? [[refuse, setRefuse, 'Refusé', false]] : []),
@@ -201,6 +212,9 @@ function PostCard({ post, onPublier, onDepublier, onRefuser, onEdit, onDelete, i
             <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${catColor} mr-1`}>
               {cat.nom}
             </span>
+          )}
+          {!post.publie && !post.refuse && (
+            <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 mr-1">À valider</span>
           )}
           {post.refuse && (
             <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-red-100 text-red-600 mr-1">Refusé</span>
@@ -277,9 +291,9 @@ function PostCardHorizontal({ post, onEdit, onPublier, onDepublier, onRefuser, o
   const catColor = cat ? (CAT_COLORS[cat.code] ?? 'bg-gray-100 text-gray-600') : null
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex">
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex">
       {/* Image gauche */}
-      <div className="w-20 flex-shrink-0 bg-gray-100 relative">
+      <div className="w-20 flex-shrink-0 bg-gray-100 relative overflow-hidden rounded-l-2xl">
         {post.affiche_url
           ? <img src={post.affiche_url} alt={post.titre} className="w-full h-full object-cover absolute inset-0" />
           : <div className="w-full h-full flex items-center justify-center text-2xl text-gray-200">📅</div>
@@ -294,6 +308,9 @@ function PostCardHorizontal({ post, onEdit, onPublier, onDepublier, onRefuser, o
             <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${catColor}`}>
               {cat.nom}
             </span>
+          )}
+          {!post.publie && !post.refuse && (
+            <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">À valider</span>
           )}
           {post.mis_en_avant && (
             <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">⭐ Avant</span>
@@ -324,6 +341,15 @@ function PostCardHorizontal({ post, onEdit, onPublier, onDepublier, onRefuser, o
           >
             ✏️ Modifier
           </button>
+
+          {!post.publie && !post.refuse && (
+            <button
+              onClick={onPublier}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-green-50 text-green-700 text-xs font-bold"
+            >
+              ✅ Publier
+            </button>
+          )}
 
           {/* Menu ··· */}
           <div className="relative ml-auto">
@@ -379,11 +405,14 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[104px]'
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [saveError, setSaveError]   = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
 
   const today = new Date().toISOString().split('T')[0]
 
   const load = useCallback(async () => {
     setLoading(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    setUserId(user?.id ?? null)
     let postsQuery = supabase.from('posts').select(`
         *,
         organisateur:organisateur_id(id,nom,photo_url),
@@ -415,9 +444,14 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[104px]'
   useEffect(() => { load() }, [load])
 
   // Filtres selon onglet
+  // Pour un pro : "À venir" = tous ses events futurs (publiés ou non)
+  // Pour l'admin : "À venir" = uniquement les events publiés (les non-publiés sont en Modération)
+  const avenirFilter = (p: PostWithRelations) =>
+    p.date_debut >= today && !p.refuse && (isAdmin ? p.publie : true)
+
   const filtered = posts.filter(p => {
     if (tab === 'moderation') return !p.publie && !p.refuse
-    if (tab === 'avenir')     return p.publie && p.date_debut >= today
+    if (tab === 'avenir')     return avenirFilter(p)
     return true
   }).filter(p => {
     const q = search.toLowerCase()
@@ -432,7 +466,7 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[104px]'
 
   const count = {
     moderation: posts.filter(p => !p.publie && !p.refuse).length,
-    avenir:     posts.filter(p => p.publie && p.date_debut >= today).length,
+    avenir:     posts.filter(avenirFilter).length,
     tous:       posts.length,
   }
 
@@ -464,15 +498,10 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[104px]'
       }
       await load()
     } else {
-      const { data: inserted, error } = await supabase
-        .from('posts').insert({ ...data, dans_agenda: true }).select()
-      console.log('[PostsAdmin] insert →', { inserted, error })
+      const { error } = await supabase
+        .from('posts').insert({ ...data, dans_agenda: true, auteur_id: userId })
       if (error) {
         setSaveError(`Erreur Supabase : ${error.message} (${error.code})`)
-        return
-      }
-      if (!inserted || inserted.length === 0) {
-        setSaveError('❌ Droits insuffisants (RLS) — exécute le fichier docs/levant-news/posts-rls-policies.sql dans Supabase.')
         return
       }
       await load()

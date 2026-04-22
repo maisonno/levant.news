@@ -139,9 +139,10 @@ function EtabForm({
 interface EtablissementsAdminProps {
   etablissementIds?: string[] // undefined = admin (pas de filtre) ; tableau = filtre pro
   topOffset?: string           // classe Tailwind sticky top-* (défaut: top-[104px])
+  isAdmin?: boolean
 }
 
-export default function EtablissementsAdmin({ etablissementIds, topOffset = 'top-[104px]' }: EtablissementsAdminProps) {
+export default function EtablissementsAdmin({ etablissementIds, topOffset = 'top-[104px]', isAdmin = true }: EtablissementsAdminProps) {
   const supabase = createClient()
   const [etabs,   setEtabs]   = useState<Etablissement[]>([])
   const [types,   setTypes]   = useState<TypeEtablissement[]>([])
@@ -214,10 +215,12 @@ export default function EtablissementsAdmin({ etablissementIds, topOffset = 'top
       <div className={`px-4 py-3 bg-white border-b border-gray-100 flex gap-2 sticky ${topOffset} z-20`}>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher…"
           className="flex-1 bg-gray-100 rounded-xl px-3 py-2 text-sm outline-none" />
-        <button onClick={() => { setEditEtab(null); setShowForm(true) }}
-          className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-bold flex-shrink-0">
-          + Ajouter
-        </button>
+        {isAdmin && (
+          <button onClick={() => { setEditEtab(null); setShowForm(true) }}
+            className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-bold flex-shrink-0">
+            + Ajouter
+          </button>
+        )}
       </div>
 
       {/* Liste groupée */}
