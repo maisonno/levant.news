@@ -396,11 +396,14 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[104px]'
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [saveError, setSaveError]   = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
 
   const today = new Date().toISOString().split('T')[0]
 
   const load = useCallback(async () => {
     setLoading(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    setUserId(user?.id ?? null)
     let postsQuery = supabase.from('posts').select(`
         *,
         organisateur:organisateur_id(id,nom,photo_url),
@@ -482,7 +485,7 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[104px]'
       await load()
     } else {
       const { data: inserted, error } = await supabase
-        .from('posts').insert({ ...data, dans_agenda: true }).select()
+        .from('posts').insert({ ...data, dans_agenda: true, auteur_id: userId }).select()
       console.log('[PostsAdmin] insert →', { inserted, error })
       if (error) {
         setSaveError(`Erreur Supabase : ${error.message} (${error.code})`)
