@@ -6,6 +6,7 @@ import Link from 'next/link'
 import PostCardList from '@/components/PostCardList'
 import { useEventSheet } from '@/contexts/EventSheetContext'
 import PageHeader from '@/components/PageHeader'
+import HorizontalCarouselWithDots from '@/components/HorizontalCarouselWithDots'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -139,16 +140,6 @@ function ExpoCard({ post }: { post: PostWithRelations }) {
   )
 }
 
-function HorizontalCarousel({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      className="flex items-start gap-3 overflow-x-auto pb-2 snap-x snap-mandatory"
-      style={{ scrollbarWidth: 'none' }}
-    >
-      {children}
-    </div>
-  )
-}
 
 // ─── Onglet Agenda ────────────────────────────────────────────────────────────
 
@@ -310,19 +301,16 @@ function AgendaTab({
 
       {/* Carousel À l'affiche — masqué si recherche ou filtre actif */}
       {!isFiltering && afficheCarousel.length > 0 && (
-        <div className="bg-white border-b border-gray-100 pt-4 pb-3">
-          <div className="flex items-center gap-2 mb-3 px-4">
+        <div className="bg-white border-b border-gray-100 pt-4 pb-3 px-4">
+          <div className="flex items-center gap-2 mb-3">
             <h2 className="text-base font-extrabold text-gray-900">À l'affiche</h2>
             <div className="flex-1 h-px bg-gray-200" />
           </div>
-          <div
-            className="flex items-start gap-3 overflow-x-auto pb-1 snap-x snap-mandatory px-4"
-            style={{ scrollbarWidth: 'none' }}
-          >
+          <HorizontalCarouselWithDots count={afficheCarousel.length + 1} className="pb-1">
             {afficheCarousel.map(post => (
               <AfficheCard key={post.id} post={post} />
             ))}
-            {/* 6e carte — Voir tout */}
+            {/* carte finale — Voir tout */}
             <button
               onClick={onViewAllAffiche}
               className="flex-shrink-0 snap-start w-44 rounded-2xl overflow-hidden active:scale-[0.97] transition-transform"
@@ -337,7 +325,7 @@ function AgendaTab({
                 <span className="text-white/60 text-xl">→</span>
               </div>
             </button>
-          </div>
+          </HorizontalCarouselWithDots>
         </div>
       )}
 
@@ -410,18 +398,18 @@ function ExpositionsTab({ expos, today }: { expos: PostWithRelations[]; today: s
       {enCours.length > 0 && (
         <section>
           <SectionDivider title="En ce moment" />
-          <HorizontalCarousel>
+          <HorizontalCarouselWithDots count={enCours.length} className="pb-2">
             {enCours.map(post => <ExpoCard key={post.id} post={post} />)}
-          </HorizontalCarousel>
+          </HorizontalCarouselWithDots>
         </section>
       )}
 
       {aVenir.length > 0 && (
         <section>
           <SectionDivider title="À venir" />
-          <HorizontalCarousel>
+          <HorizontalCarouselWithDots count={aVenir.length} className="pb-2">
             {aVenir.map(post => <ExpoCard key={post.id} post={post} />)}
-          </HorizontalCarousel>
+          </HorizontalCarouselWithDots>
         </section>
       )}
 
@@ -459,9 +447,9 @@ function AfficheTab({ posts, today }: { posts: PostWithRelations[]; today: strin
         return (
           <section key={date}>
             <SectionDivider title={jour} subtitle={dateStr || undefined} />
-            <HorizontalCarousel>
+            <HorizontalCarouselWithDots count={datePosts.length} className="pb-2">
               {datePosts.map(post => <AfficheCard key={post.id} post={post} />)}
-            </HorizontalCarousel>
+            </HorizontalCarouselWithDots>
           </section>
         )
       })}

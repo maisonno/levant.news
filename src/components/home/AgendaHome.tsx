@@ -4,6 +4,7 @@ import { PostWithRelations } from '@/types/database'
 import PostCardList from '@/components/PostCardList'
 import Link from 'next/link'
 import { useEventSheet } from '@/contexts/EventSheetContext'
+import HorizontalCarouselWithDots from '@/components/HorizontalCarouselWithDots'
 
 interface Props {
   todayPosts:  PostWithRelations[]
@@ -135,14 +136,11 @@ export default function AgendaHome({
         {aLaffiche.length > 0 && (
           <section>
             <SectionHeader title="À l'affiche" />
-            <div
-              className="flex items-start gap-3 overflow-x-auto pb-2 snap-x snap-mandatory"
-              style={{ scrollbarWidth: 'none' }}
-            >
+            <HorizontalCarouselWithDots count={aLaffiche.length + 1} className="pb-2">
               {aLaffiche.map(post => (
                 <CarouselCard key={post.id} post={post} accentColor="text-blue-600" />
               ))}
-              {/* 6e carte : lien vers la page complète */}
+              {/* carte finale : lien vers la page complète */}
               <Link
                 href="/agenda?tab=affiche"
                 className="flex-shrink-0 snap-start w-44 rounded-2xl overflow-hidden active:scale-[0.97] transition-transform"
@@ -157,7 +155,7 @@ export default function AgendaHome({
                   <span className="text-white/60 text-xl">→</span>
                 </div>
               </Link>
-            </div>
+            </HorizontalCarouselWithDots>
           </section>
         )}
 
@@ -181,14 +179,11 @@ export default function AgendaHome({
         {expos.length > 0 && (
           <section>
             <SectionHeader title="Expositions" />
-            <div
-              className="flex items-start gap-3 overflow-x-auto pb-2 snap-x snap-mandatory"
-              style={{ scrollbarWidth: 'none' }}
-            >
+            <HorizontalCarouselWithDots count={expos.length} className="pb-2">
               {expos.map(post => (
                 <CarouselCard key={post.id} post={post} accentColor="text-amber-600" />
               ))}
-            </div>
+            </HorizontalCarouselWithDots>
           </section>
         )}
 

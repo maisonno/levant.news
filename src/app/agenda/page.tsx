@@ -22,9 +22,10 @@ export default async function AgendaPage({
 }: {
   searchParams: Promise<{ tab?: string }>
 }) {
-  const supabase = await createClient()
-  const today    = new Date().toISOString().split('T')[0]
-  const params   = await searchParams
+  const supabase   = await createClient()
+  const today      = new Date().toISOString().split('T')[0]
+  const datePlus21 = new Date(Date.now() + 21 * 86400000).toISOString().split('T')[0]
+  const params     = await searchParams
   const initialTab = (['agenda', 'expositions', 'affiche'] as const).includes(
     params?.tab as any
   )
@@ -37,7 +38,7 @@ export default async function AgendaPage({
   let expos:            PostWithRelations[] = []
 
   try {
-    const [postsRes, afficheRes, ongoingExpoRes] = await Promise.allSettled([
+    const [postsRes, afficheTabAfficheRes, afficheTabPhareRes, ongoingExpoRes] = await Promise.allSettled([
 
       // Liste complète de l'agenda (hors EXPO, on filtrera côté JS)
       supabase
@@ -49,12 +50,24 @@ export default async function AgendaPage({
         .order('date_debut', { ascending: true })
         .order('ordre_dans_journee', { ascending: true, nullsFirst: false }),
 
-      // Onglet À l'affiche : tous les posts a_laffiche OU phare, à venir
+      // Onglet À l'affiche — a_laffiche (phare=false) : limité aux 21 prochains jours
       supabase
         .from('posts')
         .select('*, categorie:categories(code, nom)')
         .eq('publie', true)
-        .or('a_laffiche.eq.true,phare.eq.true')
+        .eq('a_laffiche', true)
+        .eq('phare', false)
+        .or(`date_fin.gte.${today},and(date_fin.is.null,date_debut.gte.${today})`)
+        .lte('date_debut', datePlus21)
+        .order('date_debut', { ascending: true })
+        .order('ordre_dans_journee', { ascending: true, nullsFirst: false }),
+
+      // Onglet À l'affiche — phare (Majeur) : tous les événements futurs, sans limite de date
+      supabase
+        .from('posts')
+        .select('*, categorie:categories(code, nom)')
+        .eq('publie', true)
+        .eq('phare', true)
         .or(`date_fin.gte.${today},and(date_fin.is.null,date_debut.gte.${today})`)
         .order('date_debut', { ascending: true })
         .order('ordre_dans_journee', { ascending: true, nullsFirst: false }),
@@ -70,9 +83,11 @@ export default async function AgendaPage({
         .order('date_debut', { ascending: true }),
     ])
 
-    const rawPosts       = postsRes.status       === 'fulfilled' ? (postsRes.value.data       ?? []) : []
-    const rawAffiche     = afficheRes.status     === 'fulfilled' ? (afficheRes.value.data     ?? []) : []
-    const rawOngoingExpo = ongoingExpoRes.status === 'fulfilled' ? (ongoingExpoRes.value.data ?? []) : []
+    const rawPosts            = postsRes.status              === 'fulfilled' ? (postsRes.value.data              ?? []) : []
+    const rawAfficheTabAffiche = afficheTabAfficheRes.status === 'fulfilled' ? (afficheTabAfficheRes.value.data  ?? []) : []
+    const rawAfficheTabPhare   = afficheTabPhareRes.status   === 'fulfilled' ? (afficheTabPhareRes.value.data    ?? []) : []
+    const rawOngoingExpo      = ongoingExpoRes.status        === 'fulfilled' ? (ongoingExpoRes.value.data        ?? []) : []
+    const rawAffiche = [...rawAfficheTabAffiche, ...rawAfficheTabPhare]
 
     // Fetch tous les établissements en une seule requête
     const allRaw   = [...rawPosts, ...rawAffiche, ...rawOngoingExpo]
@@ -117,13 +132,20 @@ export default async function AgendaPage({
     })
 
 
-    // Carousel (identique page d'accueil) : a_laffiche seulement, 1 par org, weighted shuffle, max 5
+    // Carousel : source 1 = a_laffiche (phare=false), 21j, 1/org, sans-org exclus
+    //            source 2 = phare, 21j, pas de limite d'org
     const byOrg = new Map<string, PostWithRelations>()
-    for (const p of afficheEnriched.filter((p: PostWithRelations) => p.a_laffiche)) {
-      const key = p.organisateur_id ?? `__solo_${p.id}`
-      if (!byOrg.has(key)) byOrg.set(key, p)
+    for (const p of rawAfficheTabAffiche.map(enrich)) {
+      if (!p.organisateur_id) continue
+      if (!byOrg.has(p.organisateur_id)) byOrg.set(p.organisateur_id, p)
     }
-    afficheCarousel = weightedShuffle(Array.from(byOrg.values()), today).slice(0, 5)
+    const carouselPhare = rawAfficheTabPhare
+      .filter((p: any) => p.date_debut <= datePlus21)
+      .map(enrich)
+    const carouselCombined = Array.from(
+      new Map([...Array.from(byOrg.values()), ...carouselPhare].map(p => [p.id, p])).values()
+    )
+    afficheCarousel = weightedShuffle(carouselCombined, today).slice(0, 5)
 
     // Onglet Expositions : en cours + à venir, dédoublonnés
     const upcomingExpos = allPosts.filter((p: PostWithRelations) => p.categorie?.code === 'EXPO')
