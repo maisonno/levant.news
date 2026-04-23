@@ -84,6 +84,15 @@ export default function InscriptionPage() {
 
       <div className="flex-1 px-5 py-6 space-y-4 max-w-sm mx-auto w-full">
 
+        <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 text-[13px] text-blue-900 leading-relaxed">
+          <p>
+            Vous pouvez vous servir de Levant.news sans créer de compte.
+          </p>
+          <p className="mt-1 text-blue-700">
+            Le compte est nécessaire pour poster des annonces ou s'inscrire à des activités.
+          </p>
+        </div>
+
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-2xl">
             {error}
