@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { PostWithRelations, ObjetPerdu } from '@/types/database'
+import { AnnonceForm } from '@/app/admin/annonces/AnnoncesAdmin'
 
 type Tab = 'posts' | 'annonces' | 'bateaux'
 
@@ -109,6 +110,7 @@ function AnnoncesList() {
   const supabase = createClient()
   const [annonces, setAnnonces] = useState<ObjetPerdu[]>([])
   const [loading,  setLoading]  = useState(true)
+  const [editAnnonce, setEditAnnonce] = useState<ObjetPerdu | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -128,6 +130,13 @@ function AnnoncesList() {
     setAnnonces(prev => prev.filter(a => a.id !== id))
   }
 
+  async function saveAnnonce(data: Partial<ObjetPerdu>) {
+    if (!editAnnonce) return
+    await supabase.from('objets_perdus').update(data).eq('id', editAnnonce.id)
+    setEditAnnonce(null)
+    await load()
+  }
+
   if (loading) {
     return <p className="text-center text-gray-400 text-sm py-8">Chargement…</p>
   }
@@ -137,39 +146,62 @@ function AnnoncesList() {
   }
 
   return (
-    <div className="px-4 pt-4 space-y-2">
-      {annonces.map(a => (
-        <div key={a.id} className="bg-white rounded-2xl border border-gray-100 px-4 py-3 flex items-start gap-3">
-          <span className="text-xl flex-shrink-0">{a.type === 'PERDU' ? '🔍' : '📦'}</span>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-extrabold text-gray-900 text-sm">{a.objet}</span>
-              <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${
-                a.type === 'PERDU' ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'
-              }`}>
-                {a.type === 'PERDU' ? 'Perdu' : 'Trouvé'}
-              </span>
-              {a.retrouve && (
-                <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
-                  Retrouvé
+    <>
+      <div className="px-4 pt-4 space-y-2">
+        {annonces.map(a => (
+          <div key={a.id} className="bg-white rounded-2xl border border-gray-100 px-4 py-3 flex items-start gap-3">
+            <span className="text-xl flex-shrink-0">{a.type === 'PERDU' ? '🔍' : '📦'}</span>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-extrabold text-gray-900 text-sm">{a.objet}</span>
+                <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${
+                  a.type === 'PERDU' ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'
+                }`}>
+                  {a.type === 'PERDU' ? 'Perdu' : 'Trouvé'}
                 </span>
+                {a.retrouve && (
+                  <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                    Retrouvé
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {a.date_evenement}{a.lieu ? ` · ${a.lieu}` : ''}
+              </p>
+              {a.description && (
+                <p className="text-xs text-gray-600 mt-1 line-clamp-2">{a.description}</p>
               )}
+              <p className="text-[11px] text-gray-400 mt-1">
+                {a.nom_declarant}{a.telephone ? ` · ${a.telephone}` : ''}{a.contact ? ` · ${a.contact}` : ''}
+              </p>
             </div>
-            <p className="text-xs text-gray-400 mt-0.5">
-              {a.date_evenement}{a.lieu ? ` · ${a.lieu}` : ''}
-            </p>
-            {a.description && (
-              <p className="text-xs text-gray-600 mt-1 line-clamp-2">{a.description}</p>
-            )}
-            <p className="text-[11px] text-gray-400 mt-1">
-              {a.nom_declarant}{a.telephone ? ` · ${a.telephone}` : ''}{a.contact ? ` · ${a.contact}` : ''}
-            </p>
+            <div className="flex flex-col gap-1 flex-shrink-0">
+              <button onClick={() => setEditAnnonce(a)}
+                className="text-xs px-2 py-1 rounded-lg bg-gray-100 text-gray-700">✏️</button>
+              <button onClick={() => supprimer(a.id)}
+                className="text-xs px-2 py-1 rounded-lg bg-red-50 text-red-500">🗑</button>
+            </div>
           </div>
-          <button onClick={() => supprimer(a.id)}
-            className="text-xs px-2 py-1 rounded-lg bg-red-50 text-red-500 flex-shrink-0">🗑</button>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+
+      {/* Popup d'édition */}
+      {editAnnonce && (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/40" onClick={() => setEditAnnonce(null)} />
+          <div className="fixed bottom-0 left-0 right-0 z-50 mx-auto max-w-[430px] bg-white rounded-t-3xl shadow-2xl max-h-[92vh] flex flex-col">
+            <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-gray-100 flex-shrink-0">
+              <h2 className="font-extrabold text-gray-900">Modifier l&apos;annonce</h2>
+              <button onClick={() => setEditAnnonce(null)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">✕</button>
+            </div>
+            <div className="overflow-y-auto flex-1 px-5 py-4">
+              <AnnonceForm initial={editAnnonce}
+                onSave={saveAnnonce} onClose={() => setEditAnnonce(null)} />
+            </div>
+          </div>
+        </>
+      )}
+    </>
   )
 }
 
