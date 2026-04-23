@@ -9,10 +9,13 @@ export default function ObjetsTrouvesTile() {
 
   useEffect(() => {
     const supabase = createClient()
+    // Annonce active = non retrouvée ET créée il y a moins de 10 jours (expiration /perdu)
+    const cutoff = new Date(Date.now() - 10 * 86400000).toISOString()
     supabase
       .from('objets_perdus')
       .select('*', { count: 'exact', head: true })
       .eq('retrouve', false)
+      .gte('created_at', cutoff)
       .then(({ count: c }) => { if (c !== null) setCount(c) })
   }, [])
 
