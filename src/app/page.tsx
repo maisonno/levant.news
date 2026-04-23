@@ -116,13 +116,14 @@ function weightedShuffle(posts: PostWithRelations[], todayStr: string): PostWith
 }
 
 async function AgendaSection() {
-  const today    = new Date().toISOString().split('T')[0]
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0]
+  const today      = new Date().toISOString().split('T')[0]
+  const tomorrow   = new Date(Date.now() + 86400000).toISOString().split('T')[0]
+  const datePlus21 = new Date(Date.now() + 21 * 86400000).toISOString().split('T')[0]
 
   const { createClient } = await import('@/lib/supabase/server')
   const supabase = await createClient()
 
-  const [agendaRes, agendaFutureRes, ongoingRes, afficheRes, futureExpoRes] = await Promise.allSettled([
+  const [agendaRes, agendaFutureRes, ongoingRes, afficheRes, phareRes, futureExpoRes] = await Promise.allSettled([
 
     // Agenda aujourd'hui + demain — sans limite (haute saison = beaucoup d'événements)
     supabase
@@ -156,14 +157,25 @@ async function AgendaSection() {
       .gte('date_fin', today)
       .order('date_debut', { ascending: true }),
 
-    // À l'affiche : a_laffiche OU phare, limités aux 15 prochains jours
+    // À l'affiche carousel source 1 : a_laffiche (phare=false), 21 jours
     supabase
       .from('posts')
       .select('*, categorie:categories(code, nom)')
       .eq('publie', true)
-      .or('a_laffiche.eq.true,phare.eq.true')
+      .eq('a_laffiche', true)
+      .eq('phare', false)
       .or(`date_fin.gte.${today},and(date_fin.is.null,date_debut.gte.${today})`)
-      .lte('date_debut', new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0])
+      .lte('date_debut', datePlus21)
+      .order('date_debut', { ascending: true }),
+
+    // À l'affiche carousel source 2 : phare, 21 jours
+    supabase
+      .from('posts')
+      .select('*, categorie:categories(code, nom)')
+      .eq('publie', true)
+      .eq('phare', true)
+      .or(`date_fin.gte.${today},and(date_fin.is.null,date_debut.gte.${today})`)
+      .lte('date_debut', datePlus21)
       .order('date_debut', { ascending: true }),
 
     // Expos futures (sans limite de date)
@@ -182,25 +194,29 @@ async function AgendaSection() {
   const rawAgenda       = [...rawAgendaTD, ...rawAgendaFuture]
   const rawOngoing      = ongoingRes.status       === 'fulfilled' ? (ongoingRes.value.data       ?? []) : []
   const rawAffiche      = afficheRes.status       === 'fulfilled' ? (afficheRes.value.data       ?? []) : []
+  const rawPhare        = phareRes.status         === 'fulfilled' ? (phareRes.value.data         ?? []) : []
   const rawFutureExpo   = futureExpoRes.status    === 'fulfilled' ? (futureExpoRes.value.data    ?? []) : []
 
   // Un seul fetch établissements pour toutes les sections
-  const allRaw = [...rawAgenda, ...rawOngoing, ...rawAffiche, ...rawFutureExpo]
+  const allRaw = [...rawAgenda, ...rawOngoing, ...rawAffiche, ...rawPhare, ...rawFutureExpo]
   const etabMap = await buildEtabMap(supabase, allRaw)
 
   const agendaEnriched  = rawAgenda.map((p: any)     => enrich(p, etabMap))
   const ongoingEnriched = rawOngoing.map((p: any)    => enrich(p, etabMap))
-  const afficheEnriched = rawAffiche.map((p: any)    => enrich(p, etabMap))
   const futureEnriched  = rawFutureExpo.map((p: any) => enrich(p, etabMap))
 
-  // À l'affiche : 1 post le plus tôt à venir par organisateur (date_debut ASC déjà trié),
-  // shuffle pondéré par proximité de date, max 5
+  // À l'affiche : source 1 = a_laffiche (phare=false), 1/org, sans-org exclus
+  //               source 2 = phare, 21j, pas de limite d'org
   const byOrg = new Map<string, PostWithRelations>()
-  for (const post of afficheEnriched) {
-    const key = post.organisateur_id ?? `__solo_${post.id}`
-    if (!byOrg.has(key)) byOrg.set(key, post)
+  for (const post of rawAffiche.map((p: any) => enrich(p, etabMap))) {
+    if (!post.organisateur_id) continue
+    if (!byOrg.has(post.organisateur_id)) byOrg.set(post.organisateur_id, post)
   }
-  const aLaffiche = weightedShuffle(Array.from(byOrg.values()), today).slice(0, 5)
+  const phareEnriched = rawPhare.map((p: any) => enrich(p, etabMap))
+  const affichePooled = Array.from(
+    new Map([...Array.from(byOrg.values()), ...phareEnriched].map(p => [p.id, p])).values()
+  )
+  const aLaffiche = weightedShuffle(affichePooled, today).slice(0, 5)
 
   // Séparer EXPO du reste
   const agendaNonExpo  = agendaEnriched.filter( (p: PostWithRelations) => p.categorie?.code !== 'EXPO')

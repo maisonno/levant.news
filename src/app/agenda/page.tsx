@@ -24,7 +24,7 @@ export default async function AgendaPage({
 }) {
   const supabase   = await createClient()
   const today      = new Date().toISOString().split('T')[0]
-  const datePlus15 = new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0]
+  const datePlus21 = new Date(Date.now() + 21 * 86400000).toISOString().split('T')[0]
   const params     = await searchParams
   const initialTab = (['agenda', 'expositions', 'affiche'] as const).includes(
     params?.tab as any
@@ -50,15 +50,15 @@ export default async function AgendaPage({
         .order('date_debut', { ascending: true })
         .order('ordre_dans_journee', { ascending: true, nullsFirst: false }),
 
-      // Onglet À l'affiche — a_laffiche : limité aux 15 prochains jours
-      // Le carrousel utilise tous les a_laffiche + phare sans limite de date
+      // Onglet À l'affiche — a_laffiche (phare=false) : limité aux 21 prochains jours
       supabase
         .from('posts')
         .select('*, categorie:categories(code, nom)')
         .eq('publie', true)
         .eq('a_laffiche', true)
+        .eq('phare', false)
         .or(`date_fin.gte.${today},and(date_fin.is.null,date_debut.gte.${today})`)
-        .lte('date_debut', datePlus15)
+        .lte('date_debut', datePlus21)
         .order('date_debut', { ascending: true })
         .order('ordre_dans_journee', { ascending: true, nullsFirst: false }),
 
@@ -132,18 +132,20 @@ export default async function AgendaPage({
     })
 
 
-    // Carousel : a_laffiche + phare des 15 prochains jours, 1 par org, weighted shuffle, max 5
-    const rawCarousel = [
-      ...rawAfficheTabAffiche,
-      ...rawAfficheTabPhare.filter((p: any) => p.date_debut <= datePlus15),
-    ]
-    const carouselDeduped = Array.from(new Map(rawCarousel.map((p: any) => [p.id, p])).values()).map(enrich)
+    // Carousel : source 1 = a_laffiche (phare=false), 21j, 1/org, sans-org exclus
+    //            source 2 = phare, 21j, pas de limite d'org
     const byOrg = new Map<string, PostWithRelations>()
-    for (const p of carouselDeduped) {
-      const key = p.organisateur_id ?? `__solo_${p.id}`
-      if (!byOrg.has(key)) byOrg.set(key, p)
+    for (const p of rawAfficheTabAffiche.map(enrich)) {
+      if (!p.organisateur_id) continue
+      if (!byOrg.has(p.organisateur_id)) byOrg.set(p.organisateur_id, p)
     }
-    afficheCarousel = weightedShuffle(Array.from(byOrg.values()), today).slice(0, 5)
+    const carouselPhare = rawAfficheTabPhare
+      .filter((p: any) => p.date_debut <= datePlus21)
+      .map(enrich)
+    const carouselCombined = Array.from(
+      new Map([...Array.from(byOrg.values()), ...carouselPhare].map(p => [p.id, p])).values()
+    )
+    afficheCarousel = weightedShuffle(carouselCombined, today).slice(0, 5)
 
     // Onglet Expositions : en cours + à venir, dédoublonnés
     const upcomingExpos = allPosts.filter((p: PostWithRelations) => p.categorie?.code === 'EXPO')
