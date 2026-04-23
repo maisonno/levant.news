@@ -153,6 +153,13 @@ export async function GET(request: Request) {
     delay_seconds:  number
   }> = []
 
+  // Stats de diagnostic (exposées avec ?debug=1 pour investiguer les mismatches
+  // trip_id/stop_id entre GTFS statique et flux RT).
+  let feedTripsTotal     = 0
+  let feedTripsMatched   = 0
+  const sampleFeedTrips:  string[] = []
+  const sampleFeedStops:  string[] = []
+
   for (const entity of feed.entity) {
     const tu = entity.tripUpdate
     if (!tu) continue
@@ -160,12 +167,17 @@ export async function GET(request: Request) {
     const tripId = tu.trip?.tripId
     if (!tripId) continue
 
+    feedTripsTotal++
+    if (sampleFeedTrips.length < 5) sampleFeedTrips.push(tripId)
+
     const ourStops = tripMap.get(tripId)
     if (!ourStops) continue
+    feedTripsMatched++
 
     for (const stu of (tu.stopTimeUpdate ?? [])) {
       const stopId = stu.stopId
       if (!stopId) continue
+      if (sampleFeedStops.length < 5) sampleFeedStops.push(stopId)
 
       const ourStop = ourStops.find(s => s.stop_id === stopId)
       if (!ourStop) continue
@@ -182,9 +194,25 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.json({
+  const debug = searchParams.get('debug') === '1'
+  const payload: Record<string, unknown> = {
     updated_at: new Date().toISOString(),
     ligne,
     delays,
-  })
+  }
+  if (debug) {
+    const sampleOurTrips = [...tripMap.keys()].slice(0, 5)
+    const sampleOurStops = [...tripMap.values()].flat().slice(0, 5).map(s => s.stop_id)
+    payload.debug = {
+      ourTripsTotal:    tripMap.size,
+      feedTripsTotal,
+      feedTripsMatched,
+      sampleOurTrips,
+      sampleFeedTrips,
+      sampleOurStops,
+      sampleFeedStops,
+    }
+  }
+
+  return NextResponse.json(payload)
 }

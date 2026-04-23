@@ -414,6 +414,7 @@ interface BusDeparture {
 
 interface BusStop {
   stop_name:   string
+  stop_code:   string | null
   stop_id:     string
   destination: string
   departures:  BusDeparture[]
@@ -475,23 +476,32 @@ function formatBusTime(t: string): string {
   return `${parseInt(h, 10)}h${m}`
 }
 
-/** Normalise un nom d'arrêt en label lisible */
+/**
+ * Normalise un arrêt en label lisible.
+ * Priorité au stop_code (préfixé par la ville sur Zou : "TOULON _ Gare Routiere"),
+ * fallback sur le stop_name pour les réseaux sans code (Mistral).
+ */
 const STOP_LABELS: Array<{ pattern: string; label: string }> = [
   // Plus spécifiques en premier
-  { pattern: 'aeroport promenade',    label: 'Aéroport — Promenade'           },
-  { pattern: 'square des heros',      label: 'Le Lavandou (Square des Héros)' },
-  { pattern: 'gare routiere',         label: 'Gare Routière de Toulon'        },
-  { pattern: 'aeroport',             label: 'Aéroport Hyères-Toulon'         },
-  { pattern: 'gare (hy',             label: 'Gare de Hyères'                 },
-  { pattern: 'port la gavine',        label: 'Port La Gavine'                 },
+  { pattern: 'aeroport promenade',       label: 'Aéroport — Promenade'            },
+  { pattern: 'toulon _ gare routiere',   label: 'Gare Routière de Toulon'         },
+  { pattern: 'lavandou _ gare routiere', label: 'Gare Routière du Lavandou'       },
+  { pattern: 'lavandou _ square',        label: 'Le Lavandou (Square des Héros)'  },
+  { pattern: 'hyeres _ aeroport',        label: 'Aéroport Hyères-Toulon'          },
+  { pattern: 'square des heros',         label: 'Le Lavandou (Square des Héros)'  },
+  { pattern: 'gare routiere',            label: 'Gare Routière de Toulon'         },
+  { pattern: 'aeroport',                 label: 'Aéroport Hyères-Toulon'          },
+  { pattern: 'gare (hy',                 label: 'Gare de Hyères'                  },
+  { pattern: 'port la gavine',           label: 'Port La Gavine'                  },
 ]
 
-function stopLabel(name: string): string {
-  const n = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+function stopLabel(stop: { stop_code: string | null; stop_name: string }): string {
+  const source = stop.stop_code || stop.stop_name
+  const n = source.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
   for (const { pattern, label } of STOP_LABELS) {
     if (n.includes(pattern)) return label
   }
-  return name
+  return stop.stop_name
 }
 
 function BusTab() {
@@ -633,7 +643,7 @@ function BusTab() {
             {/* En-tête arrêt : "Départ de [stop] → [destination]" */}
             <div className="px-4 py-3 border-b border-gray-50 bg-gray-50/80 flex items-center justify-between">
               <p className="text-xs font-bold uppercase tracking-widest text-gray-500">
-                🚏 {stopLabel(stop.stop_name)}
+                🚏 {stopLabel(stop)}
                 {stop.destination && (
                   <span className="font-normal"> → {stop.destination}</span>
                 )}
