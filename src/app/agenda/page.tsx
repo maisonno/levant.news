@@ -22,9 +22,10 @@ export default async function AgendaPage({
 }: {
   searchParams: Promise<{ tab?: string }>
 }) {
-  const supabase = await createClient()
-  const today    = new Date().toISOString().split('T')[0]
-  const params   = await searchParams
+  const supabase   = await createClient()
+  const today      = new Date().toISOString().split('T')[0]
+  const datePlus15 = new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0]
+  const params     = await searchParams
   const initialTab = (['agenda', 'expositions', 'affiche'] as const).includes(
     params?.tab as any
   )
@@ -37,7 +38,7 @@ export default async function AgendaPage({
   let expos:            PostWithRelations[] = []
 
   try {
-    const [postsRes, afficheRes, ongoingExpoRes] = await Promise.allSettled([
+    const [postsRes, afficheTabAfficheRes, afficheTabPhareRes, ongoingExpoRes] = await Promise.allSettled([
 
       // Liste complète de l'agenda (hors EXPO, on filtrera côté JS)
       supabase
@@ -49,12 +50,23 @@ export default async function AgendaPage({
         .order('date_debut', { ascending: true })
         .order('ordre_dans_journee', { ascending: true, nullsFirst: false }),
 
-      // Onglet À l'affiche : tous les posts a_laffiche OU phare, à venir
+      // Onglet À l'affiche — a_laffiche : limité aux 15 prochains jours
       supabase
         .from('posts')
         .select('*, categorie:categories(code, nom)')
         .eq('publie', true)
-        .or('a_laffiche.eq.true,phare.eq.true')
+        .eq('a_laffiche', true)
+        .or(`date_fin.gte.${today},and(date_fin.is.null,date_debut.gte.${today})`)
+        .lte('date_debut', datePlus15)
+        .order('date_debut', { ascending: true })
+        .order('ordre_dans_journee', { ascending: true, nullsFirst: false }),
+
+      // Onglet À l'affiche — phare (Majeur) : tous les événements futurs, sans limite de date
+      supabase
+        .from('posts')
+        .select('*, categorie:categories(code, nom)')
+        .eq('publie', true)
+        .eq('phare', true)
         .or(`date_fin.gte.${today},and(date_fin.is.null,date_debut.gte.${today})`)
         .order('date_debut', { ascending: true })
         .order('ordre_dans_journee', { ascending: true, nullsFirst: false }),
@@ -70,9 +82,11 @@ export default async function AgendaPage({
         .order('date_debut', { ascending: true }),
     ])
 
-    const rawPosts       = postsRes.status       === 'fulfilled' ? (postsRes.value.data       ?? []) : []
-    const rawAffiche     = afficheRes.status     === 'fulfilled' ? (afficheRes.value.data     ?? []) : []
-    const rawOngoingExpo = ongoingExpoRes.status === 'fulfilled' ? (ongoingExpoRes.value.data ?? []) : []
+    const rawPosts            = postsRes.status              === 'fulfilled' ? (postsRes.value.data              ?? []) : []
+    const rawAfficheTabAffiche = afficheTabAfficheRes.status === 'fulfilled' ? (afficheTabAfficheRes.value.data  ?? []) : []
+    const rawAfficheTabPhare   = afficheTabPhareRes.status   === 'fulfilled' ? (afficheTabPhareRes.value.data    ?? []) : []
+    const rawOngoingExpo      = ongoingExpoRes.status        === 'fulfilled' ? (ongoingExpoRes.value.data        ?? []) : []
+    const rawAffiche = [...rawAfficheTabAffiche, ...rawAfficheTabPhare]
 
     // Fetch tous les établissements en une seule requête
     const allRaw   = [...rawPosts, ...rawAffiche, ...rawOngoingExpo]
@@ -117,7 +131,7 @@ export default async function AgendaPage({
     })
 
 
-    // Carousel (identique page d'accueil) : a_laffiche seulement, 1 par org, weighted shuffle, max 5
+    // Carousel : a_laffiche seulement (déjà filtrés 15 jours), 1 par org, weighted shuffle, max 5
     const byOrg = new Map<string, PostWithRelations>()
     for (const p of afficheEnriched.filter((p: PostWithRelations) => p.a_laffiche)) {
       const key = p.organisateur_id ?? `__solo_${p.id}`
