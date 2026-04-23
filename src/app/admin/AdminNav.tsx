@@ -35,6 +35,8 @@ const TABS: TabDef[] = [
     show: a => a.isAdmin },
   { href: '/admin/import',          label: 'Import CSV',      icon: '📥',
     show: a => a.isAdmin },
+  { href: '/admin/meduse',          label: 'Méduse Watch',    icon: '🪼',
+    show: a => a.isAdmin },
 ]
 
 interface AdminNavProps {
