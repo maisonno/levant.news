@@ -405,7 +405,7 @@ function ModerationContent() {
 
   return (
     <div className="pb-20">
-      <div className="sticky top-[104px] z-20 bg-white border-b border-gray-100 px-4 flex gap-1">
+      <div className="sticky top-[45px] z-20 bg-white border-b border-gray-100 px-4 flex gap-1">
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-3 text-xs font-bold border-b-2 transition-colors ${

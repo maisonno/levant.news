@@ -9,7 +9,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
-    redirect('/compte/connexion?redirect=/admin/posts')
+    redirect('/compte/connexion?redirect=/admin')
   }
 
   const { data: profile } = await supabase
@@ -19,22 +19,24 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     .single()
 
   const isAdmin     = profile?.role === 'admin'
+  const isPro       = profile?.role === 'pro'
+  const isCompagnie = profile?.role === 'compagnie'
   const isModerator = profile?.moderateur === true
 
-  if (!isAdmin && !isModerator) {
+  if (!isAdmin && !isPro && !isCompagnie && !isModerator) {
     redirect('/')
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
       <AdminNav
-        displayName={`${profile.prenom} ${profile.nom}`}
+        displayName={`${profile!.prenom} ${profile!.nom}`}
         isAdmin={isAdmin}
+        isPro={isPro}
+        isCompagnie={isCompagnie}
         isModerator={isModerator}
       />
-      <div className="pt-0">
-        {children}
-      </div>
+      {children}
     </div>
   )
 }

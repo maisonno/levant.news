@@ -121,7 +121,7 @@ interface AnnoncesAdminProps {
   topOffset?: string
 }
 
-export default function AnnoncesAdmin({ topOffset = 'top-[104px]' }: AnnoncesAdminProps) {
+export default function AnnoncesAdmin({ topOffset = 'top-[45px]' }: AnnoncesAdminProps) {
   const supabase = createClient()
   const [annonces, setAnnonces] = useState<ObjetPerdu[]>([])
   const [loading,  setLoading]  = useState(true)
