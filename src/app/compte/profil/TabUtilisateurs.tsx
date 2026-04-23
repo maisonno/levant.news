@@ -8,6 +8,7 @@ import { Profile, Role, Etablissement } from '@/types/database'
 
 interface UserWithEtabs extends Profile {
   etablissements?: Pick<Etablissement, 'id' | 'nom'>[]
+  email?: string | null
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -53,9 +54,23 @@ function UserPanel({ user, allEtabs, onClose, onUpdated }: UserPanelProps) {
   const [linkedIds, setLinkedIds] = useState<string[]>(
     user.etablissements?.map(e => e.id) ?? []
   )
-  const [saving, setSaving] = useState(false)
-  const [saved,  setSaved]  = useState(false)
+  const [saving,     setSaving]     = useState(false)
+  const [saved,      setSaved]      = useState(false)
   const [etabSearch, setEtabSearch] = useState('')
+  const [resetSent,  setResetSent]  = useState(false)
+  const [resetError, setResetError] = useState<string | null>(null)
+
+  async function sendResetEmail() {
+    if (!user.email) return
+    setResetError(null)
+    const origin = typeof window !== 'undefined' ? window.location.origin : ''
+    const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+      redirectTo: `${origin}/compte/reinitialiser`,
+    })
+    if (error) { setResetError(error.message); return }
+    setResetSent(true)
+    setTimeout(() => setResetSent(false), 4000)
+  }
 
   async function saveProfile() {
     setSaving(true)
@@ -118,8 +133,32 @@ function UserPanel({ user, allEtabs, onClose, onUpdated }: UserPanelProps) {
                 </div>
               </div>
               <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Email</label>
+                <input
+                  readOnly
+                  value={user.email ?? '—'}
+                  className={`${field} bg-gray-50 text-gray-400 cursor-default select-all`}
+                />
+              </div>
+              <div>
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Téléphone</label>
                 <input type="tel" value={telephone} onChange={e => setTelephone(e.target.value)} className={field} />
+              </div>
+              <div>
+                {resetError && (
+                  <p className="text-xs text-red-500 mb-2">{resetError}</p>
+                )}
+                <button
+                  onClick={sendResetEmail}
+                  disabled={!user.email || resetSent}
+                  className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-semibold transition-colors ${
+                    resetSent
+                      ? 'border-green-300 bg-green-50 text-green-700'
+                      : 'border-gray-200 bg-white text-gray-600 active:bg-gray-50 disabled:opacity-40'
+                  }`}
+                >
+                  {resetSent ? '✓ Email envoyé' : "🔑 Envoyer l'email de réinitialisation"}
+                </button>
               </div>
             </div>
           </section>
@@ -418,9 +457,20 @@ export default function TabUtilisateurs() {
         if (etab) etabsByUser.get(link.user_id)!.push(etab)
       }
 
+      // Charger les emails depuis l'API admin
+      let emailMap: Record<string, string | null> = {}
+      try {
+        const res = await fetch('/api/admin/user-emails')
+        if (res.ok) {
+          const list: { id: string; email: string | null }[] = await res.json()
+          emailMap = Object.fromEntries(list.map(e => [e.id, e.email]))
+        }
+      } catch { /* ignore — l'email sera absent si l'API échoue */ }
+
       setUsers(profRes.data.map(p => ({
         ...p,
         etablissements: etabsByUser.get(p.id) ?? [],
+        email: emailMap[p.id] ?? null,
       })))
     }
     setLoading(false)
