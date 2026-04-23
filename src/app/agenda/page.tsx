@@ -131,9 +131,16 @@ export default async function AgendaPage({
     })
 
 
-    // Carousel : a_laffiche seulement (déjà filtrés 15 jours), 1 par org, weighted shuffle, max 5
+    // Carousel : a_laffiche + phare des 15 prochains jours, 1 par org, weighted shuffle, max 5
+    // rawAfficheTabAffiche (a_laffiche, 15j) + rawAfficheTabPhare filtrés à 15j
+    const rawCarousel = [
+      ...rawAfficheTabAffiche,
+      ...rawAfficheTabPhare.filter((p: any) => p.date_debut <= datePlus15),
+    ]
+    const carouselEnriched = rawCarousel.map(enrich)
+    const carouselDeduped  = Array.from(new Map(carouselEnriched.map(p => [p.id, p])).values())
     const byOrg = new Map<string, PostWithRelations>()
-    for (const p of afficheEnriched.filter((p: PostWithRelations) => p.a_laffiche)) {
+    for (const p of carouselDeduped) {
       const key = p.organisateur_id ?? `__solo_${p.id}`
       if (!byOrg.has(key)) byOrg.set(key, p)
     }
