@@ -62,10 +62,10 @@ export default function EventDetail({ post, nbInscriptions }: Props) {
             >
               ←
             </button>
-            {/* Badge phare */}
+            {/* Badge majeur */}
             {post.phare && (
               <div className="absolute top-12 right-4 bg-amber-400 text-amber-900 text-xs font-black px-3 py-1 rounded-full">
-                ⭐ Phare
+                ⭐ Majeur
               </div>
             )}
           </div>
@@ -98,7 +98,7 @@ export default function EventDetail({ post, nbInscriptions }: Props) {
             )}
             {post.phare && (
               <span className="text-xs font-black text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full">
-                ⭐ Phare
+                ⭐ Majeur
               </span>
             )}
             {post.a_laffiche && (
