@@ -28,8 +28,8 @@ interface InfoBateau {
 
 // ─── Helpers ──────────────────────────────────────────────────
 
-const COMPAGNIES = ['TLV', 'Vedettes Îles d\'Or']
-const PORTS      = ['Hyères', 'Le Lavandou', 'Île du Levant', 'Port-Cros', 'Cavalaire']
+const COMPAGNIES = ['TLV', 'Vedettes des Îles d\'Or']
+const PORTS      = ['Port d\'Hyères', 'Le Lavandou', 'Le Levant', 'Port-Cros', 'Cavalaire']
 
 function todayIso() { return new Date().toISOString().split('T')[0] }
 
@@ -63,8 +63,8 @@ function HoraireForm({
   const [form, setForm] = useState({
     date:         initial?.date         ?? todayIso(),
     heure:        initial?.heure?.slice(0, 5) ?? '',
-    port_depart:  initial?.port_depart  ?? 'Île du Levant',
-    port_arrivee: initial?.port_arrivee ?? 'Hyères',
+    port_depart:  initial?.port_depart  ?? 'Le Levant',
+    port_arrivee: initial?.port_arrivee ?? 'Port d\'Hyères',
     compagnie:    initial?.compagnie    ?? 'TLV',
     duree_min:    initial?.duree_min    ?? '',
     statut:       initial?.statut       ?? 'prevu',

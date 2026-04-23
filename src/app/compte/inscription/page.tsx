@@ -9,13 +9,14 @@ export default function InscriptionPage() {
   const supabase = createClient()
   const router   = useRouter()
 
-  const [prenom,   setPrenom]   = useState('')
-  const [nom,      setNom]      = useState('')
-  const [email,    setEmail]    = useState('')
-  const [password, setPassword] = useState('')
-  const [loading,  setLoading]  = useState(false)
-  const [error,    setError]    = useState<string | null>(null)
-  const [done,     setDone]     = useState(false)
+  const [prenom,     setPrenom]     = useState('')
+  const [nom,        setNom]        = useState('')
+  const [email,      setEmail]      = useState('')
+  const [password,   setPassword]   = useState('')
+  const [newsletter, setNewsletter] = useState(true)
+  const [loading,    setLoading]    = useState(false)
+  const [error,      setError]      = useState<string | null>(null)
+  const [done,       setDone]       = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -26,7 +27,7 @@ export default function InscriptionPage() {
       email,
       password,
       options: {
-        data: { prenom, nom },
+        data: { prenom, nom, newsletter },
         emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin}/auth/callback?next=/compte/profil`,
       },
     })
@@ -124,6 +125,33 @@ export default function InscriptionPage() {
               className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3.5 text-sm text-gray-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
             />
           </div>
+
+          <button
+            type="button"
+            onClick={() => setNewsletter(v => !v)}
+            className={`w-full flex items-start gap-3 p-4 rounded-2xl border text-left transition-colors ${
+              newsletter ? 'border-blue-400 bg-blue-50' : 'border-gray-200 bg-white active:bg-gray-50'
+            }`}
+          >
+            <span className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+              newsletter ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
+            }`}>
+              {newsletter && (
+                <svg width="12" height="10" viewBox="0 0 10 8" fill="none">
+                  <path d="M1 4l3 3 5-6" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              )}
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className={`text-sm font-bold ${newsletter ? 'text-blue-700' : 'text-gray-900'}`}>
+                📬 Recevoir la Newsletter Levant.news
+              </p>
+              <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                Restez au courant de l'actualité du Levant. Jamais plus d'un email par mois, promis !
+              </p>
+            </div>
+          </button>
+
           <button
             type="submit" disabled={loading}
             className="w-full py-3.5 rounded-2xl bg-blue-600 text-white text-sm font-bold disabled:opacity-50 active:scale-[0.98] transition-transform"

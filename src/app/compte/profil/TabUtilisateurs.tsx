@@ -48,7 +48,8 @@ function UserPanel({ user, allEtabs, onClose, onUpdated }: UserPanelProps) {
   const [nom,       setNom]       = useState(user.nom)
   const [telephone, setTelephone] = useState(user.telephone ?? '')
   const [role,      setRole]      = useState<Role>(user.role)
-  const [suspendu,  setSuspendu]  = useState(user.suspendu)
+  const [suspendu,     setSuspendu]     = useState(user.suspendu)
+  const [moderateur,   setModerateur]   = useState(user.moderateur ?? false)
   const [linkedIds, setLinkedIds] = useState<string[]>(
     user.etablissements?.map(e => e.id) ?? []
   )
@@ -59,12 +60,12 @@ function UserPanel({ user, allEtabs, onClose, onUpdated }: UserPanelProps) {
   async function saveProfile() {
     setSaving(true)
     await supabase.from('profiles')
-      .update({ prenom, nom, telephone: telephone || null, role, suspendu })
+      .update({ prenom, nom, telephone: telephone || null, role, suspendu, moderateur })
       .eq('id', user.id)
     setSaving(false)
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
-    onUpdated({ ...user, prenom, nom, telephone: telephone || null, role, suspendu })
+    onUpdated({ ...user, prenom, nom, telephone: telephone || null, role, suspendu, moderateur })
   }
 
   async function toggleEtab(etabId: string) {
@@ -145,6 +146,17 @@ function UserPanel({ user, allEtabs, onClose, onUpdated }: UserPanelProps) {
                   </button>
                 ))}
               </div>
+              {/* Modérateur */}
+              <button onClick={() => setModerateur(v => !v)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-semibold ${
+                  moderateur
+                    ? 'border-blue-300 bg-blue-50 text-blue-700'
+                    : 'border-gray-200 bg-white text-gray-600'
+                }`}>
+                <span className="text-xl">🛡️</span>
+                <span>{moderateur ? 'Modérateur' : 'Pas modérateur'}</span>
+                <span className="ml-auto text-xs text-gray-400">Basculer</span>
+              </button>
               {/* Suspension */}
               <button onClick={() => setSuspendu(v => !v)}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-semibold ${
@@ -351,6 +363,11 @@ export default function TabUtilisateurs() {
                     {u.prenom} {u.nom}
                   </p>
                   <RoleBadge role={u.role} />
+                  {u.moderateur && (
+                    <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                      🛡️ Modérateur
+                    </span>
+                  )}
                   {u.suspendu && (
                     <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-red-100 text-red-600">
                       Suspendu

@@ -61,10 +61,20 @@ const INFO_CONFIG = {
   annulation:    { accent: 'border-red-400',     iconBg: 'bg-red-100',    titleColor: 'text-red-600',    icon: '🚫', label: 'Annulation'    },
 }
 
-const STATUT_CONFIG = {
-  prevu:  { badge: 'bg-green-100 text-green-700',                  label: 'Prévu'  },
+const STATUT_CONFIG: Record<'annule' | 'change', { badge: string; label: string }> = {
   annule: { badge: 'bg-red-100 text-red-600 line-through',         label: 'Annulé' },
   change: { badge: 'bg-orange-100 text-orange-700',                label: 'Changé' },
+}
+
+function isLevant(port: string): boolean {
+  const n = port.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  return n.includes('levant')
+}
+
+function compagnieLabel(c: string): string {
+  const n = c.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  if (n.includes('vedettes')) return 'VIO'
+  return c
 }
 
 // ─── DatePicker ───────────────────────────────────────────────────────────────
@@ -196,19 +206,23 @@ function InfoCard({ info }: { info: InfoBateau }) {
 }
 
 function HoraireRow({ h }: { h: Horaire }) {
-  const cfg       = STATUT_CONFIG[h.statut]
   const cancelled = h.statut === 'annule'
+  const cfg       = h.statut !== 'prevu' ? STATUT_CONFIG[h.statut] : null
   return (
     <div className={`flex items-center gap-3 py-3 border-b border-gray-50 last:border-0 ${cancelled ? 'opacity-50' : ''}`}>
       <p className={`text-lg font-extrabold w-14 flex-shrink-0 ${cancelled ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
         {h.heure.slice(0, 5)}
       </p>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-gray-800 truncate">→ {h.port_arrivee}</p>
-        <p className="text-xs text-gray-400">{h.compagnie}{h.duree_min ? ` · ${h.duree_min} min` : ''}</p>
+        <p className="text-sm font-semibold text-gray-800 truncate">
+          {h.port_depart} → {h.port_arrivee} <span className="text-gray-400 font-normal">({compagnieLabel(h.compagnie)})</span>
+        </p>
+        {h.duree_min && <p className="text-xs text-gray-400">{h.duree_min} min</p>}
         {h.note && <p className="text-xs text-orange-600 mt-0.5">{h.note}</p>}
       </div>
-      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${cfg.badge}`}>{cfg.label}</span>
+      {cfg && (
+        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${cfg.badge}`}>{cfg.label}</span>
+      )}
     </div>
   )
 }
@@ -221,6 +235,7 @@ function BateauxTab() {
   const [horaires,     setHoraires]     = useState<Horaire[]>([])
   const [infos,        setInfos]        = useState<InfoBateau[]>([])
   const [loading,      setLoading]      = useState(true)
+  const [direction,    setDirection]    = useState<'vers' | 'depuis'>('vers')
 
   useEffect(() => {
     setLoading(true)
@@ -230,11 +245,10 @@ function BateauxTab() {
       .finally(() => setLoading(false))
   }, [selectedDate])
 
-  const byPort: Record<string, Horaire[]> = {}
-  for (const h of horaires) {
-    if (!byPort[h.port_depart]) byPort[h.port_depart] = []
-    byPort[h.port_depart].push(h)
-  }
+  const byHeure = (a: Horaire, b: Horaire) => a.heure.localeCompare(b.heure)
+  const versLevant   = horaires.filter(h => isLevant(h.port_arrivee)).sort(byHeure)
+  const depuisLevant = horaires.filter(h => isLevant(h.port_depart)).sort(byHeure)
+  const visibles     = direction === 'vers' ? versLevant : depuisLevant
 
   return (
     <div className="px-4 mt-4 space-y-4 pb-10">
@@ -250,29 +264,42 @@ function BateauxTab() {
         {formatDate(selectedDate)}
       </h2>
 
+      {/* Sous-onglets direction */}
+      <div className="flex gap-1 bg-gray-100 rounded-2xl p-1">
+        <button onClick={() => setDirection('vers')}
+          className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${
+            direction === 'vers' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'
+          }`}>
+          → Vers le Levant
+        </button>
+        <button onClick={() => setDirection('depuis')}
+          className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${
+            direction === 'depuis' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'
+          }`}>
+          ← À partir du Levant
+        </button>
+      </div>
+
       {loading && (
         <div className="flex justify-center py-10">
           <div className="w-7 h-7 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
         </div>
       )}
 
-      {!loading && horaires.length === 0 && (
+      {!loading && visibles.length === 0 && (
         <div className="bg-white rounded-2xl border border-gray-100 p-6 text-center">
           <p className="text-2xl mb-2">⛵</p>
           <p className="text-gray-500 text-sm font-medium">Aucun horaire ce jour</p>
         </div>
       )}
 
-      {!loading && Object.entries(byPort).map(([port, rows]) => (
-        <div key={port} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-50 bg-gray-50/80">
-            <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Départ — {port}</p>
-          </div>
+      {!loading && visibles.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="px-4">
-            {rows.map(h => <HoraireRow key={h.id} h={h} />)}
+            {visibles.map(h => <HoraireRow key={h.id} h={h} />)}
           </div>
         </div>
-      ))}
+      )}
 
       {/* Disclaimer + liens compagnies */}
       <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 space-y-2">

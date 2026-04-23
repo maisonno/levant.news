@@ -2,19 +2,61 @@
 
 import { useDrawer } from '@/contexts/DrawerContext'
 import { useAuth } from '@/contexts/AuthContext'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { Suspense } from 'react'
 
-const MODULES = [
-  { href: '/',          icon: '🏠', label: 'Accueil' },
-  { href: '/agenda',    icon: '📅', label: 'Agenda' },
-  { href: '/annuaire',  icon: '🗂️', label: 'Annuaire' },
-  { href: '/perdu',     icon: '🔍', label: 'Perdu / Trouvé' },
-  { href: '/infos',     icon: 'ℹ️', label: 'Infos pratiques' },
-  { href: '/webcam',    icon: '📷', label: 'Webcam' },
-  { href: '/meteo',     icon: '☀️', label: 'Météo' },
-  { href: '/transport', icon: '⛵', label: 'Transport' },
+const MODULES: { href: string; icon: string; label: string; tab?: string }[] = [
+  { href: '/agenda',                 icon: '📅',  label: 'Agenda'          },
+  { href: '/meteo',                  icon: '☀️',  label: 'Météo'           },
+  { href: '/transport?tab=bateaux',  icon: '⛵',  label: 'Bateaux', tab: 'bateaux' },
+  { href: '/transport?tab=bus',      icon: '🚌',  label: 'Bus',     tab: 'bus'     },
+  { href: '/meduse',                 icon: '🪼',  label: 'Méduse Watch'    },
+  { href: '/perdu',                  icon: '🔍',  label: 'Perdu / Trouvé'  },
+  { href: '/annuaire',               icon: '🗂️',  label: 'Annuaire'        },
+  { href: '/infos',                  icon: 'ℹ️',  label: 'Infos pratiques' },
+  { href: '/webcam',                 icon: '📷',  label: 'Webcam'          },
 ]
+
+function ModulesList({ close }: { close: () => void }) {
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const currentTab = searchParams.get('tab')
+
+  return (
+    <>
+      {MODULES.map(({ href, icon, label, tab }) => {
+        const basePath = href.split('?')[0]
+        const active = tab
+          ? pathname === basePath && (currentTab ?? 'bateaux') === tab
+          : pathname === basePath
+        return (
+          <Link
+            key={href}
+            href={href}
+            onClick={close}
+            className={`flex items-center gap-2.5 px-4 py-2 transition-colors ${
+              active
+                ? 'bg-blue-50 text-blue-700'
+                : 'text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <span
+              className={`w-7 h-7 rounded-lg flex items-center justify-center text-sm flex-shrink-0 ${
+                active ? 'bg-blue-600 text-white' : 'bg-gray-100'
+              }`}
+            >
+              {icon}
+            </span>
+            <span className={`text-sm ${active ? 'font-bold' : 'font-medium'}`}>
+              {label}
+            </span>
+          </Link>
+        )
+      })}
+    </>
+  )
+}
 
 export default function DrawerMenu() {
   const { isOpen, close } = useDrawer()
@@ -41,9 +83,9 @@ export default function DrawerMenu() {
           md:rounded-none md:shadow-none md:border-r md:border-gray-100 md:transition-none
         `}
       >
-        {/* Header — fond blanc, titre en bleu */}
-        <div className="px-5 pb-4 pt-14 bg-white border-b border-gray-100">
-          <Link href="/" onClick={close} className="block text-[22px] font-extrabold tracking-tight mb-1">
+        {/* Header — logo remonté, lien vers l'accueil */}
+        <div className="px-5 pb-3 pt-10 bg-white border-b border-gray-100">
+          <Link href="/" onClick={close} className="block text-[22px] font-extrabold tracking-tight mb-0.5">
             <span className="text-blue-700">Levant</span><span className="text-blue-400">.news</span>
           </Link>
           <div className="text-[11px] font-semibold text-gray-400 tracking-widest italic">
@@ -52,37 +94,33 @@ export default function DrawerMenu() {
         </div>
 
         {/* Liens de navigation */}
-        <div className="flex-1 overflow-y-auto py-2">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 px-5 pt-3 pb-1">
-            Navigation
-          </p>
-          {MODULES.map(({ href, icon, label }) => {
-            const active = pathname === href
-            return (
-              <Link
-                key={href}
-                href={href}
-                onClick={close}
-                className={`flex items-center gap-3 px-5 py-3 transition-colors ${
-                  active
-                    ? 'bg-blue-50 text-blue-700'
-                    : 'text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <span
-                  className={`w-9 h-9 rounded-xl flex items-center justify-center text-base flex-shrink-0 ${
-                    active ? 'bg-blue-600 text-white' : 'bg-gray-100'
-                  }`}
-                >
-                  {icon}
-                </span>
-                <span className={`text-sm ${active ? 'font-bold' : 'font-medium'}`}>
-                  {label}
-                </span>
-              </Link>
-            )
-          })}
+        <div className="flex-1 overflow-y-auto py-1">
+          <Suspense fallback={null}>
+            <ModulesList close={close} />
+          </Suspense>
         </div>
+
+        {/* Espace admin (admins + modérateurs) */}
+        {(profile?.role === 'admin' || profile?.moderateur) && (
+          <div className="border-t border-gray-100 px-4 py-2">
+            <Link
+              href="/admin"
+              onClick={close}
+              className={`flex items-center gap-2.5 px-0 py-2 transition-colors ${
+                pathname.startsWith('/admin') ? 'text-blue-700' : 'text-gray-700 hover:text-blue-700'
+              }`}
+            >
+              <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-sm flex-shrink-0 ${
+                pathname.startsWith('/admin') ? 'bg-blue-600 text-white' : 'bg-gray-100'
+              }`}>
+                ⚙️
+              </span>
+              <span className={`text-sm ${pathname.startsWith('/admin') ? 'font-bold' : 'font-medium'}`}>
+                Espace admin
+              </span>
+            </Link>
+          </div>
+        )}
 
         {/* Mon Compte — tout en bas */}
         <div className="border-t border-gray-100 px-4 py-4">

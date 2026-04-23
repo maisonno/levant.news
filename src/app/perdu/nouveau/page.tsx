@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { ObjetType } from '@/types/database'
+import { notifyModerators } from '@/lib/notifyModerators'
 
 function today() {
   return new Date().toISOString().split('T')[0]
@@ -62,6 +63,10 @@ export default function NouvelleAnnoncePage() {
       setError('Erreur lors de la publication. Réessaie.')
       setSaving(false)
     } else {
+      void notifyModerators('annonce', {
+        type, objet, date_evenement: date, description, lieu,
+        nom_declarant: nom, telephone, contact,
+      })
       router.push('/perdu')
       router.refresh()
     }

@@ -93,11 +93,15 @@ export const BUS_NETWORKS: NetworkConfig[] = [
   // ── Zou 878 ────────────────────────────────────────────────────────────────
   // matchField: 'stop_code' — le stop_name "Gare Routiere" est partagé par
   // 8 villes dans le GTFS Zou. Le stop_code inclut le préfixe ville :
-  //   stop_id         stop_code                    stop_name
-  //   01052-8313700   TOULON _ Gare Routiere       Gare Routiere
-  //   00181-8306900   HYERES _ Aéroport            Aéroport
-  //   03041-8307000   LE LAVANDOU _ Square des Heros  Square des Heros (dir 0)
-  //   03042-8307000   LE LAVANDOU _ Square des Heros  Square des Heros (dir 1)
+  //   stop_id         stop_code                      stop_name
+  //   01052-8313700   TOULON _ Gare Routiere         Gare Routiere
+  //   00181-8306900   HYERES _ Aéroport              Aéroport
+  //   xxxxx-xxxxxxx   LE LAVANDOU _ Gare Routiere    Gare Routiere (dir 0 & 1)
+  //
+  // Note : on utilise la Gare Routière du Lavandou (et pas Square des Heros)
+  // côté Lavandou car les services express ne desservent pas Square des Heros,
+  // ce qui rendait le calcul de travel_time_min null pour ces trips.
+  // Tous les bus de la ligne 878 desservent la Gare Routière du Lavandou.
   //
   // Trips via Aéroport : rares (2 en dir 0, 3 en dir 1).
   {
@@ -114,13 +118,13 @@ export const BUS_NETWORKS: NetworkConfig[] = [
           // Départ Toulon : destination toujours Le Lavandou (même pour les bus via Aéroport)
           {
             departurePattern:  'toulon _ gare routiere',
-            destinationPattern: 'le lavandou _ square',
+            destinationPattern: 'le lavandou _ gare routiere',
             destinationLabel:  'Le Lavandou',
           },
           // Départ Aéroport : vers Le Lavandou (uniquement pour les trips passant par l'aéroport)
           {
             departurePattern:  'hyeres _ aeroport',
-            destinationPattern: 'le lavandou _ square',
+            destinationPattern: 'le lavandou _ gare routiere',
             destinationLabel:  'Le Lavandou',
             requiredPattern:   'hyeres _ aeroport',
           },
@@ -131,7 +135,7 @@ export const BUS_NETWORKS: NetworkConfig[] = [
         departures: [
           // Bus via Aéroport : Le Lavandou → Aéroport (signal aux voyageurs)
           {
-            departurePattern:  'le lavandou _ square',
+            departurePattern:  'le lavandou _ gare routiere',
             destinationPattern: 'hyeres _ aeroport',
             destinationLabel:  'Aéroport Hyères-Toulon',
             requiredPattern:   'hyeres _ aeroport',
@@ -139,7 +143,7 @@ export const BUS_NETWORKS: NetworkConfig[] = [
           // Tous les bus Le Lavandou → Toulon (directs ET via Aéroport)
           // Les trips via Aéroport génèrent ainsi deux lignes : une → Aéroport, une → Toulon
           {
-            departurePattern:  'le lavandou _ square',
+            departurePattern:  'le lavandou _ gare routiere',
             destinationPattern: 'toulon _ gare routiere',
             destinationLabel:  'Gare Routière de Toulon',
           },

@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { PostWithRelations, Categorie, Etablissement } from '@/types/database'
 import ImagePicker from '@/components/admin/ImagePicker'
+import { notifyModerators } from '@/lib/notifyModerators'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -183,15 +184,16 @@ function PostForm({ initial, categories, etablissements, onSave, onClose, isAdmi
 
 interface PostCardProps {
   post: PostWithRelations
-  onPublier:   () => void
-  onDepublier: () => void
-  onRefuser:   () => void
-  onEdit:      () => void
-  onDelete:    () => void
+  onPublier:    () => void
+  onDepublier:  () => void
+  onRefuser:    () => void
+  onEdit:       () => void
+  onDelete:     () => void
+  onDuplicate:  () => void
   isAdmin?: boolean
 }
 
-function PostCard({ post, onPublier, onDepublier, onRefuser, onEdit, onDelete, isAdmin = true }: PostCardProps) {
+function PostCard({ post, onPublier, onDepublier, onRefuser, onEdit, onDelete, onDuplicate, isAdmin = true }: PostCardProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const cat = post.categorie
   const catColor = cat ? (CAT_COLORS[cat.code] ?? 'bg-gray-100 text-gray-600') : null
@@ -229,6 +231,8 @@ function PostCard({ post, onPublier, onDepublier, onRefuser, onEdit, onDelete, i
             <div className="absolute right-0 top-9 z-20 bg-white border border-gray-100 rounded-2xl shadow-lg overflow-hidden min-w-[140px]">
               <button onClick={() => { onEdit(); setMenuOpen(false) }}
                 className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50">✏️ Modifier</button>
+              <button onClick={() => { onDuplicate(); setMenuOpen(false) }}
+                className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50">📋 Dupliquer</button>
               {!post.publie && !post.refuse && (
                 <button onClick={() => { onPublier(); setMenuOpen(false) }}
                   className="w-full text-left px-4 py-3 text-sm text-green-700 hover:bg-green-50">✅ Publier</button>
@@ -285,7 +289,7 @@ function PostCard({ post, onPublier, onDepublier, onRefuser, onEdit, onDelete, i
 
 // ─── Carte post horizontale (tab À venir) ─────────────────────────────────────
 
-function PostCardHorizontal({ post, onEdit, onPublier, onDepublier, onRefuser, onDelete, isAdmin = true }: PostCardProps) {
+function PostCardHorizontal({ post, onEdit, onPublier, onDepublier, onRefuser, onDelete, onDuplicate, isAdmin = true }: PostCardProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const cat = post.categorie
   const catColor = cat ? (CAT_COLORS[cat.code] ?? 'bg-gray-100 text-gray-600') : null
@@ -361,6 +365,8 @@ function PostCardHorizontal({ post, onEdit, onPublier, onDepublier, onRefuser, o
             </button>
             {menuOpen && (
               <div className="absolute right-0 bottom-9 z-20 bg-white border border-gray-100 rounded-2xl shadow-lg overflow-hidden min-w-[140px]">
+                <button onClick={() => { onDuplicate(); setMenuOpen(false) }}
+                  className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50">📋 Dupliquer</button>
                 {post.publie && (
                   <button onClick={() => { onDepublier(); setMenuOpen(false) }}
                     className="w-full text-left px-4 py-3 text-sm text-orange-700 hover:bg-orange-50">⏸ Dépublier</button>
@@ -406,6 +412,11 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[104px]'
   const [saveError, setSaveError]   = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
+  const [duplicateData, setDuplicateData] = useState<Partial<PostWithRelations> | null>(null)
+  const [showImport, setShowImport] = useState(false)
+  const [importLoading, setImportLoading] = useState(false)
+  const [importResult, setImportResult] = useState<{ ok: number; errors: number } | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -498,20 +509,130 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[104px]'
       }
       await load()
     } else {
+      const { data: { user } } = await supabase.auth.getUser()
+      const authorId = user?.id ?? userId
+      if (!authorId) {
+        setSaveError('❌ Utilisateur non authentifié — reconnectez-vous.')
+        return
+      }
       const { error } = await supabase
-        .from('posts').insert({ ...data, dans_agenda: true, auteur_id: userId })
+        .from('posts').insert({ ...data, dans_agenda: true, auteur_id: authorId })
       if (error) {
         setSaveError(`Erreur Supabase : ${error.message} (${error.code})`)
         return
       }
       await load()
+      void notifyModerators('post', { ...data })
     }
     setSaveSuccess(true)
-    setTimeout(() => {
-      setShowForm(false)
-      setEditPost(null)
-      setSaveSuccess(false)
-    }, 800)
+    setTimeout(() => closeForm(), 800)
+  }
+
+  function closeForm() {
+    setShowForm(false)
+    setEditPost(null)
+    setDuplicateData(null)
+    setSaveError(null)
+    setSaveSuccess(false)
+  }
+
+  function handleDuplicate(post: PostWithRelations) {
+    const { id: _id, created_at: _ca, updated_at: _ua, ...rest } = post
+    setDuplicateData({ ...rest, publie: false, refuse: false, auteur_id: null })
+    setEditPost(null)
+    setShowForm(true)
+  }
+
+  const EXAMPLE_CSV = [
+    'titre,date_debut,date_fin,heure,categorie,organisateur,lieu,description,inscription',
+    "Concert d'été,2026-07-14,,21h,CONCERT,Association Levant,Espace culturel,Grande soirée musicale,false",
+    'Marché artisanal,2026-07-15,2026-07-16,9h-13h,MARCHE,,Place du village,,false',
+    'Conférence,2026-07-20,,18h30,INFO,,Salle des fêtes,Entrée libre,true',
+  ].join('\n')
+
+  function downloadExample() {
+    const blob = new Blob([EXAMPLE_CSV], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'exemple-import-evenements.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  function parseCSVRow(row: string): string[] {
+    const result: string[] = []
+    let current = ''
+    let inQuotes = false
+    for (const char of row) {
+      if (char === '"') { inQuotes = !inQuotes }
+      else if (char === ',' && !inQuotes) { result.push(current); current = '' }
+      else { current += char }
+    }
+    result.push(current)
+    return result
+  }
+
+  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImportLoading(true)
+    setImportResult(null)
+    const text = await file.text()
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
+    if (lines.length < 2) { setImportLoading(false); return }
+
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase())
+    const rows = lines.slice(1)
+
+    const { data: { user } } = await supabase.auth.getUser()
+    const authorId = user?.id ?? userId
+
+    let ok = 0, errors = 0
+    for (const rowStr of rows) {
+      const cols = parseCSVRow(rowStr)
+      const row: Record<string, string> = {}
+      headers.forEach((h, i) => { row[h] = cols[i]?.trim() ?? '' })
+
+      if (!row.titre || !row.date_debut) { errors++; continue }
+
+      const orga = row.organisateur
+        ? etablissements.find(e => e.nom.toLowerCase() === row.organisateur.toLowerCase() && e.est_organisateur)
+        : undefined
+      const lieu = row.lieu
+        ? etablissements.find(e => e.nom.toLowerCase() === row.lieu.toLowerCase() && e.est_lieu)
+        : undefined
+      const cat = row.categorie
+        ? categories.find(c => c.code.toLowerCase() === row.categorie.toLowerCase() || c.nom.toLowerCase() === row.categorie.toLowerCase())
+        : undefined
+
+      const { error } = await supabase.from('posts').insert({
+        titre: row.titre,
+        complement: row.description || null,
+        date_debut: row.date_debut,
+        date_fin: row.date_fin || null,
+        heure: row.heure || null,
+        categorie_code: cat?.code ?? null,
+        organisateur_id: orga?.id ?? null,
+        lieu_id: lieu?.id ?? null,
+        publie: false,
+        mis_en_avant: false,
+        a_laffiche: false,
+        dans_agenda: true,
+        inscription: row.inscription === 'true',
+        nb_inscriptions_max: null,
+        refuse: false,
+        phare: false,
+        auteur_id: authorId,
+      })
+      if (error) errors++; else ok++
+    }
+
+    e.target.value = ''
+    await load()
+    setImportLoading(false)
+    setImportResult({ ok, errors })
+    setTimeout(() => setImportResult(null), 5000)
   }
 
   const TABS: { id: Tab; label: string; count: number }[] = [
@@ -543,11 +664,45 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[104px]'
       <div className={`px-4 py-3 bg-white border-b border-gray-100 flex gap-2`}>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher…"
           className="flex-1 bg-gray-100 rounded-xl px-3 py-2 text-sm outline-none" />
-        <button onClick={() => { setEditPost(null); setShowForm(true) }}
+        <button onClick={() => { setEditPost(null); setDuplicateData(null); setShowForm(true) }}
           className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-bold flex-shrink-0">
           + Ajouter
         </button>
+        <button onClick={() => setShowImport(v => !v)}
+          className={`px-3 py-2 rounded-xl text-sm font-bold flex-shrink-0 ${showImport ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'}`}
+          title="Importer via CSV">
+          📥
+        </button>
+        <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={handleImport} />
       </div>
+
+      {/* Panneau import CSV */}
+      {showImport && (
+        <div className="px-4 py-3 bg-amber-50 border-b border-amber-100 space-y-2">
+          <p className="text-xs font-bold text-amber-800">Importer des événements via CSV</p>
+          <button onClick={downloadExample} className="text-xs text-blue-600 font-semibold underline text-left">
+            📄 Télécharger le fichier exemple
+          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={importLoading}
+              className="flex-1 py-2 rounded-xl bg-amber-600 text-white text-xs font-bold disabled:opacity-50">
+              {importLoading ? 'Importation…' : '📥 Choisir un fichier CSV'}
+            </button>
+            <button onClick={() => { setShowImport(false); setImportResult(null) }}
+              className="px-3 py-2 rounded-xl bg-white border border-amber-200 text-amber-700 text-xs font-semibold">
+              ✕
+            </button>
+          </div>
+          {importResult && (
+            <p className={`text-xs font-bold ${importResult.errors > 0 ? 'text-orange-700' : 'text-green-700'}`}>
+              ✅ {importResult.ok} importé{importResult.ok > 1 ? 's' : ''}
+              {importResult.errors > 0 ? ` · ❌ ${importResult.errors} erreur${importResult.errors > 1 ? 's' : ''}` : ''}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Liste */}
       <div className="px-4 pt-4 space-y-3">
@@ -559,11 +714,12 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[104px]'
         )}
         {filtered.map(p => (
           <PostCardHorizontal key={p.id} post={p} isAdmin={isAdmin}
-            onPublier={()   => updatePost(p.id, { publie: true, refuse: false })}
-            onDepublier={() => updatePost(p.id, { publie: false })}
-            onRefuser={()  => updatePost(p.id, { refuse: true, publie: false })}
-            onEdit={()     => { setEditPost(p); setShowForm(true) }}
-            onDelete={()   => setConfirmDelete(p.id)}
+            onPublier={()    => updatePost(p.id, { publie: true, refuse: false })}
+            onDepublier={()  => updatePost(p.id, { publie: false })}
+            onRefuser={()    => updatePost(p.id, { refuse: true, publie: false })}
+            onEdit={()       => { setEditPost(p); setDuplicateData(null); setShowForm(true) }}
+            onDelete={()     => setConfirmDelete(p.id)}
+            onDuplicate={()  => handleDuplicate(p)}
           />
         ))}
       </div>
@@ -571,11 +727,13 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[104px]'
       {/* Formulaire slide-up */}
       {showForm && (
         <>
-          <div className="fixed inset-0 z-40 bg-black/40" onClick={() => { setShowForm(false); setSaveError(null); setSaveSuccess(false) }} />
+          <div className="fixed inset-0 z-40 bg-black/40" onClick={closeForm} />
           <div className="fixed bottom-0 left-0 right-0 z-50 mx-auto max-w-[430px] bg-white rounded-t-3xl shadow-2xl max-h-[92vh] flex flex-col">
             <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-gray-100 flex-shrink-0">
-              <h2 className="font-extrabold text-gray-900">{editPost ? 'Modifier le post' : 'Nouveau post'}</h2>
-              <button onClick={() => { setShowForm(false); setSaveError(null); setSaveSuccess(false) }} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">✕</button>
+              <h2 className="font-extrabold text-gray-900">
+                {editPost ? 'Modifier le post' : duplicateData ? 'Dupliquer le post' : 'Nouveau post'}
+              </h2>
+              <button onClick={closeForm} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">✕</button>
             </div>
             <div className="overflow-y-auto flex-1 px-5 py-4">
               {saveError && (
@@ -589,11 +747,11 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[104px]'
                 </div>
               )}
               <PostForm
-                initial={editPost ?? undefined}
+                initial={editPost ?? duplicateData ?? undefined}
                 categories={categories}
                 etablissements={etablissements}
                 onSave={savePost}
-                onClose={() => { setShowForm(false); setSaveError(null); setSaveSuccess(false) }}
+                onClose={closeForm}
                 isAdmin={isAdmin}
                 etablissementIds={etablissementIds}
               />

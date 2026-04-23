@@ -13,7 +13,9 @@ export interface Profile {
   telephone: string | null
   role: Role
   suspendu: boolean
+  moderateur: boolean
   notification_pref: NotifPref
+  newsletter: boolean
   created_at: string
   updated_at: string
 }
