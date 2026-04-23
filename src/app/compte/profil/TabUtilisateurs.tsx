@@ -228,6 +228,158 @@ function UserPanel({ user, allEtabs, onClose, onUpdated }: UserPanelProps) {
   )
 }
 
+// ─── Slide-in : création d'un nouveau compte par l'admin ──────────────────────
+
+interface CreatePanelProps {
+  onClose:   () => void
+  onCreated: () => void
+}
+
+type RoleChoice = 'pro' | 'moderateur' | 'compagnie' | 'admin'
+
+const ROLE_CHOICES: { value: RoleChoice; label: string; desc: string; icon: string }[] = [
+  { value: 'pro',        label: 'Pro',          desc: 'Gère ses établissements et événements', icon: '🏪' },
+  { value: 'moderateur', label: 'Modérateur',   desc: 'Valide les annonces et événements',     icon: '🛡️' },
+  { value: 'compagnie',  label: 'Transporteur', desc: 'Gère les horaires bateaux / bus',       icon: '⛵' },
+  { value: 'admin',      label: 'Admin',        desc: 'Accès complet à l’espace admin',        icon: '👑' },
+]
+
+function CreateUserPanel({ onClose, onCreated }: CreatePanelProps) {
+  const [prenom,  setPrenom]  = useState('')
+  const [nom,     setNom]     = useState('')
+  const [email,   setEmail]   = useState('')
+  const [choice,  setChoice]  = useState<RoleChoice>('pro')
+  const [saving,  setSaving]  = useState(false)
+  const [error,   setError]   = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
+
+  async function submit() {
+    setError(null)
+    if (!prenom.trim() || !nom.trim()) { setError('Prénom et nom obligatoires.'); return }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setError('Email invalide.'); return }
+
+    const role       = choice === 'moderateur' ? 'user'     : choice
+    const moderateur = choice === 'moderateur'
+
+    setSaving(true)
+    try {
+      const res = await fetch('/api/admin/create-user', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ prenom: prenom.trim(), nom: nom.trim(), email: email.trim(), role, moderateur }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(json.error || `Erreur ${res.status}`)
+        setSaving(false)
+        return
+      }
+      setSuccess(true)
+      setSaving(false)
+      onCreated()
+    } catch (err: any) {
+      setError(err.message || 'Erreur réseau')
+      setSaving(false)
+    }
+  }
+
+  const field = "w-full bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 outline-none focus:border-blue-400"
+
+  return (
+    <>
+      <div className="fixed inset-0 z-40 bg-black/40" onClick={onClose} />
+      <div className="fixed bottom-0 left-0 right-0 z-50 mx-auto max-w-[430px] bg-white rounded-t-3xl shadow-2xl max-h-[92vh] flex flex-col md:left-64">
+        <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-gray-100 flex-shrink-0">
+          <div>
+            <h2 className="font-extrabold text-gray-900">Nouveau compte</h2>
+            <p className="text-xs text-gray-400 mt-0.5">L'invité recevra un email pour finaliser</p>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">✕</button>
+        </div>
+
+        <div className="overflow-y-auto flex-1 px-5 py-4 space-y-5">
+
+          {success ? (
+            <div className="bg-green-50 border border-green-200 rounded-2xl px-4 py-4 text-sm text-green-800">
+              <p className="font-bold mb-1">✓ Invitation envoyée</p>
+              <p>Un email a été envoyé à <strong>{email}</strong>. Le destinataire doit cliquer sur le lien pour définir son mot de passe et activer son compte.</p>
+              <button onClick={onClose} className="mt-3 w-full py-2.5 rounded-xl bg-green-600 text-white text-sm font-bold">
+                Fermer
+              </button>
+            </div>
+          ) : (
+            <>
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-2xl">
+                  {error}
+                </div>
+              )}
+
+              <section>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Identité</p>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Prénom</label>
+                      <input value={prenom} onChange={e => setPrenom(e.target.value)} className={field} />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Nom</label>
+                      <input value={nom} onChange={e => setNom(e.target.value)} className={field} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Email</label>
+                    <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="nom@email.fr" className={field} />
+                  </div>
+                </div>
+              </section>
+
+              <section>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Type de compte</p>
+                <div className="space-y-2">
+                  {ROLE_CHOICES.map(r => (
+                    <button
+                      key={r.value}
+                      onClick={() => setChoice(r.value)}
+                      className={`w-full flex items-start gap-3 px-4 py-3 rounded-xl border text-left transition-colors ${
+                        choice === r.value
+                          ? 'border-blue-400 bg-blue-50'
+                          : 'border-gray-200 bg-white hover:bg-gray-50'
+                      }`}
+                    >
+                      <span className={`mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${
+                        choice === r.value ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
+                      }`}>
+                        {choice === r.value && <span className="w-1.5 h-1.5 rounded-full bg-white block" />}
+                      </span>
+                      <span className="text-xl leading-none">{r.icon}</span>
+                      <span className="flex-1 min-w-0">
+                        <span className={`block text-sm font-bold ${choice === r.value ? 'text-blue-700' : 'text-gray-900'}`}>
+                          {r.label}
+                        </span>
+                        <span className="block text-xs text-gray-500 mt-0.5">{r.desc}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              <button
+                onClick={submit}
+                disabled={saving}
+                className="w-full py-3 rounded-2xl bg-blue-600 text-white text-sm font-bold disabled:opacity-50"
+              >
+                {saving ? 'Envoi en cours…' : 'Envoyer l’invitation'}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </>
+  )
+}
+
 // ─── Composant principal ──────────────────────────────────────────────────────
 
 export default function TabUtilisateurs() {
@@ -240,6 +392,7 @@ export default function TabUtilisateurs() {
   const [filterRole,   setFilterRole]   = useState<Role | ''>('')
   const [filterStatut, setFilterStatut] = useState<'actif' | 'suspendu' | ''>('')
   const [selected, setSelected] = useState<UserWithEtabs | null>(null)
+  const [creating, setCreating] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -303,6 +456,13 @@ export default function TabUtilisateurs() {
               className="w-full bg-gray-50 rounded-xl py-2.5 pl-9 pr-3 text-sm outline-none border border-gray-200"
             />
           </div>
+          <button
+            onClick={() => setCreating(true)}
+            className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-bold active:scale-[0.98] transition-transform"
+          >
+            <span className="text-base leading-none">＋</span>
+            <span>Nouveau</span>
+          </button>
         </div>
         {/* Filtres */}
         <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
@@ -397,6 +557,14 @@ export default function TabUtilisateurs() {
           allEtabs={allEtabs}
           onClose={() => setSelected(null)}
           onUpdated={handleUpdated}
+        />
+      )}
+
+      {/* Panneau slide-in création de compte */}
+      {creating && (
+        <CreateUserPanel
+          onClose={() => setCreating(false)}
+          onCreated={() => { load() }}
         />
       )}
     </div>
