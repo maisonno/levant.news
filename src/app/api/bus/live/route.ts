@@ -157,8 +157,18 @@ export async function GET(request: Request) {
   // trip_id/stop_id entre GTFS statique et flux RT).
   let feedTripsTotal     = 0
   let feedTripsMatched   = 0
-  const sampleFeedTrips:  string[] = []
+  const sampleFeedTrips:  Array<Record<string, unknown>> = []
   const sampleFeedStops:  string[] = []
+  const feedRouteIds:     Set<string> = new Set()
+
+  // Index secondaire pour matching par (stop_id, scheduled_time) quand trip_id ne matche pas
+  const stopTimeIndex = new Map<string, string>() // 'stop_id|HH:MM[:SS]' -> trip_id
+  for (const [tripId, stops] of tripMap) {
+    for (const s of stops) {
+      stopTimeIndex.set(`${s.stop_id}|${s.departure_time}`, tripId)
+    }
+  }
+  let stopTimeMatched = 0
 
   for (const entity of feed.entity) {
     const tu = entity.tripUpdate
@@ -168,23 +178,52 @@ export async function GET(request: Request) {
     if (!tripId) continue
 
     feedTripsTotal++
-    if (sampleFeedTrips.length < 5) sampleFeedTrips.push(tripId)
+    if (tu.trip?.routeId) feedRouteIds.add(tu.trip.routeId)
+    if (sampleFeedTrips.length < 5) {
+      sampleFeedTrips.push({
+        trip_id:    tripId,
+        route_id:   tu.trip?.routeId   ?? null,
+        start_date: tu.trip?.startDate ?? null,
+        start_time: tu.trip?.startTime ?? null,
+        stop_count: (tu.stopTimeUpdate ?? []).length,
+      })
+    }
 
     const ourStops = tripMap.get(tripId)
-    if (!ourStops) continue
-    feedTripsMatched++
+    if (ourStops) feedTripsMatched++
 
     for (const stu of (tu.stopTimeUpdate ?? [])) {
       const stopId = stu.stopId
       if (!stopId) continue
-      if (sampleFeedStops.length < 5) sampleFeedStops.push(stopId)
-
-      const ourStop = ourStops.find(s => s.stop_id === stopId)
-      if (!ourStop) continue
+      if (sampleFeedStops.length < 8) sampleFeedStops.push(stopId)
 
       // Priorité : délai de départ, puis d'arrivée
       const delaySec = stu.departure?.delay ?? stu.arrival?.delay
       if (delaySec == null) continue
+
+      // Matching primaire : par trip_id
+      let ourStop = ourStops?.find(s => s.stop_id === stopId)
+
+      // Matching secondaire : par (stop_id, scheduled_time) depuis le flux
+      if (!ourStop) {
+        const schedSec = Number(stu.departure?.time ?? stu.arrival?.time ?? 0)
+        if (schedSec > 0) {
+          // Convertit timestamp Unix en HH:MM:SS local France
+          const dt = new Date(schedSec * 1000)
+          const hh = String(dt.getUTCHours()  ).padStart(2, '0')
+          const mm = String(dt.getUTCMinutes()).padStart(2, '0')
+          const ss = String(dt.getUTCSeconds()).padStart(2, '0')
+          // On tente plusieurs variantes horaires pour coller au format DB
+          for (const t of [`${hh}:${mm}:${ss}`, `${hh}:${mm}:00`]) {
+            const hit = stopTimeIndex.get(`${stopId}|${t}`)
+            if (hit) {
+              ourStop = tripMap.get(hit)?.find(s => s.stop_id === stopId)
+              if (ourStop) { stopTimeMatched++; break }
+            }
+          }
+        }
+      }
+      if (!ourStop) continue
 
       delays.push({
         stop_id:        stopId,
@@ -207,6 +246,8 @@ export async function GET(request: Request) {
       ourTripsTotal:    tripMap.size,
       feedTripsTotal,
       feedTripsMatched,
+      stopTimeMatched,
+      feedRouteIds:     [...feedRouteIds],
       sampleOurTrips,
       sampleFeedTrips,
       sampleOurStops,
