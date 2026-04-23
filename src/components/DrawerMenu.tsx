@@ -2,19 +2,61 @@
 
 import { useDrawer } from '@/contexts/DrawerContext'
 import { useAuth } from '@/contexts/AuthContext'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { Suspense } from 'react'
 
-const MODULES = [
-  { href: '/agenda',    icon: '📅', label: 'Agenda' },
-  { href: '/meteo',     icon: '☀️', label: 'Météo' },
-  { href: '/transport', icon: '⛵', label: 'Transport' },
-  { href: '/meduse',    icon: '🪼', label: 'Méduse Watch' },
-  { href: '/perdu',     icon: '🔍', label: 'Perdu / Trouvé' },
-  { href: '/annuaire',  icon: '🗂️', label: 'Annuaire' },
-  { href: '/infos',     icon: 'ℹ️', label: 'Infos pratiques' },
-  { href: '/webcam',    icon: '📷', label: 'Webcam' },
+const MODULES: { href: string; icon: string; label: string; tab?: string }[] = [
+  { href: '/agenda',                 icon: '📅',  label: 'Agenda'          },
+  { href: '/meteo',                  icon: '☀️',  label: 'Météo'           },
+  { href: '/transport?tab=bateaux',  icon: '⛵',  label: 'Bateaux', tab: 'bateaux' },
+  { href: '/transport?tab=bus',      icon: '🚌',  label: 'Bus',     tab: 'bus'     },
+  { href: '/meduse',                 icon: '🪼',  label: 'Méduse Watch'    },
+  { href: '/perdu',                  icon: '🔍',  label: 'Perdu / Trouvé'  },
+  { href: '/annuaire',               icon: '🗂️',  label: 'Annuaire'        },
+  { href: '/infos',                  icon: 'ℹ️',  label: 'Infos pratiques' },
+  { href: '/webcam',                 icon: '📷',  label: 'Webcam'          },
 ]
+
+function ModulesList({ close }: { close: () => void }) {
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const currentTab = searchParams.get('tab')
+
+  return (
+    <>
+      {MODULES.map(({ href, icon, label, tab }) => {
+        const basePath = href.split('?')[0]
+        const active = tab
+          ? pathname === basePath && (currentTab ?? 'bateaux') === tab
+          : pathname === basePath
+        return (
+          <Link
+            key={href}
+            href={href}
+            onClick={close}
+            className={`flex items-center gap-2.5 px-4 py-2 transition-colors ${
+              active
+                ? 'bg-blue-50 text-blue-700'
+                : 'text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <span
+              className={`w-7 h-7 rounded-lg flex items-center justify-center text-sm flex-shrink-0 ${
+                active ? 'bg-blue-600 text-white' : 'bg-gray-100'
+              }`}
+            >
+              {icon}
+            </span>
+            <span className={`text-sm ${active ? 'font-bold' : 'font-medium'}`}>
+              {label}
+            </span>
+          </Link>
+        )
+      })}
+    </>
+  )
+}
 
 export default function DrawerMenu() {
   const { isOpen, close } = useDrawer()
@@ -53,32 +95,9 @@ export default function DrawerMenu() {
 
         {/* Liens de navigation */}
         <div className="flex-1 overflow-y-auto py-1">
-          {MODULES.map(({ href, icon, label }) => {
-            const active = pathname === href
-            return (
-              <Link
-                key={href}
-                href={href}
-                onClick={close}
-                className={`flex items-center gap-2.5 px-4 py-2 transition-colors ${
-                  active
-                    ? 'bg-blue-50 text-blue-700'
-                    : 'text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <span
-                  className={`w-7 h-7 rounded-lg flex items-center justify-center text-sm flex-shrink-0 ${
-                    active ? 'bg-blue-600 text-white' : 'bg-gray-100'
-                  }`}
-                >
-                  {icon}
-                </span>
-                <span className={`text-sm ${active ? 'font-bold' : 'font-medium'}`}>
-                  {label}
-                </span>
-              </Link>
-            )
-          })}
+          <Suspense fallback={null}>
+            <ModulesList close={close} />
+          </Suspense>
         </div>
 
         {/* Espace admin (admins + modérateurs) */}
