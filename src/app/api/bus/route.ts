@@ -15,6 +15,7 @@
  *   aucun_service: boolean,
  *   stops: Array<{
  *     stop_name: string,
+ *     stop_code: string | null,
  *     stop_id: string,
  *     departures: Array<{
  *       time: string,           // 'HH:MM' normalisé
@@ -47,7 +48,7 @@ export async function GET(request: Request) {
   // ── 1. Horaires du calendrier régulier ──────────────────────────────────────
   const { data: regularRows, error: e1 } = await supabase
     .from('bus_horaires')
-    .select('id, service_id, stop_id, stop_name, stop_sequence, departure_time, destination, travel_time_min')
+    .select('id, service_id, stop_id, stop_name, stop_code, stop_sequence, departure_time, destination, travel_time_min')
     .eq('ligne', ligne)
     .eq(dowCol, true)
     .lte('date_debut', dateGtfs)
@@ -78,7 +79,7 @@ export async function GET(request: Request) {
   if (addedServiceIds.length > 0) {
     const { data } = await supabase
       .from('bus_horaires')
-      .select('id, service_id, stop_id, stop_name, stop_sequence, departure_time, destination, travel_time_min')
+      .select('id, service_id, stop_id, stop_name, stop_code, stop_sequence, departure_time, destination, travel_time_min')
       .eq('ligne', ligne)
       .in('service_id', addedServiceIds)
     addedRows = data ?? []
@@ -107,12 +108,16 @@ export async function GET(request: Request) {
     return `${String(h - 24).padStart(2, '0')}:${parts[1]}`
   }
 
-  // ── 6. Regroupement par (stop_name, destination) ──────────────────────────
-  // On groupe par le couple (stop_name, destination) pour créer des sections
+  // ── 6. Regroupement par (stop_code|stop_name, destination) ─────────────────
+  // On groupe par le couple (arrêt, destination) pour créer des sections
   // distinctes quand un même arrêt de départ dessert plusieurs destinations
   // (ex : Le Lavandou → Gare Routière de Toulon  ET  Le Lavandou → Aéroport).
+  // On préfère stop_code (qui différencie les homonymes type "Gare Routiere"
+  // partagés entre plusieurs villes sur le réseau Zou) et on retombe sur
+  // stop_name pour les réseaux qui ne fournissent pas de stop_code (Mistral).
   const stopMap = new Map<string, {
     stop_name:    string
+    stop_code:    string | null
     stop_id:      string
     destination:  string
     min_sequence: number
@@ -121,10 +126,11 @@ export async function GET(request: Request) {
 
   for (const row of allRows) {
     const dest = row.destination ?? ''
-    const key  = `${row.stop_name}|${dest}`
+    const key  = `${row.stop_code || row.stop_name}|${dest}`
     if (!stopMap.has(key)) {
       stopMap.set(key, {
         stop_name:    row.stop_name,
+        stop_code:    row.stop_code ?? null,
         stop_id:      row.stop_id,
         destination:  dest,
         min_sequence: row.stop_sequence,
@@ -146,6 +152,7 @@ export async function GET(request: Request) {
   const stops = [...stopMap.values()]
     .map(s => ({
       stop_name:   s.stop_name,
+      stop_code:   s.stop_code,
       stop_id:     s.stop_id,
       destination: s.destination,
       departures:  s.departures

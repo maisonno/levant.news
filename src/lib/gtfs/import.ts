@@ -469,6 +469,7 @@ export async function importNetwork(
         headsign:        trip.trip_headsign ?? '',
         stop_id:         depStop.stop_id,
         stop_name:       depStop.stop_name,
+        stop_code:       depStop.stop_code || null,
         stop_sequence:   depStop.stop_sequence,
         departure_time:  depStop.departure_time,
         destination:     depConfig.destinationLabel,
