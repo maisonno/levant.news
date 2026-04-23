@@ -30,8 +30,11 @@ export const revalidate = 30 // 30 s de cache côté serveur
 
 // ─── Config des flux GTFS-RT par ligne ───────────────────────────────────────
 
+// Ligne 878 : Zou ! Proximité (opérée par SUMA / Keolis, ex-7801 + 873 depuis
+// mai 2025). Le flux "zou-express" ne contient PAS la 878 — il faut bien
+// utiliser "zou-proximite" du dataset PAN "Réseau interurbain bus Proximité ZOU !".
 const FEED_URLS: Record<string, string> = {
-  '878': 'https://proxy.transport.data.gouv.fr/resource/region-sud-zou-express-gtfs-rt-trip-update',
+  '878': 'https://proxy.transport.data.gouv.fr/resource/region-sud-zou-proximite-gtfs-rt-trip-update',
   '67':  'https://feed-rdtpm-toulon.ratpdev.com/TripUpdate/GTFS-RT',
 }
 
