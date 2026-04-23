@@ -141,11 +141,11 @@ function PostForm({ initial, categories, etablissements, onSave, onClose, isAdmi
       <div className="grid grid-cols-2 gap-2">
         {([
           ...(isAdmin ? [[publie, setPublie, 'Publié', false]] : []),
-          ...(isAdmin ? [[misEnAvant, setMisEnAvant, 'Mis en avant', false]] : []),
+          ...(isAdmin ? [[misEnAvant, setMisEnAvant, '📌 Épinglé à la une', false]] : []),
           [aLaffiche, setALaffiche, '⭐ À l\'affiche', false],
           [inscription, setInscription, 'Inscription', false],
           ...(isAdmin ? [[refuse, setRefuse, 'Refusé', false]] : []),
-          ...(isAdmin ? [[phare, setPhare, '🔦 Phare', false]] : []),
+          ...(isAdmin ? [[phare, setPhare, '🔦 Majeur', false]] : []),
         ] as [boolean, (v: boolean) => void, string, boolean][]).map(([val, setter, label, disabled]) => (
           <button key={label} type="button"
             onClick={() => !disabled && setter(!val)}
@@ -317,13 +317,13 @@ function PostCardHorizontal({ post, onEdit, onPublier, onDepublier, onRefuser, o
             <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">À valider</span>
           )}
           {post.mis_en_avant && (
-            <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">⭐ Avant</span>
+            <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">📌 Épinglé</span>
           )}
           {post.a_laffiche && (
             <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-pink-100 text-pink-700">🎬 Affiche</span>
           )}
           {post.phare && (
-            <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">🔦 Phare</span>
+            <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">🔦 Majeur</span>
           )}
         </div>
 

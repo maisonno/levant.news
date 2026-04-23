@@ -72,7 +72,7 @@ function ArticleForm({
       <div className="grid grid-cols-2 gap-2">
         {([
           [publie, setPublie, 'Publié'],
-          [misEnAvant, setMisEnAvant, 'Mis en avant'],
+          [misEnAvant, setMisEnAvant, '📌 Épinglé à la une'],
         ] as [boolean, (v: boolean) => void, string][]).map(([val, setter, label]) => (
           <button key={label} type="button" onClick={() => setter(!val)}
             className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-semibold ${
