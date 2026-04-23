@@ -15,7 +15,7 @@ function today() {
 
 // ─── Formulaire ───────────────────────────────────────────────────────────────
 
-function AnnonceForm({
+export function AnnonceForm({
   initial, onSave, onClose,
 }: {
   initial?: Partial<ObjetPerdu>
