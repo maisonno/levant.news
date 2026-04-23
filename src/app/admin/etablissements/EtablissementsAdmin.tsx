@@ -254,10 +254,12 @@ export default function EtablissementsAdmin({ etablissementIds, topOffset = 'top
                       className="flex-1 py-1.5 rounded-xl bg-gray-100 text-gray-700 text-xs font-semibold">
                       ✏️ Modifier
                     </button>
-                    <button onClick={() => setConfirmDelete(e.id)}
-                      className="px-3 py-1.5 rounded-xl bg-red-50 text-red-500 text-xs font-semibold">
-                      Supprimer
-                    </button>
+                    {isAdmin && (
+                      <button onClick={() => setConfirmDelete(e.id)}
+                        className="px-3 py-1.5 rounded-xl bg-red-50 text-red-500 text-xs font-semibold">
+                        Supprimer
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
