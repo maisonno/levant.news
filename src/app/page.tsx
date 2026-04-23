@@ -156,14 +156,13 @@ async function AgendaSection() {
       .gte('date_fin', today)
       .order('date_debut', { ascending: true }),
 
-    // À l'affiche : a_laffiche OU phare, limités aux 15 prochains jours
+    // À l'affiche : a_laffiche OU phare, tous les événements à venir (weighted shuffle favorise le plus proche)
     supabase
       .from('posts')
       .select('*, categorie:categories(code, nom)')
       .eq('publie', true)
       .or('a_laffiche.eq.true,phare.eq.true')
       .or(`date_fin.gte.${today},and(date_fin.is.null,date_debut.gte.${today})`)
-      .lte('date_debut', new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0])
       .order('date_debut', { ascending: true }),
 
     // Expos futures (sans limite de date)

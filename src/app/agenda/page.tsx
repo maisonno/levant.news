@@ -51,6 +51,7 @@ export default async function AgendaPage({
         .order('ordre_dans_journee', { ascending: true, nullsFirst: false }),
 
       // Onglet À l'affiche — a_laffiche : limité aux 15 prochains jours
+      // Le carrousel utilise tous les a_laffiche + phare sans limite de date
       supabase
         .from('posts')
         .select('*, categorie:categories(code, nom)')
@@ -62,11 +63,12 @@ export default async function AgendaPage({
         .order('ordre_dans_journee', { ascending: true, nullsFirst: false }),
 
       // Onglet À l'affiche — phare (Majeur) : tous les événements futurs, sans limite de date
+      // Sert aussi de base pour le carrousel (+ a_laffiche non filtrés)
       supabase
         .from('posts')
         .select('*, categorie:categories(code, nom)')
         .eq('publie', true)
-        .eq('phare', true)
+        .or('phare.eq.true,a_laffiche.eq.true')
         .or(`date_fin.gte.${today},and(date_fin.is.null,date_debut.gte.${today})`)
         .order('date_debut', { ascending: true })
         .order('ordre_dans_journee', { ascending: true, nullsFirst: false }),
@@ -86,6 +88,7 @@ export default async function AgendaPage({
     const rawAfficheTabAffiche = afficheTabAfficheRes.status === 'fulfilled' ? (afficheTabAfficheRes.value.data  ?? []) : []
     const rawAfficheTabPhare   = afficheTabPhareRes.status   === 'fulfilled' ? (afficheTabPhareRes.value.data    ?? []) : []
     const rawOngoingExpo      = ongoingExpoRes.status        === 'fulfilled' ? (ongoingExpoRes.value.data        ?? []) : []
+    // Tab: a_laffiche (15j) + phare (all). Carousel uses rawAfficheTabPhare which already includes all a_laffiche+phare.
     const rawAffiche = [...rawAfficheTabAffiche, ...rawAfficheTabPhare]
 
     // Fetch tous les établissements en une seule requête
@@ -131,14 +134,8 @@ export default async function AgendaPage({
     })
 
 
-    // Carousel : a_laffiche + phare des 15 prochains jours, 1 par org, weighted shuffle, max 5
-    // rawAfficheTabAffiche (a_laffiche, 15j) + rawAfficheTabPhare filtrés à 15j
-    const rawCarousel = [
-      ...rawAfficheTabAffiche,
-      ...rawAfficheTabPhare.filter((p: any) => p.date_debut <= datePlus15),
-    ]
-    const carouselEnriched = rawCarousel.map(enrich)
-    const carouselDeduped  = Array.from(new Map(carouselEnriched.map(p => [p.id, p])).values())
+    // Carousel : tous les a_laffiche + phare à venir, 1 par org, weighted shuffle, max 5
+    const carouselDeduped = Array.from(new Map(rawAfficheTabPhare.map((p: any) => [p.id, p])).values()).map(enrich)
     const byOrg = new Map<string, PostWithRelations>()
     for (const p of carouselDeduped) {
       const key = p.organisateur_id ?? `__solo_${p.id}`
