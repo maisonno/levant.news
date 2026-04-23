@@ -10,7 +10,7 @@ type Tab = 'posts' | 'annonces' | 'bateaux'
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'posts',    label: 'À modérer', icon: '📅' },
   { id: 'annonces', label: 'Annonces',  icon: '🔍' },
-  { id: 'bateaux',  label: 'Info urgente', icon: '⛵' },
+  { id: 'bateaux',  label: 'Info bateaux', icon: '⛵' },
 ]
 
 // ─── Onglet 1 : événements à modérer ──────────────────────────
