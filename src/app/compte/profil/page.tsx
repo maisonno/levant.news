@@ -1,65 +1,25 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import dynamic from 'next/dynamic'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { ObjetPerdu, Role } from '@/types/database'
-import TabUtilisateurs from './TabUtilisateurs'
-
-// ─── Imports dynamiques des composants admin ──────────────────────────────────
-
-interface PostsAdminProps   { etablissementIds?: string[]; topOffset?: string; isAdmin?: boolean }
-interface EtabAdminProps    { etablissementIds?: string[]; topOffset?: string; isAdmin?: boolean }
-interface AnnoncesAdminProps { topOffset?: string }
-
-const PostsAdmin = dynamic<PostsAdminProps>(
-  () => import('@/app/admin/posts/PostsAdmin'),
-  { loading: () => <Loader /> }
-)
-const ArticlesAdmin = dynamic(
-  () => import('@/app/admin/articles/ArticlesAdmin'),
-  { loading: () => <Loader /> }
-)
-const EtablissementsAdmin = dynamic<EtabAdminProps>(
-  () => import('@/app/admin/etablissements/EtablissementsAdmin'),
-  { loading: () => <Loader /> }
-)
-const BateauAdmin = dynamic(
-  () => import('@/app/admin/bateau/BateauAdmin'),
-  { loading: () => <Loader /> }
-)
-const AnnoncesAdmin = dynamic<AnnoncesAdminProps>(
-  () => import('@/app/admin/annonces/AnnoncesAdmin'),
-  { loading: () => <Loader /> }
-)
-
-function Loader() {
-  return <p className="text-center text-gray-400 text-sm py-12">Chargement…</p>
-}
 
 // ─── Configuration des onglets ────────────────────────────────────────────────
 
-type TabId = 'compte' | 'annonces' | 'newsletter' | 'evenements' | 'articles' | 'etablissements' | 'bateau' | 'utilisateurs' | 'obj_perdus'
+type TabId = 'compte' | 'annonces' | 'newsletter'
 
 interface TabDef {
   id: TabId
   label: string
   icon: string
-  roles: Role[]
 }
 
 const TABS: TabDef[] = [
-  { id: 'compte',         label: 'Mon compte',     icon: '👤', roles: ['user','pro','compagnie','admin'] },
-  { id: 'annonces',       label: 'Mes annonces',   icon: '🔍', roles: ['user','pro','compagnie','admin'] },
-  { id: 'newsletter',     label: 'Newsletter',     icon: '📬', roles: ['user','pro','compagnie','admin'] },
-  { id: 'evenements',     label: 'Événements',     icon: '📅', roles: ['pro','admin'] },
-  { id: 'articles',       label: 'Articles',       icon: '📖', roles: ['admin'] },
-  { id: 'etablissements', label: 'Établissements', icon: '🏪', roles: ['pro','admin'] },
-  { id: 'bateau',         label: 'Bateau',         icon: '⛵', roles: ['compagnie','admin'] },
-  { id: 'utilisateurs',   label: 'Utilisateurs',   icon: '👥', roles: ['admin'] },
-  { id: 'obj_perdus',     label: 'Obj. perdus',    icon: '📋', roles: ['admin'] },
+  { id: 'compte',     label: 'Mon compte',   icon: '👤' },
+  { id: 'annonces',   label: 'Mes annonces', icon: '🔍' },
+  { id: 'newsletter', label: 'Newsletter',   icon: '📬' },
 ]
 
 const ROLE_BADGE: Record<Role, { label: string; color: string }> = {
@@ -279,33 +239,13 @@ function SectionNewsletter() {
 export default function ProfilPage() {
   const { user, profile, loading, signOut } = useAuth()
   const router = useRouter()
-  const supabase = createClient()
 
   const [active, setActive] = useState<TabId>('compte')
-  const [userEtabIds, setUserEtabIds] = useState<string[] | undefined>(undefined)
 
   // Redirect si non connecté
   useEffect(() => {
     if (!loading && !user) router.push('/compte/connexion')
   }, [loading, user, router])
-
-  // Charger les établissements liés (pour pro et compagnie)
-  const loadEtabs = useCallback(async () => {
-    if (!user || !profile) return
-    if (profile.role === 'admin') {
-      setUserEtabIds(undefined) // pas de filtre
-      return
-    }
-    if (profile.role === 'pro' || profile.role === 'compagnie') {
-      const { data } = await supabase
-        .from('compte_etablissements')
-        .select('etablissement_id')
-        .eq('user_id', user.id)
-      setUserEtabIds((data ?? []).map((r: { etablissement_id: string }) => r.etablissement_id))
-    }
-  }, [user, profile]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => { loadEtabs() }, [loadEtabs])
 
   if (loading || !user) {
     return (
@@ -324,17 +264,6 @@ export default function ProfilPage() {
   const role: Role = profile?.role ?? 'user'
   const displayName = profile ? `${profile.prenom} ${profile.nom}` : user.email ?? ''
   const roleBadge = ROLE_BADGE[role]
-
-  // Debug
-  console.log('[Profil] profile:', profile)
-  console.log('[Profil] role résolu:', role)
-
-  // Onglets visibles selon le rôle
-  const visibleTabs = TABS.filter(t => t.roles.includes(role))
-  console.log('[Profil] onglets visibles:', visibleTabs.map(t => t.id))
-
-  // Si l'onglet actif n'est plus visible (changement de rôle), revenir au premier
-  const activeTab = visibleTabs.find(t => t.id === active) ? active : visibleTabs[0]?.id ?? 'compte'
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -378,10 +307,10 @@ export default function ProfilPage() {
         className="sticky top-0 z-20 bg-white border-b border-gray-100 px-4 flex gap-1 overflow-x-auto"
         style={{ scrollbarWidth: 'none' }}
       >
-        {visibleTabs.map(t => (
+        {TABS.map(t => (
           <button key={t.id} onClick={() => setActive(t.id)}
             className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-3.5 text-xs font-bold border-b-2 transition-colors ${
-              activeTab === t.id
+              active === t.id
                 ? 'border-blue-600 text-blue-600'
                 : 'border-transparent text-gray-400 hover:text-gray-600'
             }`}>
@@ -391,50 +320,12 @@ export default function ProfilPage() {
         ))}
       </div>
 
-      {/* Contenu — les onglets simples ont une contrainte de largeur, les onglets admin utilisent toute la largeur */}
-      {activeTab === 'compte' && (
-        <div className="px-4 py-5 max-w-sm mx-auto">
-          <SectionCoordonnees />
-        </div>
-      )}
-      {activeTab === 'annonces' && (
-        <div className="px-4 py-5 max-w-sm mx-auto">
-          <SectionAnnonces />
-        </div>
-      )}
-      {activeTab === 'newsletter' && (
-        <div className="px-4 py-5 max-w-sm mx-auto">
-          <SectionNewsletter />
-        </div>
-      )}
-
-      {/* Onglets admin / pro : pleine largeur */}
-      {activeTab === 'evenements' && (
-        <PostsAdmin
-          etablissementIds={role === 'admin' ? undefined : userEtabIds}
-          topOffset="top-[97px]"
-          isAdmin={role === 'admin'}
-        />
-      )}
-      {activeTab === 'articles' && (
-        <ArticlesAdmin />
-      )}
-      {activeTab === 'etablissements' && (
-        <EtablissementsAdmin
-          etablissementIds={role === 'admin' ? undefined : userEtabIds}
-          topOffset="top-[97px]"
-          isAdmin={role === 'admin'}
-        />
-      )}
-      {activeTab === 'bateau' && (
-        <BateauAdmin />
-      )}
-      {activeTab === 'utilisateurs' && (
-        <TabUtilisateurs />
-      )}
-      {activeTab === 'obj_perdus' && (
-        <AnnoncesAdmin topOffset="top-[97px]" />
-      )}
+      {/* Contenu */}
+      <div className="px-4 py-5 max-w-sm mx-auto">
+        {active === 'compte'     && <SectionCoordonnees />}
+        {active === 'annonces'   && <SectionAnnonces />}
+        {active === 'newsletter' && <SectionNewsletter />}
+      </div>
     </div>
   )
 }

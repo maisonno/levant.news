@@ -100,8 +100,8 @@ export default function DrawerMenu() {
           </Suspense>
         </div>
 
-        {/* Espace admin (admins + modérateurs) */}
-        {(profile?.role === 'admin' || profile?.moderateur) && (
+        {/* Espace admin (admins + modérateurs + pro + compagnie) */}
+        {(profile?.role === 'admin' || profile?.role === 'pro' || profile?.role === 'compagnie' || profile?.moderateur) && (
           <div className="border-t border-gray-100 px-4 py-2">
             <Link
               href="/admin"

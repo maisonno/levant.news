@@ -9,7 +9,9 @@ export default async function AdminPage() {
   const { data: profile } = await supabase
     .from('profiles').select('role, moderateur').eq('id', user.id).single()
 
-  if (profile?.role === 'admin') redirect('/admin/posts')
-  if (profile?.moderateur) redirect('/admin/moderation')
+  if (profile?.role === 'admin')     redirect('/admin/posts')
+  if (profile?.role === 'pro')       redirect('/admin/posts')
+  if (profile?.role === 'compagnie') redirect('/admin/bateau')
+  if (profile?.moderateur)           redirect('/admin/moderation')
   redirect('/')
 }

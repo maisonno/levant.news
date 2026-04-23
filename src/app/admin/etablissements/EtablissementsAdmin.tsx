@@ -142,7 +142,7 @@ interface EtablissementsAdminProps {
   isAdmin?: boolean
 }
 
-export default function EtablissementsAdmin({ etablissementIds, topOffset = 'top-[104px]', isAdmin = true }: EtablissementsAdminProps) {
+export default function EtablissementsAdmin({ etablissementIds, topOffset = 'top-[45px]', isAdmin = true }: EtablissementsAdminProps) {
   const supabase = createClient()
   const [etabs,   setEtabs]   = useState<Etablissement[]>([])
   const [types,   setTypes]   = useState<TypeEtablissement[]>([])

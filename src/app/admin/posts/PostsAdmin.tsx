@@ -398,7 +398,7 @@ interface PostsAdminProps {
   isAdmin?: boolean            // masque les actions réservées à l'admin si false
 }
 
-export default function PostsAdmin({ etablissementIds, topOffset = 'top-[104px]', isAdmin = true }: PostsAdminProps) {
+export default function PostsAdmin({ etablissementIds, topOffset = 'top-[45px]', isAdmin = true }: PostsAdminProps) {
   const supabase = createClient()
   const [tab, setTab] = useState<Tab>(isAdmin ? 'moderation' : 'avenir')
   const [posts, setPosts]           = useState<PostWithRelations[]>([])
