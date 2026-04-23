@@ -65,7 +65,7 @@ function UserPanel({ user, allEtabs, onClose, onUpdated }: UserPanelProps) {
     setResetError(null)
     const origin = typeof window !== 'undefined' ? window.location.origin : ''
     const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-      redirectTo: `${origin}/compte/reinitialiser`,
+      redirectTo: `${origin}/auth/callback?next=/compte/reinitialiser`,
     })
     if (error) { setResetError(error.message); return }
     setResetSent(true)

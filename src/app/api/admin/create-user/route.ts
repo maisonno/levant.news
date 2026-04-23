@@ -62,7 +62,9 @@ export async function POST(req: NextRequest) {
 
   // Base URL pour le lien dans l'email (priorité à SITE_URL, sinon origine de la requête)
   const origin = process.env.NEXT_PUBLIC_SITE_URL || new URL(req.url).origin
-  const redirectTo = `${origin}/compte/reinitialiser`
+  // Passe par /auth/callback (SSR, pas de PKCE) qui établit la session
+  // puis redirige vers /compte/reinitialiser où l'utilisateur définit son mot de passe
+  const redirectTo = `${origin}/auth/callback?next=/compte/reinitialiser`
 
   const { data: invited, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
     data: { prenom, nom, newsletter: false },
