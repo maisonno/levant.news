@@ -170,9 +170,14 @@ export default function EtabSheet() {
             <div className="px-5 py-4 space-y-4">
 
               {/* Nom */}
-              <h2 className="text-xl font-extrabold text-gray-900 leading-snug">
-                {etab.nom}
-              </h2>
+              <div>
+                <h2 className="text-xl font-extrabold text-gray-900 leading-snug">
+                  {etab.nom}
+                </h2>
+                {etab.statut && (
+                  <p className="mt-1 text-sm font-medium text-blue-600">{etab.statut}</p>
+                )}
+              </div>
 
               {/* Description */}
               {etab.description && (

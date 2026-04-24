@@ -37,6 +37,9 @@ function EtabCard({ etab, grouped }: { etab: Etablissement; grouped: boolean }) 
           <p className="font-bold text-gray-900 text-[15px] leading-snug line-clamp-1">
             {etab.nom}
           </p>
+          {etab.statut && (
+            <p className="text-[11px] font-medium text-blue-600 leading-snug line-clamp-1">{etab.statut}</p>
+          )}
           {etab.description && (
             <p className="text-xs text-gray-400 line-clamp-1 leading-snug">
               {etab.description.replace(/\*\*/g, '').replace(/\*/g, '')}
