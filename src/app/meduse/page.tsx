@@ -13,6 +13,7 @@ const LIEUX = [
   'La dalle du port',
   'Le bain de Diane',
   'Les plates',
+  'La calanque des moines',
   'Les pierres blanches',
   'La galère',
 ]
