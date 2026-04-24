@@ -44,6 +44,7 @@ function PostForm({ initial, categories, etablissements, onSave, onClose, isAdmi
   const [dateDebut,    setDateDebut]    = useState(initial?.date_debut ?? '')
   const [dateFin,      setDateFin]      = useState(initial?.date_fin ?? '')
   const [heure,        setHeure]        = useState(initial?.heure ?? '')
+  const [ordreJournee, setOrdreJournee] = useState(initial?.ordre_dans_journee?.toString() ?? '')
   const [categorieCode,setCategorieCode]= useState(initial?.categorie_code ?? '')
   const [organisateurId,setOrganisateurId] = useState(() => {
     if (initial?.organisateur_id) return initial.organisateur_id
@@ -76,7 +77,8 @@ function PostForm({ initial, categories, etablissements, onSave, onClose, isAdmi
     await onSave({
       titre, complement: complement || null,
       date_debut: dateDebut, date_fin: dateFin || null,
-      heure: heure || null, categorie_code: categorieCode || null,
+      heure: heure || null, ordre_dans_journee: ordreJournee ? parseInt(ordreJournee) : null,
+      categorie_code: categorieCode || null,
       organisateur_id: organisateurId || null, lieu_id: lieuId || null,
       publie, mis_en_avant: misEnAvant, a_laffiche: aLaffiche,
       affiche_url: afficheUrl || null,
@@ -104,9 +106,15 @@ function PostForm({ initial, categories, etablissements, onSave, onClose, isAdmi
           <input type="date" value={dateFin} onChange={e => setDateFin(e.target.value)} className={field} />
         </div>
       </div>
-      <div>
-        <label className="label">Heure</label>
-        <input value={heure} onChange={e => setHeure(e.target.value)} placeholder="21h, 18h-20h…" className={field} />
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="label">Heure</label>
+          <input value={heure} onChange={e => setHeure(e.target.value)} placeholder="21h, 18h-20h…" className={field} />
+        </div>
+        <div>
+          <label className="label">Ordre dans la journée</label>
+          <input type="number" value={ordreJournee} onChange={e => setOrdreJournee(e.target.value)} min={0} placeholder="0, 1, 2…" className={field} />
+        </div>
       </div>
       <div>
         <label className="label">Catégorie</label>
