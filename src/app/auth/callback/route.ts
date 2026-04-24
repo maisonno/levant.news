@@ -24,11 +24,13 @@ export async function GET(request: NextRequest) {
       }
     )
 
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
-    if (!error) {
-      return NextResponse.redirect(`${origin}${next}`)
-    }
+    await supabase.auth.exchangeCodeForSession(code)
   }
 
-  return NextResponse.redirect(`${origin}/compte/connexion?error=auth`)
+  // On redirige toujours vers `next` — même si l'échange a échoué ou qu'il n'y
+  // avait pas de code. Supabase peut renvoyer les tokens dans le fragment d'URL
+  // (#access_token=…), que le client détectera en arrivant sur la page cible.
+  // La page cible décide elle-même si la session est valide.
+  return NextResponse.redirect(`${origin}${next}`)
 }
+

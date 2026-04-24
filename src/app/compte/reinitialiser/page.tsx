@@ -19,19 +19,36 @@ function Content() {
   const [error,     setError]     = useState<string | null>(null)
 
   useEffect(() => {
+    let cancelled = false
+
     async function init() {
-      // Si on a un code PKCE, on l'échange contre une session de récupération
+      // Cas PKCE : on a un code dans l'URL à échanger
       if (code) {
         const { error } = await supabase.auth.exchangeCodeForSession(code)
-        if (error) {
-          setStatus('invalid')
-          return
-        }
+        if (!cancelled && !error) { setStatus('ready'); return }
       }
+
+      // Sinon, on vérifie la session (cookies déjà posés par /auth/callback,
+      // ou hash fragment auto-détecté par le client Supabase)
       const { data: { session } } = await supabase.auth.getSession()
-      setStatus(session ? 'ready' : 'invalid')
+      if (cancelled) return
+      if (session) { setStatus('ready'); return }
+
+      // Dernière chance : le client peut être en train de traiter un hash
+      // fragment (#access_token=…). On écoute les changements d'état auth
+      // pendant un court délai avant de conclure "lien invalide".
+      const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
+        if (!cancelled && s) setStatus('ready')
+      })
+      setTimeout(() => {
+        if (cancelled) return
+        setStatus(prev => prev === 'loading' ? 'invalid' : prev)
+        sub.subscription.unsubscribe()
+      }, 1500)
     }
     init()
+
+    return () => { cancelled = true }
   }, [code]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function submit(e: React.FormEvent) {
