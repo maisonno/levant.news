@@ -270,42 +270,41 @@ function UserPanel({ user, allEtabs, onClose, onUpdated }: UserPanelProps) {
 // ─── Slide-in : création d'un nouveau compte par l'admin ──────────────────────
 
 interface CreatePanelProps {
+  allEtabs:  Etablissement[]
   onClose:   () => void
   onCreated: () => void
 }
 
-type RoleChoice = 'pro' | 'moderateur' | 'compagnie' | 'admin'
-
-const ROLE_CHOICES: { value: RoleChoice; label: string; desc: string; icon: string }[] = [
-  { value: 'pro',        label: 'Pro',          desc: 'Gère ses établissements et événements', icon: '🏪' },
-  { value: 'moderateur', label: 'Modérateur',   desc: 'Valide les annonces et événements',     icon: '🛡️' },
-  { value: 'compagnie',  label: 'Transporteur', desc: 'Gère les horaires bateaux / bus',       icon: '⛵' },
-  { value: 'admin',      label: 'Admin',        desc: 'Accès complet à l’espace admin',        icon: '👑' },
-]
-
-function CreateUserPanel({ onClose, onCreated }: CreatePanelProps) {
-  const [prenom,  setPrenom]  = useState('')
-  const [nom,     setNom]     = useState('')
-  const [email,   setEmail]   = useState('')
-  const [choice,  setChoice]  = useState<RoleChoice>('pro')
-  const [saving,  setSaving]  = useState(false)
-  const [error,   setError]   = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
+function CreateUserPanel({ allEtabs, onClose, onCreated }: CreatePanelProps) {
+  const [prenom,     setPrenom]     = useState('')
+  const [nom,        setNom]        = useState('')
+  const [email,      setEmail]      = useState('')
+  const [role,       setRole]       = useState<Role>('user')
+  const [moderateur, setModerateur] = useState(false)
+  const [linkedIds,  setLinkedIds]  = useState<string[]>([])
+  const [etabSearch, setEtabSearch] = useState('')
+  const [saving,     setSaving]     = useState(false)
+  const [error,      setError]      = useState<string | null>(null)
+  const [success,    setSuccess]    = useState(false)
 
   async function submit() {
     setError(null)
     if (!prenom.trim() || !nom.trim()) { setError('Prénom et nom obligatoires.'); return }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setError('Email invalide.'); return }
 
-    const role       = choice === 'moderateur' ? 'user'     : choice
-    const moderateur = choice === 'moderateur'
-
     setSaving(true)
     try {
       const res = await fetch('/api/admin/create-user', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ prenom: prenom.trim(), nom: nom.trim(), email: email.trim(), role, moderateur }),
+        body:    JSON.stringify({
+          prenom:           prenom.trim(),
+          nom:              nom.trim(),
+          email:            email.trim(),
+          role,
+          moderateur,
+          etablissementIds: linkedIds,
+        }),
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) {
@@ -321,6 +320,14 @@ function CreateUserPanel({ onClose, onCreated }: CreatePanelProps) {
       setSaving(false)
     }
   }
+
+  function toggleEtab(etabId: string) {
+    setLinkedIds(prev => prev.includes(etabId) ? prev.filter(id => id !== etabId) : [...prev, etabId])
+  }
+
+  const filteredEtabs = allEtabs.filter(e =>
+    e.nom.toLowerCase().includes(etabSearch.toLowerCase())
+  )
 
   const field = "w-full bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 outline-none focus:border-blue-400"
 
@@ -354,8 +361,9 @@ function CreateUserPanel({ onClose, onCreated }: CreatePanelProps) {
                 </div>
               )}
 
+              {/* Informations */}
               <section>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Identité</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Informations</p>
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-2">
                     <div>
@@ -374,33 +382,85 @@ function CreateUserPanel({ onClose, onCreated }: CreatePanelProps) {
                 </div>
               </section>
 
+              {/* Profil & statut */}
               <section>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Type de compte</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Profil & Statut</p>
                 <div className="space-y-2">
-                  {ROLE_CHOICES.map(r => (
-                    <button
-                      key={r.value}
-                      onClick={() => setChoice(r.value)}
-                      className={`w-full flex items-start gap-3 px-4 py-3 rounded-xl border text-left transition-colors ${
-                        choice === r.value
-                          ? 'border-blue-400 bg-blue-50'
-                          : 'border-gray-200 bg-white hover:bg-gray-50'
-                      }`}
-                    >
-                      <span className={`mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${
-                        choice === r.value ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
-                      }`}>
-                        {choice === r.value && <span className="w-1.5 h-1.5 rounded-full bg-white block" />}
-                      </span>
-                      <span className="text-xl leading-none">{r.icon}</span>
-                      <span className="flex-1 min-w-0">
-                        <span className={`block text-sm font-bold ${choice === r.value ? 'text-blue-700' : 'text-gray-900'}`}>
-                          {r.label}
+                  {/* Rôle */}
+                  <div className="grid grid-cols-2 gap-2">
+                    {(['user','pro','compagnie','admin'] as Role[]).map(r => (
+                      <button key={r} onClick={() => setRole(r)}
+                        className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-semibold text-left ${
+                          role === r
+                            ? 'border-blue-400 bg-blue-50 text-blue-700'
+                            : 'border-gray-200 bg-white text-gray-500'
+                        }`}>
+                        <span className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${
+                          role === r ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
+                        }`}>
+                          {role === r && <span className="w-1.5 h-1.5 rounded-full bg-white block" />}
                         </span>
-                        <span className="block text-xs text-gray-500 mt-0.5">{r.desc}</span>
-                      </span>
-                    </button>
-                  ))}
+                        {r === 'user' ? 'Normal' : ROLE_CONFIG[r].label}
+                      </button>
+                    ))}
+                  </div>
+                  {/* Modérateur */}
+                  <button onClick={() => setModerateur(v => !v)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-semibold ${
+                      moderateur
+                        ? 'border-blue-300 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 bg-white text-gray-600'
+                    }`}>
+                    <span className="text-xl">🛡️</span>
+                    <span>{moderateur ? 'Modérateur' : 'Pas modérateur'}</span>
+                    <span className="ml-auto text-xs text-gray-400">Basculer</span>
+                  </button>
+                </div>
+              </section>
+
+              {/* Établissements liés */}
+              <section>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">
+                  Établissements liés
+                  {linkedIds.length > 0 && (
+                    <span className="ml-2 bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full normal-case font-bold">
+                      {linkedIds.length}
+                    </span>
+                  )}
+                </p>
+                <input
+                  value={etabSearch}
+                  onChange={e => setEtabSearch(e.target.value)}
+                  placeholder="Filtrer les établissements…"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none mb-2"
+                />
+                <div className="space-y-1.5 max-h-52 overflow-y-auto">
+                  {filteredEtabs.map(e => {
+                    const linked = linkedIds.includes(e.id)
+                    return (
+                      <button key={e.id} onClick={() => toggleEtab(e.id)}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-sm text-left transition-colors ${
+                          linked
+                            ? 'border-blue-400 bg-blue-50'
+                            : 'border-gray-200 bg-white hover:bg-gray-50'
+                        }`}>
+                        <span className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+                          linked ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
+                        }`}>
+                          {linked && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                        </span>
+                        <span className={`flex-1 font-medium ${linked ? 'text-blue-700' : 'text-gray-700'}`}>
+                          {e.nom}
+                        </span>
+                        {e.type_code && (
+                          <span className="text-[10px] text-gray-400">{e.type_code}</span>
+                        )}
+                      </button>
+                    )
+                  })}
+                  {filteredEtabs.length === 0 && (
+                    <p className="text-sm text-gray-400 text-center py-4">Aucun établissement trouvé</p>
+                  )}
                 </div>
               </section>
 
@@ -613,6 +673,7 @@ export default function TabUtilisateurs() {
       {/* Panneau slide-in création de compte */}
       {creating && (
         <CreateUserPanel
+          allEtabs={allEtabs}
           onClose={() => setCreating(false)}
           onCreated={() => { load() }}
         />

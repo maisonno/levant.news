@@ -5,11 +5,12 @@ import { createClient } from '@supabase/supabase-js'
 type Role = 'user' | 'pro' | 'compagnie' | 'admin'
 
 interface Body {
-  prenom:     string
-  nom:        string
-  email:      string
-  role:       Role
-  moderateur: boolean
+  prenom:           string
+  nom:              string
+  email:            string
+  role:             Role
+  moderateur:       boolean
+  etablissementIds: string[]
 }
 
 function isValidRole(r: string): r is Role {
@@ -44,11 +45,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Corps JSON invalide' }, { status: 400 })
   }
 
-  const prenom     = (body.prenom ?? '').trim()
-  const nom        = (body.nom ?? '').trim()
-  const email      = (body.email ?? '').trim().toLowerCase()
-  const role       = body.role
-  const moderateur = Boolean(body.moderateur)
+  const prenom           = (body.prenom ?? '').trim()
+  const nom              = (body.nom ?? '').trim()
+  const email            = (body.email ?? '').trim().toLowerCase()
+  const role             = body.role
+  const moderateur       = Boolean(body.moderateur)
+  const etablissementIds = Array.isArray(body.etablissementIds)
+    ? body.etablissementIds.filter((id: any) => typeof id === 'string' && id.length > 0)
+    : []
 
   if (!prenom || !nom) return NextResponse.json({ error: 'Prénom et nom obligatoires' }, { status: 400 })
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return NextResponse.json({ error: 'Email invalide' }, { status: 400 })
@@ -90,6 +94,18 @@ export async function POST(req: NextRequest) {
       { error: `Compte créé mais rôle non appliqué : ${updateErr.message}` },
       { status: 500 }
     )
+  }
+
+  // Liaison aux établissements sélectionnés
+  if (etablissementIds.length > 0) {
+    const rows = etablissementIds.map(id => ({ user_id: invited.user.id, etablissement_id: id }))
+    const { error: linkErr } = await admin.from('compte_etablissements').insert(rows)
+    if (linkErr) {
+      return NextResponse.json(
+        { error: `Compte créé mais établissements non associés : ${linkErr.message}` },
+        { status: 500 }
+      )
+    }
   }
 
   return NextResponse.json({ ok: true, userId: invited.user.id })
