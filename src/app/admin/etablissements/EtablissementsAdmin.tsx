@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Etablissement, TypeEtablissement } from '@/types/database'
 import ImagePicker from '@/components/admin/ImagePicker'
+import { supabaseImg } from '@/lib/supabaseImg'
 
 const TYPE_LABELS: Record<string, string> = {
   SERVICES:         'Services',
@@ -237,7 +238,7 @@ export default function EtablissementsAdmin({ etablissementIds, topOffset = 'top
                 <div key={e.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
                   <div className="flex items-center gap-3">
                     {e.photo_url
-                      ? <img src={e.photo_url} alt={e.nom} className="w-10 h-10 rounded-xl object-cover flex-shrink-0 bg-gray-100" />
+                      ? <img src={supabaseImg(e.photo_url, 80)} alt={e.nom} className="w-10 h-10 rounded-xl object-cover flex-shrink-0 bg-gray-100" />
                       : <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-lg flex-shrink-0">🏪</div>
                     }
                     <div className="flex-1 min-w-0">

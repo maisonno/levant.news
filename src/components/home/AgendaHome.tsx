@@ -5,6 +5,7 @@ import PostCardList from '@/components/PostCardList'
 import Link from 'next/link'
 import { useEventSheet } from '@/contexts/EventSheetContext'
 import HorizontalCarouselWithDots from '@/components/HorizontalCarouselWithDots'
+import { supabaseImg } from '@/lib/supabaseImg'
 
 interface Props {
   todayPosts:  PostWithRelations[]
@@ -55,7 +56,7 @@ function CarouselCard({ post, accentColor = 'text-blue-600' }: { post: PostWithR
     >
       <div className="w-full aspect-square bg-gray-100">
         {post.affiche_url ? (
-          <img src={post.affiche_url} alt={post.titre} className="w-full h-full object-cover" />
+          <img src={supabaseImg(post.affiche_url, 360)} alt={post.titre} className="w-full h-full object-cover" />
         ) : (
           <div
             className="w-full h-full flex items-center justify-center text-4xl"

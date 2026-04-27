@@ -6,6 +6,7 @@ import Link from 'next/link'
 import PostCardList from '@/components/PostCardList'
 import { useEventSheet } from '@/contexts/EventSheetContext'
 import PageHeader from '@/components/PageHeader'
+import { supabaseImg } from '@/lib/supabaseImg'
 import HorizontalCarouselWithDots from '@/components/HorizontalCarouselWithDots'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -90,7 +91,7 @@ function AfficheCard({ post }: { post: PostWithRelations }) {
     >
       <div className="w-full aspect-square bg-gray-100">
         {post.affiche_url ? (
-          <img src={post.affiche_url} alt={post.titre} className="w-full h-full object-cover" />
+          <img src={supabaseImg(post.affiche_url, 360)} alt={post.titre} className="w-full h-full object-cover" />
         ) : (
           <div
             className="w-full h-full flex items-center justify-center text-4xl"
@@ -124,7 +125,7 @@ function ExpoCard({ post }: { post: PostWithRelations }) {
     >
       <div className="w-full aspect-square bg-amber-50">
         {post.affiche_url ? (
-          <img src={post.affiche_url} alt={post.titre} className="w-full h-full object-cover" />
+          <img src={supabaseImg(post.affiche_url, 360)} alt={post.titre} className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-4xl">🖼️</div>
         )}

@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
+import { supabaseImg } from '@/lib/supabaseImg'
 import { useObjetPerduSheet } from '@/contexts/ObjetPerduSheetContext'
 
 function formatDate(iso: string) {
@@ -123,7 +124,7 @@ export default function ObjetPerduSheet() {
               </div>
               {objet.photo_url ? (
                 <>
-                  <img src={objet.photo_url} alt={objet.objet} className="w-full h-full object-cover" />
+                  <img src={supabaseImg(objet.photo_url, 860)} alt={objet.objet} className="w-full h-full object-cover" />
                   <div className="absolute inset-0 pointer-events-none"
                        style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.25) 0%, transparent 40%)' }} />
                   <button onClick={close} aria-label="Fermer"

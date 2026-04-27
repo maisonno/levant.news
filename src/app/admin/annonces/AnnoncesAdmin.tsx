@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { ObjetPerdu, ObjetType } from '@/types/database'
 import { notifyModerators } from '@/lib/notifyModerators'
+import { supabaseImg } from '@/lib/supabaseImg'
 
 function fmtDate(iso: string) {
   return new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -203,7 +204,7 @@ export default function AnnoncesAdmin({ topOffset = 'top-[45px]' }: AnnoncesAdmi
           <div key={a.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
             <div className="flex items-start gap-3">
               {a.photo_url
-                ? <img src={a.photo_url} alt={a.objet} className="w-12 h-12 rounded-xl object-cover flex-shrink-0" />
+                ? <img src={supabaseImg(a.photo_url, 100)} alt={a.objet} className="w-12 h-12 rounded-xl object-cover flex-shrink-0" />
                 : <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center text-2xl flex-shrink-0">
                     {a.type === 'PERDU' ? '🔍' : '📦'}
                   </div>

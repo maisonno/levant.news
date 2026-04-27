@@ -6,6 +6,7 @@ import { Article } from '@/types/database'
 import { useArticleSheet } from '@/contexts/ArticleSheetContext'
 import { useDrawer } from '@/contexts/DrawerContext'
 import PageHeader from '@/components/PageHeader'
+import { supabaseImg } from '@/lib/supabaseImg'
 
 // ─── Couleurs & icônes par thème ─────────────────────────────────────────────
 
@@ -34,7 +35,7 @@ function HeroCard({ article }: { article: Article }) {
         {/* Image */}
         {article.image_url && (
           <div className="w-full aspect-[16/9] bg-gray-100">
-            <img src={article.image_url} alt={article.titre} className="w-full h-full object-cover" />
+            <img src={supabaseImg(article.image_url, 860)} alt={article.titre} className="w-full h-full object-cover" />
           </div>
         )}
         {!article.image_url && (
@@ -73,7 +74,7 @@ function VerticalCard({ article }: { article: Article }) {
         {/* Image */}
         <div className="w-full aspect-square bg-gray-100 flex-shrink-0">
           {article.image_url ? (
-            <img src={article.image_url} alt={article.titre} className="w-full h-full object-cover" />
+            <img src={supabaseImg(article.image_url, 420)} alt={article.titre} className="w-full h-full object-cover" />
           ) : (
             <div className={`w-full h-full ${meta.bg} flex items-center justify-center text-3xl`}>
               {meta.icon}

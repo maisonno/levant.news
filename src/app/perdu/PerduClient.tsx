@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { ObjetPerdu } from '@/types/database'
 import PageHeader from '@/components/PageHeader'
+import { supabaseImg } from '@/lib/supabaseImg'
 import { useObjetPerduSheet } from '@/contexts/ObjetPerduSheetContext'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -76,7 +77,7 @@ function AnnonceCard({ annonce, onClick }: { annonce: ObjetPerdu; onClick: () =>
       <div className="flex items-stretch gap-0">
         <div className="w-20 h-20 flex-shrink-0 bg-gray-100 flex items-center justify-center overflow-hidden">
           {annonce.photo_url
-            ? <img src={annonce.photo_url} alt={annonce.objet} className="w-full h-full object-cover" />
+            ? <img src={supabaseImg(annonce.photo_url, 160)} alt={annonce.objet} className="w-full h-full object-cover" />
             : <span className="text-3xl">{annonce.type === 'PERDU' ? '🔍' : '📦'}</span>
           }
         </div>

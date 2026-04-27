@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { PostWithRelations, Categorie, Etablissement } from '@/types/database'
 import ImagePicker from '@/components/admin/ImagePicker'
 import { notifyModerators } from '@/lib/notifyModerators'
+import { supabaseImg } from '@/lib/supabaseImg'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -211,7 +212,7 @@ function PostCard({ post, onPublier, onDepublier, onRefuser, onEdit, onDelete, o
       {/* Miniature affiche */}
       {post.affiche_url && (
         <div className="w-full h-28 bg-gray-100">
-          <img src={post.affiche_url} alt={post.titre} className="w-full h-full object-cover" />
+          <img src={supabaseImg(post.affiche_url, 240)} alt={post.titre} className="w-full h-full object-cover" />
         </div>
       )}
       <div className="p-4 space-y-2">
@@ -307,7 +308,7 @@ function PostCardHorizontal({ post, onEdit, onPublier, onDepublier, onRefuser, o
       {/* Image gauche */}
       <div className="w-20 flex-shrink-0 bg-gray-100 relative overflow-hidden rounded-l-2xl">
         {post.affiche_url
-          ? <img src={post.affiche_url} alt={post.titre} className="w-full h-full object-cover absolute inset-0" />
+          ? <img src={supabaseImg(post.affiche_url, 160)} alt={post.titre} className="w-full h-full object-cover absolute inset-0" />
           : <div className="w-full h-full flex items-center justify-center text-2xl text-gray-200">📅</div>
         }
       </div>

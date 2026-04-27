@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Article, ThemeArticle } from '@/types/database'
 import ImagePicker from '@/components/admin/ImagePicker'
+import { supabaseImg } from '@/lib/supabaseImg'
 
 // ─── Formulaire ───────────────────────────────────────────────────────────────
 
@@ -179,7 +180,7 @@ export default function ArticlesAdmin() {
                 <div key={a.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
                   <div className="flex items-start gap-3">
                     {a.image_url && (
-                      <img src={a.image_url} alt={a.titre}
+                      <img src={supabaseImg(a.image_url, 100)} alt={a.titre}
                         className="w-12 h-12 rounded-xl object-cover flex-shrink-0 bg-gray-100" />
                     )}
                     <div className="flex-1 min-w-0">

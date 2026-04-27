@@ -2,6 +2,7 @@
 
 import { useRef, useState, useEffect } from 'react'
 import { useArticleSheet } from '@/contexts/ArticleSheetContext'
+import { supabaseImg } from '@/lib/supabaseImg'
 
 // ─── Markdown simple ──────────────────────────────────────────────────────────
 
@@ -141,7 +142,7 @@ export default function ArticleSheet() {
             {/* Image ou bandeau thème */}
             <div className={`relative w-full flex-shrink-0 ${hasImage ? 'aspect-[4/3]' : 'h-32'}`}>
               {hasImage ? (
-                <img src={article.image_url!} alt={article.titre} className="w-full h-full object-cover" />
+                <img src={supabaseImg(article.image_url, 860)} alt={article.titre} className="w-full h-full object-cover" />
               ) : (
                 <div className={`w-full h-full ${theme.bg}`} />
               )}

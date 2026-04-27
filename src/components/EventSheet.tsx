@@ -2,6 +2,7 @@
 
 import { useRef, useState, useEffect } from 'react'
 import { useEventSheet } from '@/contexts/EventSheetContext'
+import { supabaseImg } from '@/lib/supabaseImg'
 
 // ─── Couleurs catégories ──────────────────────────────────────────────────────
 
@@ -170,7 +171,7 @@ export default function EventSheet() {
               </div>
               {post.affiche_url ? (
                 <img
-                  src={post.affiche_url}
+                  src={supabaseImg(post.affiche_url, 860)}
                   alt={post.titre}
                   className="w-full h-full object-cover"
                 />
