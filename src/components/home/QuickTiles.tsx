@@ -4,7 +4,7 @@ import ObjetsTrouvesTile from './ObjetsTrouvesTile'
 import MeduseTile from './MeduseTile'
 
 const GRAY_TILES = [
-  { href: '/annuaire', label: 'Annuaire' },
+  { href: '/annuaire', label: 'Commerçants' },
   { href: '/infos',    label: 'Infos'    },
   { href: '/webcam',   label: 'Webcam'   },
 ]
