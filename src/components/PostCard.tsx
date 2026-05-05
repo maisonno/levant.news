@@ -78,13 +78,13 @@ export default function PostCard({ post, grouped = false, showDate = false, igno
       <button onClick={() => open(post)} className="w-full text-left">
         <div className="flex bg-white rounded-2xl overflow-hidden shadow-md border border-blue-100 h-44 active:scale-[0.98] transition-transform">
 
-          {/* Image — gauche, carré */}
-          <div className="w-44 flex-shrink-0 bg-gray-100 overflow-hidden">
+          {/* Image — gauche, carré explicite */}
+          <div className="w-44 h-44 flex-shrink-0 bg-gray-100 overflow-hidden">
             {post.affiche_url ? (
               <img
                 src={supabaseImg(post.affiche_url, 360)}
                 alt={post.titre}
-                className="w-full h-full object-cover object-top"
+                className="w-full h-full object-cover"
               />
             ) : (
               <div className={`w-full h-full flex items-center justify-center text-4xl ${colors?.bg ?? 'bg-gray-50'}`}>
@@ -132,12 +132,12 @@ export default function PostCard({ post, grouped = false, showDate = false, igno
           ? 'flex bg-white h-28 active:bg-gray-50 transition-colors'
           : 'flex bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 h-28 active:scale-[0.98] transition-transform'
       }>
-        <div className="w-28 flex-shrink-0 bg-gray-100 overflow-hidden">
+        <div className="w-28 h-28 flex-shrink-0 bg-gray-100 overflow-hidden">
           {post.affiche_url ? (
             <img
               src={supabaseImg(post.affiche_url, 240)}
               alt={post.titre}
-              className="w-full h-full object-cover object-top"
+              className="w-full h-full object-cover"
             />
           ) : (
             <div className={`w-full h-full flex items-center justify-center text-3xl ${colors?.bg ?? 'bg-gray-50'}`}>
