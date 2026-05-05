@@ -84,7 +84,7 @@ export default function PostCard({ post, grouped = false, showDate = false, igno
               <img
                 src={supabaseImg(post.affiche_url, 360)}
                 alt={post.titre}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain"
               />
             ) : (
               <div className={`w-full h-full flex items-center justify-center text-4xl ${colors?.bg ?? 'bg-gray-50'}`}>
@@ -137,7 +137,7 @@ export default function PostCard({ post, grouped = false, showDate = false, igno
             <img
               src={supabaseImg(post.affiche_url, 240)}
               alt={post.titre}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain"
             />
           ) : (
             <div className={`w-full h-full flex items-center justify-center text-3xl ${colors?.bg ?? 'bg-gray-50'}`}>
