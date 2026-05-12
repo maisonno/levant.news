@@ -1,10 +1,12 @@
-import { createClient } from '@/lib/supabase/server'
+import { unstable_cache } from 'next/cache'
+import { staticClient } from '@/lib/supabase/static'
 import AgendaClient from './AgendaClient'
 import { PostWithRelations } from '@/types/database'
 
-export const revalidate = 60
+export const revalidate = 300
 
-/** Même algo que la page d'accueil : priority = −ln(U) / weight, weight = 1/(jours+1) */
+const POST_COLS = 'id, titre, complement, date_debut, heure, ordre_dans_journee, date_fin, organisateur_id, lieu_id, mis_en_avant, a_laffiche, dans_agenda, affiche_url, inscription, nb_inscriptions_max, phare, categorie:categories(code, nom)'
+
 function weightedShuffle(posts: PostWithRelations[], todayStr: string): PostWithRelations[] {
   const todayMs = new Date(todayStr + 'T12:00:00').getTime()
   const scored = posts.map(post => {
@@ -17,69 +19,42 @@ function weightedShuffle(posts: PostWithRelations[], todayStr: string): PostWith
   return scored.map(s => s.post)
 }
 
-export default async function AgendaPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ tab?: string }>
-}) {
-  const supabase   = await createClient()
-  const today      = new Date().toISOString().split('T')[0]
-  const datePlus21 = new Date(Date.now() + 21 * 86400000).toISOString().split('T')[0]
-  const params     = await searchParams
-  const initialTab = (['agenda', 'expositions', 'affiche'] as const).includes(
-    params?.tab as any
-  )
-    ? (params.tab as 'agenda' | 'expositions' | 'affiche')
-    : 'agenda'
+function enrich(p: any, etabMap: Record<string, any>): PostWithRelations {
+  return {
+    ...p,
+    organisateur: p.organisateur_id ? etabMap[p.organisateur_id] ?? null : null,
+    lieu:         p.lieu_id         ? etabMap[p.lieu_id]         ?? null : null,
+  }
+}
 
-  let posts:            PostWithRelations[] = []
-  let afficheTab:       PostWithRelations[] = []
-  let afficheCarousel:  PostWithRelations[] = []
-  let expos:            PostWithRelations[] = []
+const getAgendaPageData = unstable_cache(
+  async (today: string, datePlus21: string) => {
+    const supabase = staticClient()
 
-  try {
     const [postsRes, afficheTabAfficheRes, afficheTabPhareRes, ongoingExpoRes] = await Promise.allSettled([
-
-      // Liste complète de l'agenda (hors EXPO, on filtrera côté JS)
       supabase
-        .from('posts')
-        .select('*, categorie:categories(code, nom)')
-        .eq('publie', true)
-        .eq('dans_agenda', true)
+        .from('posts').select(POST_COLS)
+        .eq('publie', true).eq('dans_agenda', true)
         .gte('date_debut', today)
         .order('date_debut', { ascending: true })
         .order('ordre_dans_journee', { ascending: true, nullsFirst: false }),
-
-      // Onglet À l'affiche — a_laffiche (phare=false) : limité aux 21 prochains jours
       supabase
-        .from('posts')
-        .select('*, categorie:categories(code, nom)')
-        .eq('publie', true)
-        .eq('a_laffiche', true)
-        .eq('phare', false)
+        .from('posts').select(POST_COLS)
+        .eq('publie', true).eq('a_laffiche', true).eq('phare', false)
         .or(`date_fin.gte.${today},and(date_fin.is.null,date_debut.gte.${today})`)
         .lte('date_debut', datePlus21)
         .order('date_debut', { ascending: true })
         .order('ordre_dans_journee', { ascending: true, nullsFirst: false }),
-
-      // Onglet À l'affiche — phare (Majeur) : tous les événements futurs, sans limite de date
       supabase
-        .from('posts')
-        .select('*, categorie:categories(code, nom)')
-        .eq('publie', true)
-        .eq('phare', true)
+        .from('posts').select(POST_COLS)
+        .eq('publie', true).eq('phare', true)
         .or(`date_fin.gte.${today},and(date_fin.is.null,date_debut.gte.${today})`)
         .order('date_debut', { ascending: true })
         .order('ordre_dans_journee', { ascending: true, nullsFirst: false }),
-
-      // Expos en cours (démarrées avant aujourd'hui, pas encore terminées)
       supabase
-        .from('posts')
-        .select('*, categorie:categories(code, nom)')
-        .eq('publie', true)
-        .eq('dans_agenda', true)
-        .lt('date_debut', today)
-        .gte('date_fin', today)
+        .from('posts').select(POST_COLS)
+        .eq('publie', true).eq('dans_agenda', true)
+        .lt('date_debut', today).gte('date_fin', today)
         .order('date_debut', { ascending: true }),
     ])
 
@@ -87,69 +62,81 @@ export default async function AgendaPage({
     const rawAfficheTabAffiche = afficheTabAfficheRes.status === 'fulfilled' ? (afficheTabAfficheRes.value.data  ?? []) : []
     const rawAfficheTabPhare   = afficheTabPhareRes.status   === 'fulfilled' ? (afficheTabPhareRes.value.data    ?? []) : []
     const rawOngoingExpo      = ongoingExpoRes.status        === 'fulfilled' ? (ongoingExpoRes.value.data        ?? []) : []
-    const rawAffiche = [...rawAfficheTabAffiche, ...rawAfficheTabPhare]
 
-    // Fetch tous les établissements en une seule requête
-    const allRaw   = [...rawPosts, ...rawAffiche, ...rawOngoingExpo]
-    const etabIds  = [...new Set(allRaw.flatMap((p: any) => [p.organisateur_id, p.lieu_id].filter(Boolean)))]
+    const allRaw  = [...rawPosts, ...rawAfficheTabAffiche, ...rawAfficheTabPhare, ...rawOngoingExpo]
+    const etabIds = [...new Set(allRaw.flatMap((p: any) => [p.organisateur_id, p.lieu_id].filter(Boolean)))]
 
     let etabMap: Record<string, any> = {}
     if (etabIds.length > 0) {
       const { data: etabs } = await supabase
-        .from('etablissements')
-        .select('id, nom, photo_url')
-        .in('id', etabIds)
-      if (etabs) etabMap = Object.fromEntries(etabs.map(e => [e.id, e]))
+        .from('etablissements').select('id, nom, photo_url').in('id', etabIds)
+      if (etabs) etabMap = Object.fromEntries(etabs.map((e: any) => [e.id, e]))
     }
 
-    const enrich = (p: any): PostWithRelations => ({
-      ...p,
-      organisateur: p.organisateur_id ? etabMap[p.organisateur_id] ?? null : null,
-      lieu:         p.lieu_id         ? etabMap[p.lieu_id]         ?? null : null,
-    })
+    return {
+      rawPosts:             rawPosts.map((p: any) => enrich(p, etabMap)),
+      rawAfficheTabAffiche: rawAfficheTabAffiche.map((p: any) => enrich(p, etabMap)),
+      rawAfficheTabPhare:   rawAfficheTabPhare.map((p: any) => enrich(p, etabMap)),
+      rawOngoingExpo:       rawOngoingExpo.map((p: any) => enrich(p, etabMap)),
+    }
+  },
+  ['agenda-page'],
+  { revalidate: 300 },
+)
+
+export default async function AgendaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>
+}) {
+  const today      = new Date().toISOString().split('T')[0]
+  const datePlus21 = new Date(Date.now() + 21 * 86400000).toISOString().split('T')[0]
+  const params     = await searchParams
+  const initialTab = (['agenda', 'expositions', 'affiche'] as const).includes(params?.tab as any)
+    ? (params.tab as 'agenda' | 'expositions' | 'affiche')
+    : 'agenda'
+
+  let posts:           PostWithRelations[] = []
+  let afficheTab:      PostWithRelations[] = []
+  let afficheCarousel: PostWithRelations[] = []
+  let expos:           PostWithRelations[] = []
+
+  try {
+    const { rawPosts, rawAfficheTabAffiche, rawAfficheTabPhare, rawOngoingExpo } =
+      await getAgendaPageData(today, datePlus21)
 
     // Agenda (hors EXPO)
-    const allPosts = rawPosts.map(enrich)
-    posts = allPosts.filter((p: PostWithRelations) => p.categorie?.code !== 'EXPO')
+    posts = rawPosts.filter(p => p.categorie?.code !== 'EXPO')
 
-    // Onglet À l'affiche : a_laffiche + phare, dédoublonnés, triés par date
-    // Limite : max 3 prochains événements non-phare par organisateur
-    // Les événements phares ne comptent pas dans cette limite
-    // Les événements sans organisateur ne sont pas publiés à l'affiche
-    const afficheEnriched = rawAffiche.map(enrich)
-    const afficheDeduped  = Array.from(
-      new Map(afficheEnriched.map(p => [p.id, p])).values()
-    ).sort((a, b) => a.date_debut.localeCompare(b.date_debut))
-
+    // Onglet À l'affiche : dédoublonné, max 3/org pour non-phare
+    const rawAffiche   = [...rawAfficheTabAffiche, ...rawAfficheTabPhare]
+    const afficheDedup = Array.from(new Map(rawAffiche.map(p => [p.id, p])).values())
+      .sort((a, b) => a.date_debut.localeCompare(b.date_debut))
     const orgCount = new Map<string, number>()
-    afficheTab = afficheDeduped.filter(p => {
-      if (!p.organisateur_id) return false  // sans organisateur : exclu
-      if (p.phare === true)   return true   // phare : toujours affiché, ne compte pas
+    afficheTab = afficheDedup.filter(p => {
+      if (!p.organisateur_id) return false
+      if (p.phare === true)   return true
       const n = orgCount.get(p.organisateur_id) ?? 0
-      if (n >= 3)             return false
+      if (n >= 3) return false
       orgCount.set(p.organisateur_id, n + 1)
       return true
     })
 
-
-    // Carousel : source 1 = a_laffiche (phare=false), 21j, 1/org, sans-org exclus
-    //            source 2 = phare, 21j, pas de limite d'org
+    // Carousel : source 1 = a_laffiche (phare=false), 1/org ; source 2 = phare ≤21j
     const byOrg = new Map<string, PostWithRelations>()
-    for (const p of rawAfficheTabAffiche.map(enrich)) {
+    for (const p of rawAfficheTabAffiche) {
       if (!p.organisateur_id) continue
       if (!byOrg.has(p.organisateur_id)) byOrg.set(p.organisateur_id, p)
     }
-    const carouselPhare = rawAfficheTabPhare
-      .filter((p: any) => p.date_debut <= datePlus21)
-      .map(enrich)
+    const carouselPhare    = rawAfficheTabPhare.filter(p => p.date_debut <= datePlus21)
     const carouselCombined = Array.from(
       new Map([...Array.from(byOrg.values()), ...carouselPhare].map(p => [p.id, p])).values()
     )
     afficheCarousel = weightedShuffle(carouselCombined, today).slice(0, 5)
 
-    // Onglet Expositions : en cours + à venir, dédoublonnés
-    const upcomingExpos = allPosts.filter((p: PostWithRelations) => p.categorie?.code === 'EXPO')
-    const ongoingExpos  = rawOngoingExpo.map(enrich).filter((p: PostWithRelations) => p.categorie?.code === 'EXPO')
+    // Expositions : en cours + à venir, dédoublonnées
+    const upcomingExpos = rawPosts.filter(p => p.categorie?.code === 'EXPO')
+    const ongoingExpos  = rawOngoingExpo.filter(p => p.categorie?.code === 'EXPO')
     const expoMap = new Map<string, PostWithRelations>()
     for (const p of [...ongoingExpos, ...upcomingExpos]) expoMap.set(p.id, p)
     expos = Array.from(expoMap.values()).sort((a, b) => a.date_debut.localeCompare(b.date_debut))

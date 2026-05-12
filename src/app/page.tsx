@@ -1,13 +1,17 @@
 import { Suspense } from 'react'
+import { unstable_cache } from 'next/cache'
 import Hero from '@/components/home/Hero'
 import InfoBateauBanner from '@/components/home/InfoBateauBanner'
 import MisEnAvant from '@/components/home/MisEnAvant'
 import MagCarousel from '@/components/home/MagCarousel'
 import QuickTiles from '@/components/home/QuickTiles'
 import AgendaHome from '@/components/home/AgendaHome'
+import { staticClient } from '@/lib/supabase/static'
 import { PostWithRelations } from '@/types/database'
 
-export const revalidate = 60
+export const revalidate = 300
+
+const POST_COLS = 'id, titre, complement, date_debut, heure, ordre_dans_journee, date_fin, organisateur_id, lieu_id, mis_en_avant, a_laffiche, dans_agenda, affiche_url, inscription, nb_inscriptions_max, phare, categorie:categories(code, nom)'
 
 // ─── Skeletons ────────────────────────────────────────────────────────────────
 
@@ -39,9 +43,9 @@ function AgendaSkeleton() {
   )
 }
 
-// ─── Helpers communs ──────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-async function buildEtabMap(supabase: any, posts: any[]) {
+async function fetchEtabMap(supabase: ReturnType<typeof staticClient>, posts: any[]) {
   const ids = [...new Set(posts.flatMap((p: any) => [p.organisateur_id, p.lieu_id].filter(Boolean)))]
   if (ids.length === 0) return {}
   const { data } = await supabase.from('etablissements').select('id, nom, photo_url').in('id', ids)
@@ -56,53 +60,107 @@ function enrich(p: any, etabMap: Record<string, any>): PostWithRelations {
   }
 }
 
-// ─── Section : Mis en avant ───────────────────────────────────────────────────
+// ─── Cached queries ───────────────────────────────────────────────────────────
 
-async function MisEnAvantSection() {
-  const today = new Date().toISOString().split('T')[0]
-  const { createClient } = await import('@/lib/supabase/server')
-  const supabase = await createClient()
+const getMisEnAvantData = unstable_cache(
+  async (today: string) => {
+    const supabase = staticClient()
+    const { data: raw } = await supabase
+      .from('posts')
+      .select(POST_COLS)
+      .eq('publie', true)
+      .eq('mis_en_avant', true)
+      .or(`date_fin.gte.${today},and(date_fin.is.null,date_debut.gte.${today})`)
+      .order('date_debut', { ascending: true })
+      .order('ordre_dans_journee', { ascending: true, nullsFirst: false })
+    if (!raw?.length) return []
+    const etabMap = await fetchEtabMap(supabase, raw)
+    return raw.map((p: any) => enrich(p, etabMap))
+  },
+  ['home-mis-en-avant'],
+  { revalidate: 300 },
+)
 
-  const { data: raw } = await supabase
-    .from('posts')
-    .select('*, categorie:categories(code, nom)')
-    .eq('publie', true)
-    .eq('mis_en_avant', true)
-    .or(`date_fin.gte.${today},and(date_fin.is.null,date_debut.gte.${today})`)
-    .order('date_debut', { ascending: true })
-    .order('ordre_dans_journee', { ascending: true, nullsFirst: false })
+const getMagData = unstable_cache(
+  async () => {
+    const { data } = await staticClient()
+      .from('articles_mag')
+      .select('id, titre, photo_principale_url, tags, auteur_nom')
+      .eq('publie', true)
+      .order('date_publication', { ascending: false })
+      .limit(6)
+    return data ?? []
+  },
+  ['home-mag'],
+  { revalidate: 300 },
+)
 
-  if (!raw?.length) return null
+const getAgendaData = unstable_cache(
+  async (today: string, tomorrow: string, datePlus21: string) => {
+    const supabase = staticClient()
+    const [agendaRes, agendaFutureRes, ongoingRes, afficheRes, phareRes, futureExpoRes] = await Promise.allSettled([
+      supabase
+        .from('posts').select(POST_COLS)
+        .eq('publie', true).eq('dans_agenda', true)
+        .gte('date_debut', today).lte('date_debut', tomorrow)
+        .order('date_debut', { ascending: true })
+        .order('ordre_dans_journee', { ascending: true, nullsFirst: false }),
+      supabase
+        .from('posts').select(POST_COLS)
+        .eq('publie', true).eq('dans_agenda', true)
+        .gt('date_debut', tomorrow)
+        .order('date_debut', { ascending: true })
+        .order('ordre_dans_journee', { ascending: true, nullsFirst: false })
+        .limit(10),
+      supabase
+        .from('posts').select(POST_COLS)
+        .eq('publie', true).eq('dans_agenda', true)
+        .lt('date_debut', today).gte('date_fin', today)
+        .order('date_debut', { ascending: true }),
+      supabase
+        .from('posts').select(POST_COLS)
+        .eq('publie', true).eq('a_laffiche', true).eq('phare', false)
+        .or(`date_fin.gte.${today},and(date_fin.is.null,date_debut.gte.${today})`)
+        .lte('date_debut', datePlus21)
+        .order('date_debut', { ascending: true }),
+      supabase
+        .from('posts').select(POST_COLS)
+        .eq('publie', true).eq('phare', true)
+        .or(`date_fin.gte.${today},and(date_fin.is.null,date_debut.gte.${today})`)
+        .lte('date_debut', datePlus21)
+        .order('date_debut', { ascending: true }),
+      supabase
+        .from('posts').select(POST_COLS)
+        .eq('publie', true).eq('dans_agenda', true)
+        .gte('date_debut', today)
+        .order('date_debut', { ascending: true }),
+    ])
 
-  const etabMap = await buildEtabMap(supabase, raw)
-  const posts   = raw.map((p: any) => enrich(p, etabMap))
+    const rawAgenda      = agendaRes.status      === 'fulfilled' ? (agendaRes.value.data      ?? []) : []
+    const rawAgendaFuture = agendaFutureRes.status === 'fulfilled' ? (agendaFutureRes.value.data ?? []) : []
+    const rawOngoing     = ongoingRes.status     === 'fulfilled' ? (ongoingRes.value.data     ?? []) : []
+    const rawAffiche     = afficheRes.status     === 'fulfilled' ? (afficheRes.value.data     ?? []) : []
+    const rawPhare       = phareRes.status       === 'fulfilled' ? (phareRes.value.data       ?? []) : []
+    const rawFutureExpo  = futureExpoRes.status  === 'fulfilled' ? (futureExpoRes.value.data  ?? []) : []
 
-  return <MisEnAvant posts={posts} />
-}
+    const allRaw = [...rawAgenda, ...rawAgendaFuture, ...rawOngoing, ...rawAffiche, ...rawPhare, ...rawFutureExpo]
+    const etabMap = await fetchEtabMap(supabase, allRaw)
 
-// ─── Section : Levant Mag ─────────────────────────────────────────────────────
+    return {
+      rawAgendaTD:     rawAgenda.map((p: any) => enrich(p, etabMap)),
+      rawAgendaFuture: rawAgendaFuture.map((p: any) => enrich(p, etabMap)),
+      rawOngoing:      rawOngoing.map((p: any) => enrich(p, etabMap)),
+      rawAffiche:      rawAffiche.map((p: any) => enrich(p, etabMap)),
+      rawPhare:        rawPhare.map((p: any) => enrich(p, etabMap)),
+      rawFutureExpo:   rawFutureExpo.map((p: any) => enrich(p, etabMap)),
+    }
+  },
+  ['home-agenda'],
+  { revalidate: 300 },
+)
 
-async function MagCarouselSection() {
-  const { createClient } = await import('@/lib/supabase/server')
-  const supabase = await createClient()
+// ─── Shuffle pondéré ──────────────────────────────────────────────────────────
 
-  const { data: articles } = await supabase
-    .from('articles_mag')
-    .select('*')
-    .eq('publie', true)
-    .order('date_publication', { ascending: false })
-    .limit(6)
-
-  if (!articles?.length) return null
-  return <MagCarousel articles={articles} />
-}
-
-// ─── Section : Agenda ─────────────────────────────────────────────────────────
-
-/**
- * Shuffle pondéré : plus la date est proche, plus la probabilité de passer
- * en tête est élevée. Algorithme : priority = -ln(U) / weight, sort asc.
- */
 function weightedShuffle(posts: PostWithRelations[], todayStr: string): PostWithRelations[] {
   const todayMs = new Date(todayStr + 'T12:00:00').getTime()
   const scored = posts.map(post => {
@@ -115,125 +173,61 @@ function weightedShuffle(posts: PostWithRelations[], todayStr: string): PostWith
   return scored.map(s => s.post)
 }
 
+// ─── Section : Mis en avant ───────────────────────────────────────────────────
+
+async function MisEnAvantSection() {
+  const today = new Date().toISOString().split('T')[0]
+  const posts = await getMisEnAvantData(today)
+  if (!posts.length) return null
+  return <MisEnAvant posts={posts} />
+}
+
+// ─── Section : Levant Mag ─────────────────────────────────────────────────────
+
+async function MagCarouselSection() {
+  const articles = await getMagData()
+  if (!articles.length) return null
+  return <MagCarousel articles={articles} />
+}
+
+// ─── Section : Agenda ─────────────────────────────────────────────────────────
+
 async function AgendaSection() {
   const today      = new Date().toISOString().split('T')[0]
   const tomorrow   = new Date(Date.now() + 86400000).toISOString().split('T')[0]
   const datePlus21 = new Date(Date.now() + 21 * 86400000).toISOString().split('T')[0]
 
-  const { createClient } = await import('@/lib/supabase/server')
-  const supabase = await createClient()
+  const { rawAgendaTD, rawAgendaFuture, rawOngoing, rawAffiche, rawPhare, rawFutureExpo } =
+    await getAgendaData(today, tomorrow, datePlus21)
 
-  const [agendaRes, agendaFutureRes, ongoingRes, afficheRes, phareRes, futureExpoRes] = await Promise.allSettled([
-
-    // Agenda aujourd'hui + demain — sans limite (haute saison = beaucoup d'événements)
-    supabase
-      .from('posts')
-      .select('*, categorie:categories(code, nom)')
-      .eq('publie', true)
-      .eq('dans_agenda', true)
-      .gte('date_debut', today)
-      .lte('date_debut', tomorrow)
-      .order('date_debut', { ascending: true })
-      .order('ordre_dans_journee', { ascending: true, nullsFirst: false }),
-
-    // Agenda après-demain et au-delà — limité à 10 (on en affiche au max 10-N)
-    supabase
-      .from('posts')
-      .select('*, categorie:categories(code, nom)')
-      .eq('publie', true)
-      .eq('dans_agenda', true)
-      .gt('date_debut', tomorrow)
-      .order('date_debut', { ascending: true })
-      .order('ordre_dans_journee', { ascending: true, nullsFirst: false })
-      .limit(10),
-
-    // En ce moment : événements multi-jours déjà commencés
-    supabase
-      .from('posts')
-      .select('*, categorie:categories(code, nom)')
-      .eq('publie', true)
-      .eq('dans_agenda', true)
-      .lt('date_debut', today)
-      .gte('date_fin', today)
-      .order('date_debut', { ascending: true }),
-
-    // À l'affiche carousel source 1 : a_laffiche (phare=false), 21 jours
-    supabase
-      .from('posts')
-      .select('*, categorie:categories(code, nom)')
-      .eq('publie', true)
-      .eq('a_laffiche', true)
-      .eq('phare', false)
-      .or(`date_fin.gte.${today},and(date_fin.is.null,date_debut.gte.${today})`)
-      .lte('date_debut', datePlus21)
-      .order('date_debut', { ascending: true }),
-
-    // À l'affiche carousel source 2 : phare, 21 jours
-    supabase
-      .from('posts')
-      .select('*, categorie:categories(code, nom)')
-      .eq('publie', true)
-      .eq('phare', true)
-      .or(`date_fin.gte.${today},and(date_fin.is.null,date_debut.gte.${today})`)
-      .lte('date_debut', datePlus21)
-      .order('date_debut', { ascending: true }),
-
-    // Expos futures (sans limite de date)
-    supabase
-      .from('posts')
-      .select('*, categorie:categories(code, nom)')
-      .eq('publie', true)
-      .eq('dans_agenda', true)
-      .gte('date_debut', today)
-      .order('date_debut', { ascending: true }),
-  ])
-
-  // Aujourd'hui + demain (sans limite) + après-demain (limité 10)
-  const rawAgendaTD     = agendaRes.status        === 'fulfilled' ? (agendaRes.value.data        ?? []) : []
-  const rawAgendaFuture = agendaFutureRes.status  === 'fulfilled' ? (agendaFutureRes.value.data  ?? []) : []
-  const rawAgenda       = [...rawAgendaTD, ...rawAgendaFuture]
-  const rawOngoing      = ongoingRes.status       === 'fulfilled' ? (ongoingRes.value.data       ?? []) : []
-  const rawAffiche      = afficheRes.status       === 'fulfilled' ? (afficheRes.value.data       ?? []) : []
-  const rawPhare        = phareRes.status         === 'fulfilled' ? (phareRes.value.data         ?? []) : []
-  const rawFutureExpo   = futureExpoRes.status    === 'fulfilled' ? (futureExpoRes.value.data    ?? []) : []
-
-  // Un seul fetch établissements pour toutes les sections
-  const allRaw = [...rawAgenda, ...rawOngoing, ...rawAffiche, ...rawPhare, ...rawFutureExpo]
-  const etabMap = await buildEtabMap(supabase, allRaw)
-
-  const agendaEnriched  = rawAgenda.map((p: any)     => enrich(p, etabMap))
-  const ongoingEnriched = rawOngoing.map((p: any)    => enrich(p, etabMap))
-  const futureEnriched  = rawFutureExpo.map((p: any) => enrich(p, etabMap))
+  const rawAgenda = [...rawAgendaTD, ...rawAgendaFuture]
 
   // À l'affiche : source 1 = a_laffiche (phare=false), 1/org, sans-org exclus
-  //               source 2 = phare, 21j, pas de limite d'org
   const byOrg = new Map<string, PostWithRelations>()
-  for (const post of rawAffiche.map((p: any) => enrich(p, etabMap))) {
+  for (const post of rawAffiche) {
     if (!post.organisateur_id) continue
     if (!byOrg.has(post.organisateur_id)) byOrg.set(post.organisateur_id, post)
   }
-  const phareEnriched = rawPhare.map((p: any) => enrich(p, etabMap))
   const affichePooled = Array.from(
-    new Map([...Array.from(byOrg.values()), ...phareEnriched].map(p => [p.id, p])).values()
+    new Map([...Array.from(byOrg.values()), ...rawPhare].map(p => [p.id, p])).values()
   )
   const aLaffiche = weightedShuffle(affichePooled, today).slice(0, 5)
 
   // Séparer EXPO du reste
-  const agendaNonExpo  = agendaEnriched.filter( (p: PostWithRelations) => p.categorie?.code !== 'EXPO')
-  const ongoingNonExpo = ongoingEnriched.filter((p: PostWithRelations) => p.categorie?.code !== 'EXPO')
-  const ongoingExpos   = ongoingEnriched.filter((p: PostWithRelations) => p.categorie?.code === 'EXPO')
+  const agendaNonExpo  = rawAgenda.filter( p => p.categorie?.code !== 'EXPO')
+  const ongoingNonExpo = rawOngoing.filter(p => p.categorie?.code !== 'EXPO')
+  const ongoingExpos   = rawOngoing.filter(p => p.categorie?.code === 'EXPO')
 
   const todayPosts  = agendaNonExpo.filter(p => p.date_debut === today)
   const demainPosts = agendaNonExpo.filter(p => p.date_debut === tomorrow)
   const autresPosts = agendaNonExpo.filter(p => p.date_debut > tomorrow)
   const enCeMoment  = ongoingNonExpo
 
-  // Autres jours : limiter à (10 - N) événements supplémentaires
   const N = todayPosts.length + demainPosts.length
   const autresLimites = autresPosts.slice(0, Math.max(0, 10 - N))
 
   // Expos : en cours + futures, dédupliquées
-  const futureExpos = futureEnriched.filter((p: PostWithRelations) => p.categorie?.code === 'EXPO')
+  const futureExpos = rawFutureExpo.filter(p => p.categorie?.code === 'EXPO')
   const expoMap = new Map<string, PostWithRelations>()
   for (const p of [...ongoingExpos, ...futureExpos]) expoMap.set(p.id, p)
   const expos = Array.from(expoMap.values()).sort((a, b) => a.date_debut.localeCompare(b.date_debut))
@@ -253,8 +247,6 @@ async function AgendaSection() {
 }
 
 // ─── Page principale ──────────────────────────────────────────────────────────
-// Rendu synchrone : Hero et QuickTiles s'affichent immédiatement.
-// Les sections lentes (MisEnAvant, MagCarousel, Agenda) streament en parallèle.
 
 export default function HomePage() {
   return (
