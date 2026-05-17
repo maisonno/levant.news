@@ -2,9 +2,10 @@
 
 import { PostWithRelations } from '@/types/database'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { supabaseImg } from '@/lib/supabaseImg'
+import { createClient } from '@/lib/supabase/client'
 
 interface Props {
   post: PostWithRelations
@@ -31,9 +32,20 @@ const CAT_COLORS: Record<string, string> = {
   ACTIVITE:     'bg-teal-100 text-teal-700',
 }
 
-export default function EventDetail({ post, nbInscriptions }: Props) {
+export default function EventDetail({ post, nbInscriptions: initialCount }: Props) {
   const router = useRouter()
   const [showInscription, setShowInscription] = useState(false)
+  const [nbInscriptions, setNbInscriptions] = useState(initialCount)
+
+  // Recharge côté client pour contourner le cache ISR
+  useEffect(() => {
+    if (!post.inscription) return
+    createClient()
+      .from('inscriptions')
+      .select('id', { count: 'exact', head: true })
+      .eq('post_id', post.id)
+      .then(({ count }) => { if (count !== null) setNbInscriptions(count) })
+  }, [post.id, post.inscription])
 
   const placesRestantes = post.nb_inscriptions_max
     ? post.nb_inscriptions_max - nbInscriptions
@@ -229,7 +241,11 @@ export default function EventDetail({ post, nbInscriptions }: Props) {
         {/* Formulaire d'inscription (modal inline) */}
         {showInscription && (
           <div className="mt-4">
-            <InscriptionForm postId={post.id} onClose={() => setShowInscription(false)} />
+            <InscriptionForm
+              postId={post.id}
+              onClose={() => setShowInscription(false)}
+              onSuccess={() => setNbInscriptions(n => n + 1)}
+            />
           </div>
         )}
 
@@ -248,7 +264,7 @@ export default function EventDetail({ post, nbInscriptions }: Props) {
 
 // ─── Formulaire d'inscription ────────────────────────────────────────────────
 
-function InscriptionForm({ postId, onClose }: { postId: string; onClose: () => void }) {
+function InscriptionForm({ postId, onClose, onSuccess }: { postId: string; onClose: () => void; onSuccess: () => void }) {
   const [form, setForm] = useState({ prenom: '', nom: '', telephone: '' })
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
 
@@ -258,14 +274,15 @@ function InscriptionForm({ postId, onClose }: { postId: string; onClose: () => v
     setStatus('loading')
 
     try {
-      const { createClient } = await import('@/lib/supabase/client')
       const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
       const { error } = await supabase
         .from('inscriptions')
-        .insert({ post_id: postId, ...form })
+        .insert({ post_id: postId, compte_id: user?.id ?? null, ...form })
 
       if (error) throw error
       setStatus('success')
+      onSuccess()
     } catch {
       setStatus('error')
     }

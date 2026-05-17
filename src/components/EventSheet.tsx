@@ -1,7 +1,9 @@
 'use client'
 
 import { useRef, useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useEventSheet } from '@/contexts/EventSheetContext'
+import { useAuth } from '@/contexts/AuthContext'
 import { supabaseImg } from '@/lib/supabaseImg'
 import { createClient } from '@/lib/supabase/client'
 
@@ -99,6 +101,8 @@ function MarkdownText({ text }: { text: string }) {
 
 export default function EventSheet() {
   const { post, isOpen, close } = useEventSheet()
+  const { user, loading: authLoading } = useAuth()
+  const router = useRouter()
 
   const touchStartY = useRef(0)
   const [translateY, setTranslateY] = useState(0)
@@ -110,9 +114,9 @@ export default function EventSheet() {
   const [form, setForm]             = useState({ prenom: '', nom: '', telephone: '' })
   const [formStatus, setFormStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
 
-  // Charger le compteur quand le post change (si places limitées)
+  // Charger le compteur quand le post change
   useEffect(() => {
-    if (!post?.inscription || !post?.nb_inscriptions_max) return
+    if (!post?.inscription) return
     createClient()
       .from('inscriptions')
       .select('id', { count: 'exact', head: true })
@@ -127,14 +131,24 @@ export default function EventSheet() {
     setFormStatus('idle')
   }, [post?.id])
 
+  function goToLogin() {
+    close()
+    router.push('/compte/connexion')
+  }
+
+  function goToSignup() {
+    close()
+    router.push('/compte/inscription')
+  }
+
   async function handleInscription(e: React.FormEvent) {
     e.preventDefault()
-    if (!form.prenom || !form.nom || !form.telephone || !post) return
+    if (!form.prenom || !form.nom || !form.telephone || !post || !user) return
     setFormStatus('loading')
     try {
       const { error } = await createClient()
         .from('inscriptions')
-        .insert({ post_id: post.id, ...form })
+        .insert({ post_id: post.id, compte_id: user.id, ...form })
       if (error) throw error
       setFormStatus('success')
       setNbInscriptions(n => n + 1)
@@ -323,8 +337,31 @@ export default function EventSheet() {
                       </div>
                     )}
 
-                    {/* Bouton ou formulaire */}
-                    {!showForm && !isComplet && formStatus !== 'success' && (
+                    {/* Pas connecté → invite à créer un compte */}
+                    {!authLoading && !user && !isComplet && formStatus !== 'success' && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-2xl px-4 py-4 space-y-3">
+                        <p className="text-sm font-semibold text-blue-900">Connectez-vous pour vous inscrire</p>
+                        <p className="text-xs text-blue-700">Un compte est nécessaire pour réserver votre place.</p>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={goToSignup}
+                            className="flex-1 py-2.5 rounded-xl text-white font-bold text-sm"
+                            style={{ background: 'linear-gradient(135deg,#1A56DB,#3730a3)' }}
+                          >
+                            Créer un compte
+                          </button>
+                          <button
+                            onClick={goToLogin}
+                            className="flex-1 py-2.5 rounded-xl text-blue-700 font-bold text-sm bg-white border border-blue-200"
+                          >
+                            Se connecter
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Connecté → bouton S'inscrire */}
+                    {!authLoading && user && !showForm && !isComplet && formStatus !== 'success' && (
                       <button
                         onClick={() => setShowForm(true)}
                         className="w-full py-3.5 rounded-2xl text-white font-bold text-sm"
