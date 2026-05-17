@@ -109,51 +109,67 @@ export default function EventSheet() {
   const [isDragging, setIsDragging] = useState(false)
 
   // ── Inscription ───────────────────────────────────────────────────────────
-  const [showForm, setShowForm]     = useState(false)
-  const [nbInscriptions, setNbInscriptions] = useState(0)
-  const [form, setForm]             = useState({ prenom: '', nom: '', telephone: '' })
-  const [formStatus, setFormStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [mesInscriptions, setMesInscriptions] = useState<{ id: string; prenom: string; nom: string }[]>([])
+  const [nbInscriptions, setNbInscriptions]   = useState(0)
+  const [showForm, setShowForm]               = useState(false)
+  const [form, setForm]                       = useState({ prenom: '', nom: '', telephone: '' })
+  const [formStatus, setFormStatus]           = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [cancellingIds, setCancellingIds]     = useState<Set<string>>(new Set())
 
-  // Charger le compteur quand le post change
+  // Charger le compteur total + les inscriptions de l'utilisateur
   useEffect(() => {
     if (!post?.inscription) return
-    createClient()
-      .from('inscriptions')
-      .select('id', { count: 'exact', head: true })
-      .eq('post_id', post.id)
+    const supabase = createClient()
+    supabase.from('inscriptions').select('id', { count: 'exact', head: true }).eq('post_id', post.id)
       .then(({ count }) => setNbInscriptions(count ?? 0))
-  }, [post?.id])
+    if (user) {
+      supabase.from('inscriptions').select('id, prenom, nom').eq('post_id', post.id).eq('compte_id', user.id)
+        .then(({ data }) => setMesInscriptions(data ?? []))
+    }
+  }, [post?.id, user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Réinitialiser le formulaire à chaque ouverture d'un nouveau post
+  // Réinitialiser à chaque nouveau post
   useEffect(() => {
     setShowForm(false)
     setForm({ prenom: '', nom: '', telephone: '' })
     setFormStatus('idle')
+    setMesInscriptions([])
+    setNbInscriptions(0)
   }, [post?.id])
 
-  function goToLogin() {
-    close()
-    router.push('/compte/connexion')
-  }
-
-  function goToSignup() {
-    close()
-    router.push('/compte/inscription')
-  }
+  function goToLogin()  { close(); router.push('/compte/connexion') }
+  function goToSignup() { close(); router.push('/compte/inscription') }
 
   async function handleInscription(e: React.FormEvent) {
     e.preventDefault()
     if (!form.prenom || !form.nom || !form.telephone || !post || !user) return
     setFormStatus('loading')
     try {
-      const { error } = await createClient()
+      const { data, error } = await createClient()
         .from('inscriptions')
         .insert({ post_id: post.id, compte_id: user.id, ...form })
+        .select('id, prenom, nom')
+        .single()
       if (error) throw error
-      setFormStatus('success')
+      setMesInscriptions(prev => [...prev, data])
       setNbInscriptions(n => n + 1)
+      setForm({ prenom: '', nom: '', telephone: '' })
+      setFormStatus('success')
+      setTimeout(() => { setFormStatus('idle'); setShowForm(false) }, 1500)
     } catch {
       setFormStatus('error')
+    }
+  }
+
+  async function handleCancel(id: string) {
+    setCancellingIds(prev => new Set([...prev, id]))
+    try {
+      const { error } = await createClient().from('inscriptions').delete().eq('id', id)
+      if (error) throw error
+      setMesInscriptions(prev => prev.filter(i => i.id !== id))
+      setNbInscriptions(n => Math.max(0, n - 1))
+    } finally {
+      setCancellingIds(prev => { const s = new Set(prev); s.delete(id); return s })
     }
   }
 
@@ -337,99 +353,100 @@ export default function EventSheet() {
                       </div>
                     )}
 
-                    {/* Pas connecté → invite à créer un compte */}
-                    {!authLoading && !user && !isComplet && formStatus !== 'success' && (
+                    {/* Non connecté → invite */}
+                    {!authLoading && !user && !isComplet && (
                       <div className="bg-blue-50 border border-blue-200 rounded-2xl px-4 py-4 space-y-3">
                         <p className="text-sm font-semibold text-blue-900">Connectez-vous pour vous inscrire</p>
                         <p className="text-xs text-blue-700">Un compte est nécessaire pour réserver votre place.</p>
                         <div className="flex gap-2">
-                          <button
-                            onClick={goToSignup}
-                            className="flex-1 py-2.5 rounded-xl text-white font-bold text-sm"
-                            style={{ background: 'linear-gradient(135deg,#1A56DB,#3730a3)' }}
-                          >
+                          <button onClick={goToSignup} className="flex-1 py-2.5 rounded-xl text-white font-bold text-sm" style={{ background: 'linear-gradient(135deg,#1A56DB,#3730a3)' }}>
                             Créer un compte
                           </button>
-                          <button
-                            onClick={goToLogin}
-                            className="flex-1 py-2.5 rounded-xl text-blue-700 font-bold text-sm bg-white border border-blue-200"
-                          >
+                          <button onClick={goToLogin} className="flex-1 py-2.5 rounded-xl text-blue-700 font-bold text-sm bg-white border border-blue-200">
                             Se connecter
                           </button>
                         </div>
                       </div>
                     )}
 
-                    {/* Connecté → bouton S'inscrire */}
-                    {!authLoading && user && !showForm && !isComplet && formStatus !== 'success' && (
-                      <button
-                        onClick={() => setShowForm(true)}
-                        className="w-full py-3.5 rounded-2xl text-white font-bold text-sm"
-                        style={{ background: 'linear-gradient(135deg,#1A56DB,#3730a3)' }}
-                      >
-                        S'inscrire
-                      </button>
-                    )}
+                    {/* Connecté */}
+                    {!authLoading && user && (
+                      <div className="space-y-2">
 
-                    {isComplet && (
-                      <div className="w-full py-3.5 rounded-2xl bg-gray-100 text-center text-gray-500 font-semibold text-sm">
-                        Complet
-                      </div>
-                    )}
+                        {/* Liste des inscriptions de l'utilisateur */}
+                        {mesInscriptions.length > 0 && (
+                          <div className="bg-gray-50 border border-gray-200 rounded-2xl overflow-hidden">
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 pt-3 pb-1">
+                              Mes inscriptions
+                            </p>
+                            {mesInscriptions.map(insc => (
+                              <div key={insc.id} className="flex items-center justify-between px-4 py-2.5 border-t border-gray-100 first:border-t-0">
+                                <span className="text-sm font-medium text-gray-800">
+                                  {insc.prenom} {insc.nom.toUpperCase()}
+                                </span>
+                                <button
+                                  onClick={() => handleCancel(insc.id)}
+                                  disabled={cancellingIds.has(insc.id)}
+                                  className="text-xs text-red-500 font-semibold disabled:opacity-40 active:opacity-70 ml-3 flex-shrink-0"
+                                >
+                                  {cancellingIds.has(insc.id) ? '…' : 'Annuler'}
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
 
-                    {/* Formulaire inline */}
-                    {showForm && formStatus !== 'success' && (
-                      <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <p className="font-bold text-gray-900 text-sm">Votre inscription</p>
-                          <button onClick={() => setShowForm(false)} className="text-gray-400 text-xl font-light leading-none">×</button>
-                        </div>
-                        <form onSubmit={handleInscription} className="space-y-2.5">
-                          <input
-                            type="text"
-                            placeholder="Prénom *"
-                            value={form.prenom}
-                            onChange={e => setForm(f => ({ ...f, prenom: e.target.value }))}
-                            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-white outline-none focus:border-blue-400"
-                            required
-                          />
-                          <input
-                            type="text"
-                            placeholder="Nom *"
-                            value={form.nom}
-                            onChange={e => setForm(f => ({ ...f, nom: e.target.value }))}
-                            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-white outline-none focus:border-blue-400"
-                            required
-                          />
-                          <input
-                            type="tel"
-                            placeholder="Téléphone *"
-                            value={form.telephone}
-                            onChange={e => setForm(f => ({ ...f, telephone: e.target.value }))}
-                            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-white outline-none focus:border-blue-400"
-                            required
-                          />
-                          {formStatus === 'error' && (
-                            <p className="text-xs text-red-600">Erreur lors de l'inscription. Réessayez.</p>
-                          )}
+                        {/* Complet */}
+                        {isComplet && mesInscriptions.length === 0 && (
+                          <div className="w-full py-3.5 rounded-2xl bg-gray-100 text-center text-gray-500 font-semibold text-sm">
+                            Complet
+                          </div>
+                        )}
+
+                        {/* Bouton ajouter (si places dispo) */}
+                        {!isComplet && !showForm && (
                           <button
-                            type="submit"
-                            disabled={formStatus === 'loading'}
-                            className="w-full py-3 rounded-xl text-white font-bold text-sm disabled:opacity-60"
+                            onClick={() => setShowForm(true)}
+                            className="w-full py-3 rounded-2xl text-white font-bold text-sm"
                             style={{ background: 'linear-gradient(135deg,#1A56DB,#3730a3)' }}
                           >
-                            {formStatus === 'loading' ? 'Envoi…' : 'Confirmer l\'inscription'}
+                            {mesInscriptions.length === 0 ? "S'inscrire" : '+ Ajouter une inscription'}
                           </button>
-                        </form>
-                      </div>
-                    )}
+                        )}
 
-                    {/* Confirmation */}
-                    {formStatus === 'success' && (
-                      <div className="bg-green-50 border border-green-200 rounded-2xl p-4 text-center">
-                        <p className="text-2xl mb-1">🎉</p>
-                        <p className="font-bold text-green-800 text-sm">Inscription confirmée !</p>
-                        <p className="text-xs text-green-600 mt-1">{form.prenom}, on vous attend !</p>
+                        {/* Formulaire */}
+                        {showForm && (
+                          <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <p className="font-bold text-gray-900 text-sm">Nouvelle inscription</p>
+                              <button onClick={() => { setShowForm(false); setFormStatus('idle') }} className="text-gray-400 text-xl font-light leading-none">×</button>
+                            </div>
+                            {formStatus === 'success' ? (
+                              <p className="text-center text-sm font-semibold text-green-700 py-2">✓ Inscription ajoutée !</p>
+                            ) : (
+                              <form onSubmit={handleInscription} className="space-y-2.5">
+                                <input type="text" placeholder="Prénom *" value={form.prenom}
+                                  onChange={e => setForm(f => ({ ...f, prenom: e.target.value }))}
+                                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-white outline-none focus:border-blue-400" required />
+                                <input type="text" placeholder="Nom *" value={form.nom}
+                                  onChange={e => setForm(f => ({ ...f, nom: e.target.value }))}
+                                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-white outline-none focus:border-blue-400" required />
+                                <input type="tel" placeholder="Téléphone *" value={form.telephone}
+                                  onChange={e => setForm(f => ({ ...f, telephone: e.target.value }))}
+                                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-white outline-none focus:border-blue-400" required />
+                                {formStatus === 'error' && (
+                                  <p className="text-xs text-red-600">Erreur lors de l'inscription. Réessayez.</p>
+                                )}
+                                <button type="submit" disabled={formStatus === 'loading'}
+                                  className="w-full py-3 rounded-xl text-white font-bold text-sm disabled:opacity-60"
+                                  style={{ background: 'linear-gradient(135deg,#1A56DB,#3730a3)' }}>
+                                  {formStatus === 'loading' ? 'Envoi…' : "Confirmer l'inscription"}
+                                </button>
+                              </form>
+                            )}
+                          </div>
+                        )}
+
                       </div>
                     )}
                   </div>
