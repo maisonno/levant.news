@@ -114,8 +114,8 @@ export default async function AgendaPage({
       .sort((a, b) => a.date_debut.localeCompare(b.date_debut))
     const orgCount = new Map<string, number>()
     afficheTab = afficheDedup.filter(p => {
-      if (!p.organisateur_id) return false
-      if (p.phare === true)   return true
+      if (p.phare === true)        return true
+      if (!p.organisateur_id)      return true
       const n = orgCount.get(p.organisateur_id) ?? 0
       if (n >= 3) return false
       orgCount.set(p.organisateur_id, n + 1)
