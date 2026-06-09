@@ -149,11 +149,13 @@ function AgendaTab({
   today,
   afficheCarousel,
   onViewAllAffiche,
+  hasError,
 }: {
   posts:            PostWithRelations[]
   today:            string
   afficheCarousel:  PostWithRelations[]
   onViewAllAffiche: () => void
+  hasError:         boolean
 }) {
   const [search,      setSearch]      = useState('')
   const [filterDate,  setFilterDate]  = useState('')
@@ -210,6 +212,16 @@ function AgendaTab({
 
   return (
     <>
+      {/* Erreur de chargement */}
+      {hasError && (
+        <div className="mx-4 mt-4 p-4 bg-red-50 border border-red-100 rounded-2xl text-center">
+          <p className="text-sm text-red-600 font-medium">Impossible de charger les événements.</p>
+          <a href="/agenda" className="mt-2 inline-block text-sm text-red-700 font-semibold underline">
+            Réessayer
+          </a>
+        </div>
+      )}
+
       {/* Barre de recherche + filtres */}
       <div className="bg-white border-b border-gray-100 px-4 py-3">
         <div className="flex gap-2">
@@ -333,9 +345,13 @@ function AgendaTab({
       <div className="px-4 py-4 space-y-6">
         {filtered.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-4xl mb-3">🔍</p>
+            <p className="text-4xl mb-3">{isFiltering ? '🔍' : '📅'}</p>
             <p className="text-gray-500 font-medium">
-              {search ? `Aucun résultat pour « ${search} »` : 'Aucun événement pour ces critères'}
+              {search
+                ? `Aucun résultat pour « ${search} »`
+                : isFiltering
+                  ? 'Aucun événement pour ces critères'
+                  : 'Aucun événement à venir'}
             </p>
             {hasActiveFilters && (
               <button onClick={resetFilters} className="mt-3 text-blue-600 font-semibold text-sm">
@@ -468,10 +484,11 @@ interface Props {
   afficheTab:       PostWithRelations[]
   expos:            PostWithRelations[]
   today:            string
+  hasError?:        boolean
   initialTab?:      TabId
 }
 
-export default function AgendaClient({ posts, afficheCarousel, afficheTab, expos, today, initialTab = 'agenda' }: Props) {
+export default function AgendaClient({ posts, afficheCarousel, afficheTab, expos, today, hasError = false, initialTab = 'agenda' }: Props) {
   const [activeTab, setActiveTab] = useState<TabId>(initialTab)
 
   return (
@@ -501,7 +518,7 @@ export default function AgendaClient({ posts, afficheCarousel, afficheTab, expos
       </div>
 
       {/* Contenu des onglets */}
-      {activeTab === 'agenda'      && <AgendaTab      posts={posts}      today={today} afficheCarousel={afficheCarousel} onViewAllAffiche={() => setActiveTab('affiche')} />}
+      {activeTab === 'agenda'      && <AgendaTab      posts={posts}      today={today} afficheCarousel={afficheCarousel} onViewAllAffiche={() => setActiveTab('affiche')} hasError={hasError} />}
       {activeTab === 'expositions' && <ExpositionsTab expos={expos}      today={today} />}
       {activeTab === 'affiche'     && <AfficheTab     posts={afficheTab} today={today} />}
 

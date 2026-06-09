@@ -58,7 +58,11 @@ const getAgendaPageData = unstable_cache(
         .order('date_debut', { ascending: true }),
     ])
 
-    const rawPosts            = postsRes.status              === 'fulfilled' ? (postsRes.value.data              ?? []) : []
+    // Throw si la requête principale échoue → unstable_cache ne met pas en cache l'état vide
+    if (postsRes.status === 'rejected') throw postsRes.reason
+    if (postsRes.value.error) throw new Error(postsRes.value.error.message)
+
+    const rawPosts            = postsRes.value.data ?? []
     const rawAfficheTabAffiche = afficheTabAfficheRes.status === 'fulfilled' ? (afficheTabAfficheRes.value.data  ?? []) : []
     const rawAfficheTabPhare   = afficheTabPhareRes.status   === 'fulfilled' ? (afficheTabPhareRes.value.data    ?? []) : []
     const rawOngoingExpo      = ongoingExpoRes.status        === 'fulfilled' ? (ongoingExpoRes.value.data        ?? []) : []
@@ -100,6 +104,7 @@ export default async function AgendaPage({
   let afficheTab:      PostWithRelations[] = []
   let afficheCarousel: PostWithRelations[] = []
   let expos:           PostWithRelations[] = []
+  let hasError = false
 
   try {
     const { rawPosts, rawAfficheTabAffiche, rawAfficheTabPhare, rawOngoingExpo } =
@@ -143,6 +148,7 @@ export default async function AgendaPage({
 
   } catch (err) {
     console.error('Erreur agenda:', err)
+    hasError = true
   }
 
   return (
@@ -152,6 +158,7 @@ export default async function AgendaPage({
       afficheTab={afficheTab}
       expos={expos}
       today={today}
+      hasError={hasError}
       initialTab={initialTab}
     />
   )
