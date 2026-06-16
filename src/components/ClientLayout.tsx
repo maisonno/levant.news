@@ -1,5 +1,6 @@
 'use client'
 
+import NextTopLoader from 'nextjs-toploader'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { DrawerProvider } from '@/contexts/DrawerContext'
 import { EventSheetProvider } from '@/contexts/EventSheetContext'
@@ -15,6 +16,8 @@ import FloatingBurger from '@/components/FloatingBurger'
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   return (
+    <>
+    <NextTopLoader color="#1A56DB" height={3} showSpinner={false} shadow={false} />
     <AuthProvider>
     <DrawerProvider>
       <EventSheetProvider>
@@ -54,5 +57,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       </EventSheetProvider>
     </DrawerProvider>
     </AuthProvider>
+    </>
   )
 }

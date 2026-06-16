@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { PostWithRelations } from '@/types/database'
 import Link from 'next/link'
 import PostCardList from '@/components/PostCardList'
@@ -157,6 +158,7 @@ function AgendaTab({
   onViewAllAffiche: () => void
   hasError:         boolean
 }) {
+  const router = useRouter()
   const [search,      setSearch]      = useState('')
   const [filterDate,  setFilterDate]  = useState('')
   const [filterCats,  setFilterCats]  = useState<Set<string>>(new Set())
@@ -216,9 +218,12 @@ function AgendaTab({
       {hasError && (
         <div className="mx-4 mt-4 p-4 bg-red-50 border border-red-100 rounded-2xl text-center">
           <p className="text-sm text-red-600 font-medium">Impossible de charger les événements.</p>
-          <a href="/agenda" className="mt-2 inline-block text-sm text-red-700 font-semibold underline">
+          <button
+            onClick={() => router.refresh()}
+            className="mt-2 text-sm text-red-700 font-semibold underline"
+          >
             Réessayer
-          </a>
+          </button>
         </div>
       )}
 
