@@ -115,6 +115,7 @@ export default function EventSheet() {
   const [form, setForm]                       = useState({ prenom: '', nom: '', telephone: '' })
   const [formStatus, setFormStatus]           = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [cancellingIds, setCancellingIds]     = useState<Set<string>>(new Set())
+  const [cancelErrorId, setCancelErrorId]     = useState<string | null>(null)
 
   // Charger le compteur total + les inscriptions de l'utilisateur
   useEffect(() => {
@@ -135,6 +136,7 @@ export default function EventSheet() {
     setFormStatus('idle')
     setMesInscriptions([])
     setNbInscriptions(0)
+    setCancelErrorId(null)
   }, [post?.id])
 
   function goToLogin()  { close(); router.push('/compte/connexion') }
@@ -163,11 +165,14 @@ export default function EventSheet() {
 
   async function handleCancel(id: string) {
     setCancellingIds(prev => new Set([...prev, id]))
+    setCancelErrorId(null)
     try {
       const { error } = await createClient().from('inscriptions').delete().eq('id', id)
       if (error) throw error
       setMesInscriptions(prev => prev.filter(i => i.id !== id))
       setNbInscriptions(n => Math.max(0, n - 1))
+    } catch {
+      setCancelErrorId(id)
     } finally {
       setCancellingIds(prev => { const s = new Set(prev); s.delete(id); return s })
     }
@@ -380,17 +385,22 @@ export default function EventSheet() {
                               Mes inscriptions
                             </p>
                             {mesInscriptions.map(insc => (
-                              <div key={insc.id} className="flex items-center justify-between px-4 py-2.5 border-t border-gray-100 first:border-t-0">
-                                <span className="text-sm font-medium text-gray-800">
-                                  {insc.prenom} {insc.nom.toUpperCase()}
-                                </span>
-                                <button
-                                  onClick={() => handleCancel(insc.id)}
-                                  disabled={cancellingIds.has(insc.id)}
-                                  className="text-xs text-red-500 font-semibold disabled:opacity-40 active:opacity-70 ml-3 flex-shrink-0"
-                                >
-                                  {cancellingIds.has(insc.id) ? '…' : 'Annuler'}
-                                </button>
+                              <div key={insc.id} className="px-4 py-2.5 border-t border-gray-100 first:border-t-0">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-medium text-gray-800">
+                                    {insc.prenom} {insc.nom.toUpperCase()}
+                                  </span>
+                                  <button
+                                    onClick={() => handleCancel(insc.id)}
+                                    disabled={cancellingIds.has(insc.id)}
+                                    className="text-xs text-red-500 font-semibold disabled:opacity-40 active:opacity-70 ml-3 flex-shrink-0"
+                                  >
+                                    {cancellingIds.has(insc.id) ? '…' : 'Annuler'}
+                                  </button>
+                                </div>
+                                {cancelErrorId === insc.id && (
+                                  <p className="text-xs text-red-500 mt-1">Erreur — réessayez.</p>
+                                )}
                               </div>
                             ))}
                           </div>

@@ -3,6 +3,7 @@
 import { PostWithRelations } from '@/types/database'
 import PostCardList from '@/components/PostCardList'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useEventSheet } from '@/contexts/EventSheetContext'
 import HorizontalCarouselWithDots from '@/components/HorizontalCarouselWithDots'
 import { supabaseImg } from '@/lib/supabaseImg'
@@ -16,6 +17,7 @@ interface Props {
   expos:       PostWithRelations[]
   today:       string
   tomorrow:    string
+  hasError?:   boolean
 }
 
 function formatDateShort(iso: string): string {
@@ -80,8 +82,9 @@ function CarouselCard({ post, accentColor = 'text-blue-600' }: { post: PostWithR
 }
 
 export default function AgendaHome({
-  todayPosts, enCeMoment, aLaffiche, demainPosts, autresPosts, expos, today, tomorrow,
+  todayPosts, enCeMoment, aLaffiche, demainPosts, autresPosts, expos, today, tomorrow, hasError = false,
 }: Props) {
+  const router = useRouter()
 
   // Grouper autresPosts par date
   const grouped = new Map<string, PostWithRelations[]>()
@@ -107,11 +110,22 @@ export default function AgendaHome({
       {/* État vide */}
       {!hasAny && (
         <div className="bg-white rounded-2xl p-6 text-center border border-gray-100">
-          <p className="text-3xl mb-2">🌊</p>
-          <p className="text-gray-500 font-medium">Rien à venir dans les 7 prochains jours</p>
-          <Link href="/agenda" className="text-blue-600 font-semibold text-sm mt-2 inline-block">
-            Voir l'agenda complet →
-          </Link>
+          <p className="text-3xl mb-2">{hasError ? '⚠️' : '🌊'}</p>
+          <p className="text-gray-500 font-medium">
+            {hasError ? 'Impossible de charger l\'agenda' : 'Rien à venir dans les 7 prochains jours'}
+          </p>
+          {hasError ? (
+            <button
+              onClick={() => router.refresh()}
+              className="text-blue-600 font-semibold text-sm mt-2 inline-block"
+            >
+              Rafraîchir →
+            </button>
+          ) : (
+            <Link href="/agenda" className="text-blue-600 font-semibold text-sm mt-2 inline-block">
+              Voir l'agenda complet →
+            </Link>
+          )}
         </div>
       )}
 
