@@ -13,6 +13,10 @@ export function supabaseImg(
 ): string | undefined {
   if (!url) return undefined
   if (!url.includes('/storage/v1/object/public/')) return url
+  // Kill-switch global : si les transformations d'images Supabase sont
+  // indisponibles (quota / plan), poser NEXT_PUBLIC_IMAGE_TRANSFORM=off
+  // dans Vercel renvoie l'URL d'origine sans aucune requête vers /render.
+  if (process.env.NEXT_PUBLIC_IMAGE_TRANSFORM === 'off') return url
   return (
     url.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/') +
     `?width=${width}&quality=${quality}&resize=contain`

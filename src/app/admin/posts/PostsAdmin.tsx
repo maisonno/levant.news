@@ -6,6 +6,7 @@ import { PostWithRelations, Categorie, Etablissement } from '@/types/database'
 import ImagePicker from '@/components/admin/ImagePicker'
 import { notifyModerators } from '@/lib/notifyModerators'
 import { supabaseImg } from '@/lib/supabaseImg'
+import { revalidatePublic } from '@/app/admin/revalidate-action'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -686,12 +687,14 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[45px]',
   async function updatePost(id: string, data: object) {
     await supabase.from('posts').update(data).eq('id', id)
     setPosts(prev => prev.map(p => p.id === id ? { ...p, ...data } : p))
+    void revalidatePublic()
   }
 
   async function deletePost(id: string) {
     await supabase.from('posts').delete().eq('id', id)
     setPosts(prev => prev.filter(p => p.id !== id))
     setConfirmDelete(null)
+    void revalidatePublic()
   }
 
   async function savePost(data: Partial<PostWithRelations>) {
@@ -726,6 +729,7 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[45px]',
       await load()
       void notifyModerators('post', { ...data })
     }
+    void revalidatePublic()
     setSaveSuccess(true)
     setTimeout(() => closeForm(), 800)
   }
@@ -832,6 +836,7 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[45px]',
 
     e.target.value = ''
     await load()
+    if (ok > 0) void revalidatePublic()
     setImportLoading(false)
     setImportResult({ ok, errors })
     setTimeout(() => setImportResult(null), 5000)

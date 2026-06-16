@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { PostWithRelations, ObjetPerdu } from '@/types/database'
 import { AnnonceForm } from '@/app/admin/annonces/AnnoncesAdmin'
+import { revalidatePublic } from '@/app/admin/revalidate-action'
 
 type Tab = 'posts' | 'annonces' | 'bateaux'
 
@@ -38,6 +39,7 @@ function PostsToModerate() {
   async function publier(id: string) {
     await supabase.from('posts').update({ publie: true, refuse: false }).eq('id', id)
     setPosts(prev => prev.filter(p => p.id !== id))
+    void revalidatePublic()
   }
 
   async function refuser(id: string) {

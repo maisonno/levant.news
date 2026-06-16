@@ -2,7 +2,7 @@
 
 import { useEventSheet } from '@/contexts/EventSheetContext'
 import { PostWithRelations } from '@/types/database'
-import { supabaseImg } from '@/lib/supabaseImg'
+import SmartImg from '@/components/SmartImg'
 
 const CAT_COLORS: Record<string, { bg: string; text: string }> = {
   CONCERT:           { bg: 'bg-purple-100', text: 'text-purple-700' },
@@ -81,8 +81,9 @@ export default function PostCard({ post, grouped = false, showDate = false, igno
           {/* Image — gauche, carré explicite */}
           <div className="w-44 h-44 flex-shrink-0 bg-gray-100 overflow-hidden">
             {post.affiche_url ? (
-              <img
-                src={supabaseImg(post.affiche_url, 360)}
+              <SmartImg
+                url={post.affiche_url}
+                width={360}
                 alt={post.titre}
                 className="w-full h-full object-cover"
               />
@@ -134,8 +135,9 @@ export default function PostCard({ post, grouped = false, showDate = false, igno
       }>
         <div className="w-28 h-28 flex-shrink-0 bg-gray-100 overflow-hidden">
           {post.affiche_url ? (
-            <img
-              src={supabaseImg(post.affiche_url, 240)}
+            <SmartImg
+              url={post.affiche_url}
+              width={240}
               alt={post.titre}
               className="w-full h-full object-cover"
             />
