@@ -4,7 +4,7 @@ import { PostWithRelations } from '@/types/database'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { supabaseImg } from '@/lib/supabaseImg'
+import SmartImg from '@/components/SmartImg'
 import { createClient } from '@/lib/supabase/client'
 
 interface Props {
@@ -59,8 +59,9 @@ export default function EventDetail({ post, nbInscriptions: initialCount }: Prop
       <div className="relative">
         {post.affiche_url ? (
           <div className="relative h-64">
-            <img
-              src={supabaseImg(post.affiche_url, 860)}
+            <SmartImg
+              url={post.affiche_url}
+              width={860}
               alt={post.titre}
               className="w-full h-full object-cover"
             />

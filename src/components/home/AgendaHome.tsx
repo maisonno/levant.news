@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEventSheet } from '@/contexts/EventSheetContext'
 import HorizontalCarouselWithDots from '@/components/HorizontalCarouselWithDots'
-import { supabaseImg } from '@/lib/supabaseImg'
+import SmartImg from '@/components/SmartImg'
 
 interface Props {
   todayPosts:  PostWithRelations[]
@@ -58,7 +58,7 @@ function CarouselCard({ post, accentColor = 'text-blue-600' }: { post: PostWithR
     >
       <div className="w-full aspect-square bg-gray-100">
         {post.affiche_url ? (
-          <img src={supabaseImg(post.affiche_url, 360)} alt={post.titre} className="w-full h-full object-cover" />
+          <SmartImg url={post.affiche_url} width={360} alt={post.titre} className="w-full h-full object-cover" />
         ) : (
           <div
             className="w-full h-full flex items-center justify-center text-4xl"

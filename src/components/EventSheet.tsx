@@ -4,7 +4,7 @@ import { useRef, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useEventSheet } from '@/contexts/EventSheetContext'
 import { useAuth } from '@/contexts/AuthContext'
-import { supabaseImg } from '@/lib/supabaseImg'
+import SmartImg from '@/components/SmartImg'
 import { createClient } from '@/lib/supabase/client'
 
 // ─── Couleurs catégories ──────────────────────────────────────────────────────
@@ -245,8 +245,9 @@ export default function EventSheet() {
                 <div className="w-10 h-1 bg-white/70 backdrop-blur-sm rounded-full shadow-sm" />
               </div>
               {post.affiche_url ? (
-                <img
-                  src={supabaseImg(post.affiche_url, 860)}
+                <SmartImg
+                  url={post.affiche_url}
+                  width={860}
                   alt={post.titre}
                   className="w-full h-full object-cover"
                 />
