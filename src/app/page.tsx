@@ -136,7 +136,11 @@ const getAgendaData = unstable_cache(
         .order('date_debut', { ascending: true }),
     ])
 
-    const rawAgenda      = agendaRes.status      === 'fulfilled' ? (agendaRes.value.data      ?? []) : []
+    // Throw si la requête principale échoue → unstable_cache ne met pas en cache l'état vide
+    if (agendaRes.status === 'rejected') throw agendaRes.reason
+    if (agendaRes.value.error) throw new Error(agendaRes.value.error.message)
+
+    const rawAgenda      = agendaRes.value.data ?? []
     const rawAgendaFuture = agendaFutureRes.status === 'fulfilled' ? (agendaFutureRes.value.data ?? []) : []
     const rawOngoing     = ongoingRes.status     === 'fulfilled' ? (ongoingRes.value.data     ?? []) : []
     const rawAffiche     = afficheRes.status     === 'fulfilled' ? (afficheRes.value.data     ?? []) : []
@@ -160,6 +164,7 @@ const getAgendaData = unstable_cache(
 )
 
 // ─── Shuffle pondéré ──────────────────────────────────────────────────────────
+
 
 function weightedShuffle(posts: PostWithRelations[], todayStr: string): PostWithRelations[] {
   const todayMs = new Date(todayStr + 'T12:00:00').getTime()
@@ -197,40 +202,50 @@ async function AgendaSection() {
   const tomorrow   = new Date(Date.now() + 86400000).toISOString().split('T')[0]
   const datePlus21 = new Date(Date.now() + 21 * 86400000).toISOString().split('T')[0]
 
-  const { rawAgendaTD, rawAgendaFuture, rawOngoing, rawAffiche, rawPhare, rawFutureExpo } =
-    await getAgendaData(today, tomorrow, datePlus21)
+  let todayPosts:   PostWithRelations[] = []
+  let demainPosts:  PostWithRelations[] = []
+  let autresLimites: PostWithRelations[] = []
+  let enCeMoment:   PostWithRelations[] = []
+  let aLaffiche:    PostWithRelations[] = []
+  let expos:        PostWithRelations[] = []
+  let hasError = false
 
-  const rawAgenda = [...rawAgendaTD, ...rawAgendaFuture]
+  try {
+    const { rawAgendaTD, rawAgendaFuture, rawOngoing, rawAffiche, rawPhare, rawFutureExpo } =
+      await getAgendaData(today, tomorrow, datePlus21)
 
-  // À l'affiche : source 1 = a_laffiche (phare=false), 1/org, sans-org exclus
-  const byOrg = new Map<string, PostWithRelations>()
-  for (const post of rawAffiche) {
-    if (!post.organisateur_id) continue
-    if (!byOrg.has(post.organisateur_id)) byOrg.set(post.organisateur_id, post)
+    const rawAgenda = [...rawAgendaTD, ...rawAgendaFuture]
+
+    const byOrg = new Map<string, PostWithRelations>()
+    for (const post of rawAffiche) {
+      if (!post.organisateur_id) continue
+      if (!byOrg.has(post.organisateur_id)) byOrg.set(post.organisateur_id, post)
+    }
+    const affichePooled = Array.from(
+      new Map([...Array.from(byOrg.values()), ...rawPhare].map(p => [p.id, p])).values()
+    )
+    aLaffiche = weightedShuffle(affichePooled, today).slice(0, 5)
+
+    const agendaNonExpo  = rawAgenda.filter( p => p.categorie?.code !== 'EXPO')
+    const ongoingNonExpo = rawOngoing.filter(p => p.categorie?.code !== 'EXPO')
+    const ongoingExpos   = rawOngoing.filter(p => p.categorie?.code === 'EXPO')
+
+    todayPosts  = agendaNonExpo.filter(p => p.date_debut === today)
+    demainPosts = agendaNonExpo.filter(p => p.date_debut === tomorrow)
+    const autresPosts = agendaNonExpo.filter(p => p.date_debut > tomorrow)
+    enCeMoment  = ongoingNonExpo
+
+    const N = todayPosts.length + demainPosts.length
+    autresLimites = autresPosts.slice(0, Math.max(0, 10 - N))
+
+    const futureExpos = rawFutureExpo.filter(p => p.categorie?.code === 'EXPO')
+    const expoMap = new Map<string, PostWithRelations>()
+    for (const p of [...ongoingExpos, ...futureExpos]) expoMap.set(p.id, p)
+    expos = Array.from(expoMap.values()).sort((a, b) => a.date_debut.localeCompare(b.date_debut))
+  } catch (err) {
+    console.error('Erreur agenda homepage:', err)
+    hasError = true
   }
-  const affichePooled = Array.from(
-    new Map([...Array.from(byOrg.values()), ...rawPhare].map(p => [p.id, p])).values()
-  )
-  const aLaffiche = weightedShuffle(affichePooled, today).slice(0, 5)
-
-  // Séparer EXPO du reste
-  const agendaNonExpo  = rawAgenda.filter( p => p.categorie?.code !== 'EXPO')
-  const ongoingNonExpo = rawOngoing.filter(p => p.categorie?.code !== 'EXPO')
-  const ongoingExpos   = rawOngoing.filter(p => p.categorie?.code === 'EXPO')
-
-  const todayPosts  = agendaNonExpo.filter(p => p.date_debut === today)
-  const demainPosts = agendaNonExpo.filter(p => p.date_debut === tomorrow)
-  const autresPosts = agendaNonExpo.filter(p => p.date_debut > tomorrow)
-  const enCeMoment  = ongoingNonExpo
-
-  const N = todayPosts.length + demainPosts.length
-  const autresLimites = autresPosts.slice(0, Math.max(0, 10 - N))
-
-  // Expos : en cours + futures, dédupliquées
-  const futureExpos = rawFutureExpo.filter(p => p.categorie?.code === 'EXPO')
-  const expoMap = new Map<string, PostWithRelations>()
-  for (const p of [...ongoingExpos, ...futureExpos]) expoMap.set(p.id, p)
-  const expos = Array.from(expoMap.values()).sort((a, b) => a.date_debut.localeCompare(b.date_debut))
 
   return (
     <AgendaHome
@@ -242,6 +257,7 @@ async function AgendaSection() {
       expos={expos}
       today={today}
       tomorrow={tomorrow}
+      hasError={hasError}
     />
   )
 }

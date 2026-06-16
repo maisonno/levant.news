@@ -6,6 +6,7 @@ import { PostWithRelations, Categorie, Etablissement } from '@/types/database'
 import ImagePicker from '@/components/admin/ImagePicker'
 import { notifyModerators } from '@/lib/notifyModerators'
 import { supabaseImg } from '@/lib/supabaseImg'
+import { revalidatePublic } from '@/app/admin/revalidate-action'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -191,18 +192,195 @@ function PostForm({ initial, categories, etablissements, onSave, onClose, isAdmi
 
 // ─── Carte post ───────────────────────────────────────────────────────────────
 
+// ─── Modal inscriptions admin ─────────────────────────────────────────────────
+
+type InscriptionRow = {
+  id: string
+  nom: string
+  prenom: string
+  telephone: string | null
+  compte_id: string | null
+  compte: { prenom: string; nom: string; email?: string } | null
+}
+
+function InscriptionsModal({ post, adminId, onClose }: {
+  post: PostWithRelations
+  adminId: string
+  onClose: () => void
+}) {
+  const [inscriptions, setInscriptions]   = useState<InscriptionRow[]>([])
+  const [loading, setLoading]             = useState(true)
+  const [showForm, setShowForm]           = useState(false)
+  const [form, setForm]                   = useState({ nom: '', prenom: '', email: '', telephone: '' })
+  const [formStatus, setFormStatus]       = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [cancellingIds, setCancellingIds] = useState<Set<string>>(new Set())
+  const [formError, setFormError]         = useState<string | null>(null)
+
+  async function load() {
+    setLoading(true)
+    const res = await fetch(`/api/admin/inscriptions?post_id=${post.id}`)
+    const data = await res.json()
+    setInscriptions(Array.isArray(data) ? data : [])
+    setLoading(false)
+  }
+
+  useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault()
+    if (!form.nom || !form.prenom) return
+    setFormStatus('loading')
+    setFormError(null)
+    try {
+      const res = await fetch('/api/admin/inscriptions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ post_id: post.id, ...form }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Erreur')
+      setInscriptions(prev => [...prev, data])
+      setForm({ nom: '', prenom: '', email: '', telephone: '' })
+      setFormStatus('success')
+      setTimeout(() => { setFormStatus('idle'); setShowForm(false) }, 1200)
+    } catch (err: any) {
+      setFormError(err.message)
+      setFormStatus('error')
+    }
+  }
+
+  async function handleCancel(id: string) {
+    setCancellingIds(prev => new Set([...prev, id]))
+    try {
+      await fetch(`/api/admin/inscriptions?id=${id}`, { method: 'DELETE' })
+      setInscriptions(prev => prev.filter(i => i.id !== id))
+    } finally {
+      setCancellingIds(prev => { const s = new Set(prev); s.delete(id); return s })
+    }
+  }
+
+  const field = "w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-400 bg-white"
+
+  return (
+    <>
+      <div className="fixed inset-0 z-40 bg-black/40" onClick={onClose} />
+      <div className="fixed bottom-0 left-0 right-0 z-50 mx-auto max-w-[430px] bg-white rounded-t-3xl shadow-2xl max-h-[90vh] flex flex-col">
+        {/* En-tête */}
+        <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-gray-100 flex-shrink-0">
+          <div>
+            <h2 className="font-extrabold text-gray-900 text-base">Inscriptions</h2>
+            <p className="text-xs text-gray-400 truncate max-w-[260px]">{post.titre}</p>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">✕</button>
+        </div>
+
+        <div className="overflow-y-auto flex-1 px-4 py-4 space-y-4">
+          {/* Résumé */}
+          <div className="flex items-center gap-3 text-sm">
+            <span className="font-bold text-gray-900">{inscriptions.length} inscription{inscriptions.length !== 1 ? 's' : ''}</span>
+            {post.nb_inscriptions_max && (
+              <span className="text-gray-400">/ {post.nb_inscriptions_max} places</span>
+            )}
+          </div>
+
+          {/* Liste */}
+          {loading ? (
+            <p className="text-center text-gray-400 text-sm py-6">Chargement…</p>
+          ) : inscriptions.length === 0 ? (
+            <p className="text-center text-gray-400 text-sm py-6">Aucune inscription pour l'instant.</p>
+          ) : (
+            <div className="rounded-2xl border border-gray-200 overflow-hidden">
+              {inscriptions.map((insc, idx) => (
+                <div key={insc.id} className={`flex items-start gap-3 px-4 py-3 ${idx > 0 ? 'border-t border-gray-100' : ''}`}>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900">{insc.prenom} {insc.nom.toUpperCase()}</p>
+                    {insc.telephone && <p className="text-xs text-gray-500">{insc.telephone}</p>}
+                    {insc.compte && (
+                      <p className="text-[10px] text-blue-500 mt-0.5 truncate">
+                        👤 {insc.compte.prenom} {insc.compte.nom}{insc.compte.email ? ` · ${insc.compte.email}` : ''}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => handleCancel(insc.id)}
+                    disabled={cancellingIds.has(insc.id)}
+                    className="text-xs text-red-500 font-semibold flex-shrink-0 disabled:opacity-40 pt-0.5"
+                  >
+                    {cancellingIds.has(insc.id) ? '…' : 'Annuler'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Bouton ajouter */}
+          {!showForm && (
+            <button
+              onClick={() => setShowForm(true)}
+              className="w-full py-3 rounded-2xl text-white font-bold text-sm"
+              style={{ background: 'linear-gradient(135deg,#1A56DB,#3730a3)' }}
+            >
+              + Ajouter une inscription
+            </button>
+          )}
+
+          {/* Formulaire */}
+          {showForm && (
+            <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <p className="font-bold text-gray-900 text-sm">Nouvelle inscription</p>
+                <button onClick={() => { setShowForm(false); setFormStatus('idle'); setFormError(null) }} className="text-gray-400 text-xl leading-none">×</button>
+              </div>
+              {formStatus === 'success' ? (
+                <p className="text-center text-sm font-semibold text-green-700 py-2">✓ Inscription ajoutée !</p>
+              ) : (
+                <form onSubmit={handleAdd} className="space-y-2.5">
+                  <div className="grid grid-cols-2 gap-2">
+                    <input placeholder="Prénom *" value={form.prenom} required
+                      onChange={e => setForm(f => ({ ...f, prenom: e.target.value }))} className={field} />
+                    <input placeholder="Nom *" value={form.nom} required
+                      onChange={e => setForm(f => ({ ...f, nom: e.target.value }))} className={field} />
+                  </div>
+                  <input type="email" placeholder="Email" value={form.email}
+                    onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className={field} />
+                  <input type="tel" placeholder="Téléphone" value={form.telephone}
+                    onChange={e => setForm(f => ({ ...f, telephone: e.target.value }))} className={field} />
+                  <p className="text-[10px] text-gray-400">
+                    Si l'email ou le téléphone correspond à un compte existant, l'inscription lui sera liée.
+                  </p>
+                  {formError && <p className="text-xs text-red-600">{formError}</p>}
+                  <button type="submit" disabled={formStatus === 'loading'}
+                    className="w-full py-3 rounded-xl text-white font-bold text-sm disabled:opacity-60"
+                    style={{ background: 'linear-gradient(135deg,#1A56DB,#3730a3)' }}>
+                    {formStatus === 'loading' ? 'Envoi…' : 'Confirmer'}
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
+
+          <div className="h-4" />
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ─── Types cartes ─────────────────────────────────────────────────────────────
+
 interface PostCardProps {
   post: PostWithRelations
-  onPublier:    () => void
-  onDepublier:  () => void
-  onRefuser:    () => void
-  onEdit:       () => void
-  onDelete:     () => void
-  onDuplicate:  () => void
+  onPublier:      () => void
+  onDepublier:    () => void
+  onRefuser:      () => void
+  onEdit:         () => void
+  onDelete:       () => void
+  onDuplicate:    () => void
+  onInscriptions: () => void
   isAdmin?: boolean
 }
 
-function PostCard({ post, onPublier, onDepublier, onRefuser, onEdit, onDelete, onDuplicate, isAdmin = true }: PostCardProps) {
+function PostCard({ post, onPublier, onDepublier, onRefuser, onEdit, onDelete, onDuplicate, onInscriptions, isAdmin = true }: PostCardProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const cat = post.categorie
   const catColor = cat ? (CAT_COLORS[cat.code] ?? 'bg-gray-100 text-gray-600') : null
@@ -291,6 +469,12 @@ function PostCard({ post, onPublier, onDepublier, onRefuser, onEdit, onDelete, o
           Dépublier
         </button>
       )}
+      {post.inscription && (
+        <button onClick={onInscriptions}
+          className="w-full py-2 rounded-xl bg-green-50 text-green-700 text-xs font-bold">
+          📋 Voir les inscriptions
+        </button>
+      )}
       </div>
     </div>
   )
@@ -298,7 +482,7 @@ function PostCard({ post, onPublier, onDepublier, onRefuser, onEdit, onDelete, o
 
 // ─── Carte post horizontale (tab À venir) ─────────────────────────────────────
 
-function PostCardHorizontal({ post, onEdit, onPublier, onDepublier, onRefuser, onDelete, onDuplicate, isAdmin = true }: PostCardProps) {
+function PostCardHorizontal({ post, onEdit, onPublier, onDepublier, onRefuser, onDelete, onDuplicate, onInscriptions, isAdmin = true }: PostCardProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const cat = post.categorie
   const catColor = cat ? (CAT_COLORS[cat.code] ?? 'bg-gray-100 text-gray-600') : null
@@ -354,6 +538,15 @@ function PostCardHorizontal({ post, onEdit, onPublier, onDepublier, onRefuser, o
           >
             ✏️ Modifier
           </button>
+
+          {post.inscription && (
+            <button
+              onClick={onInscriptions}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-green-50 text-green-700 text-xs font-bold"
+            >
+              📋 Inscriptions
+            </button>
+          )}
 
           {!post.publie && !post.refuse && (
             <button
@@ -422,6 +615,7 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[45px]',
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [duplicateData, setDuplicateData] = useState<Partial<PostWithRelations> | null>(null)
+  const [inscriptionsPost, setInscriptionsPost] = useState<PostWithRelations | null>(null)
   const [showImport, setShowImport] = useState(false)
   const [importLoading, setImportLoading] = useState(false)
   const [importResult, setImportResult] = useState<{ ok: number; errors: number } | null>(null)
@@ -493,12 +687,14 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[45px]',
   async function updatePost(id: string, data: object) {
     await supabase.from('posts').update(data).eq('id', id)
     setPosts(prev => prev.map(p => p.id === id ? { ...p, ...data } : p))
+    void revalidatePublic()
   }
 
   async function deletePost(id: string) {
     await supabase.from('posts').delete().eq('id', id)
     setPosts(prev => prev.filter(p => p.id !== id))
     setConfirmDelete(null)
+    void revalidatePublic()
   }
 
   async function savePost(data: Partial<PostWithRelations>) {
@@ -533,6 +729,7 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[45px]',
       await load()
       void notifyModerators('post', { ...data })
     }
+    void revalidatePublic()
     setSaveSuccess(true)
     setTimeout(() => closeForm(), 800)
   }
@@ -639,6 +836,7 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[45px]',
 
     e.target.value = ''
     await load()
+    if (ok > 0) void revalidatePublic()
     setImportLoading(false)
     setImportResult({ ok, errors })
     setTimeout(() => setImportResult(null), 5000)
@@ -723,12 +921,13 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[45px]',
         )}
         {filtered.map(p => (
           <PostCardHorizontal key={p.id} post={p} isAdmin={isAdmin}
-            onPublier={()    => updatePost(p.id, { publie: true, refuse: false })}
-            onDepublier={()  => updatePost(p.id, { publie: false })}
-            onRefuser={()    => updatePost(p.id, { refuse: true, publie: false })}
-            onEdit={()       => { setEditPost(p); setDuplicateData(null); setShowForm(true) }}
-            onDelete={()     => setConfirmDelete(p.id)}
-            onDuplicate={()  => handleDuplicate(p)}
+            onPublier={()       => updatePost(p.id, { publie: true, refuse: false })}
+            onDepublier={()     => updatePost(p.id, { publie: false })}
+            onRefuser={()       => updatePost(p.id, { refuse: true, publie: false })}
+            onEdit={()          => { setEditPost(p); setDuplicateData(null); setShowForm(true) }}
+            onDelete={()        => setConfirmDelete(p.id)}
+            onDuplicate={()     => handleDuplicate(p)}
+            onInscriptions={()  => setInscriptionsPost(p)}
           />
         ))}
       </div>
@@ -767,6 +966,15 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[45px]',
             </div>
           </div>
         </>
+      )}
+
+      {/* Modal inscriptions */}
+      {inscriptionsPost && (
+        <InscriptionsModal
+          post={inscriptionsPost}
+          adminId={userId ?? ''}
+          onClose={() => setInscriptionsPost(null)}
+        />
       )}
 
       {/* Confirmation suppression */}

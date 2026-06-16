@@ -2,7 +2,7 @@
 
 import { useRef, useState, useEffect } from 'react'
 import { useEtabSheet } from '@/contexts/EtabSheetContext'
-import { supabaseImg } from '@/lib/supabaseImg'
+import SmartImg from '@/components/SmartImg'
 
 // ─── Rendu Markdown simple ────────────────────────────────────────────────────
 
@@ -145,7 +145,7 @@ export default function EtabSheet() {
                 <div className="w-10 h-1 bg-white/70 backdrop-blur-sm rounded-full shadow-sm" />
               </div>
               {hasPhoto ? (
-                <img src={supabaseImg(etab.photo_url, 860)} alt={etab.nom} className="w-full h-full object-cover" />
+                <SmartImg url={etab.photo_url!} width={860} alt={etab.nom} className="w-full h-full object-cover" />
               ) : (
                 <div
                   className="w-full h-full flex items-center justify-center text-7xl"
