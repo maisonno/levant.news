@@ -2,7 +2,7 @@
 
 import { useDrawer } from '@/contexts/DrawerContext'
 import { useAuth } from '@/contexts/AuthContext'
-import { usePathname, useSearchParams, useRouter } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Suspense } from 'react'
 
@@ -62,7 +62,6 @@ export default function DrawerMenu() {
   const { isOpen, close } = useDrawer()
   const { user, profile } = useAuth()
   const pathname = usePathname()
-  const router = useRouter()
 
   return (
     <>
@@ -104,7 +103,7 @@ export default function DrawerMenu() {
         {/* Rafraîchir */}
         <div className="border-t border-gray-100 px-4 py-2">
           <button
-            onClick={() => { router.refresh(); close() }}
+            onClick={() => { close(); window.location.reload() }}
             className="flex items-center gap-2.5 w-full px-0 py-2 text-gray-500 hover:text-gray-700 transition-colors"
           >
             <span className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 text-base">
