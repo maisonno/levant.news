@@ -65,7 +65,7 @@ function SectionDivider({ title, subtitle }: { title: string; subtitle?: string 
   return (
     <div className="flex items-center gap-2 mb-3">
       <h2 className="text-base font-extrabold text-gray-900">{title}</h2>
-      {subtitle && <span className="text-sm text-gray-400">{subtitle}</span>}
+      {subtitle && <span className="text-sm font-bold text-gray-900">{subtitle}</span>}
       <div className="flex-1 h-px bg-gray-200" />
     </div>
   )
