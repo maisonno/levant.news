@@ -13,7 +13,7 @@ const MODULES: { href: string; icon: string; label: string; tab?: string }[] = [
   { href: '/transport?tab=bus',      icon: '🚌',  label: 'Bus',     tab: 'bus'     },
   { href: '/meduse',                 icon: '🪼',  label: 'Méduse Watch'    },
   { href: '/perdu',                  icon: '🔍',  label: 'Perdu / Trouvé'  },
-  { href: '/annuaire',               icon: '🗂️',  label: 'Annuaire'        },
+  { href: '/annuaire',               icon: '🗂️',  label: 'Commerçants'     },
   { href: '/infos',                  icon: 'ℹ️',  label: 'Infos pratiques' },
   { href: '/webcam',                 icon: '📷',  label: 'Webcam'          },
 ]

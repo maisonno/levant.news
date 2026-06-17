@@ -228,7 +228,21 @@ async function AgendaSection() {
     enCeMoment  = ongoingNonExpo
 
     const N = todayPosts.length + demainPosts.length
-    autresLimites = autresPosts.slice(0, Math.max(0, 10 - N))
+    const limit = Math.max(0, 15 - N)
+    // Si une date commence à être affichée, on affiche tous ses événements
+    let count = 0
+    const autresParDate = new Map<string, PostWithRelations[]>()
+    for (const p of autresPosts) {
+      if (!autresParDate.has(p.date_debut)) autresParDate.set(p.date_debut, [])
+      autresParDate.get(p.date_debut)!.push(p)
+    }
+    const result: PostWithRelations[] = []
+    for (const [, datePosts] of autresParDate) {
+      if (count >= limit) break
+      for (const p of datePosts) result.push(p)
+      count += datePosts.length
+    }
+    autresLimites = result
   } catch (err) {
     console.error('Erreur agenda homepage:', err)
     hasError = true
