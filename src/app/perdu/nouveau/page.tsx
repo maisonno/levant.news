@@ -226,7 +226,7 @@ export default function NouvelleAnnoncePage() {
                   uploading ? 'border-blue-200 bg-blue-50' : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
                 }`}>
                   <input
-                    type="file" accept="image/*" capture="environment" className="hidden"
+                    type="file" accept="image/*" className="hidden"
                     disabled={uploading}
                     onChange={e => { const f = e.target.files?.[0]; if (f) handlePhotoFile(f); e.target.value = '' }}
                   />
