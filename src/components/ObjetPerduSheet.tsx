@@ -117,31 +117,54 @@ export default function ObjetPerduSheet() {
           <div className="overflow-y-auto flex-1 pb-safe">
 
             {/* Zone image / header */}
-            <div className="relative w-full bg-gray-100 flex-shrink-0"
-                 style={{ aspectRatio: objet.photo_url ? '1/1' : 'auto', minHeight: objet.photo_url ? undefined : '80px' }}>
-              <div className="absolute top-3 left-0 right-0 z-10 flex justify-center pointer-events-none">
-                <div className="w-10 h-1 bg-white/70 backdrop-blur-sm rounded-full shadow-sm" />
-              </div>
-              {objet.photo_url ? (
-                <>
-                  <SmartImg url={objet.photo_url!} width={860} alt={objet.objet} className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 pointer-events-none"
-                       style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.25) 0%, transparent 40%)' }} />
-                  <button onClick={close} aria-label="Fermer"
-                    className="absolute top-10 right-4 w-9 h-9 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white text-lg font-bold active:bg-black/60">
-                    ✕
-                  </button>
-                </>
-              ) : (
-                <div className={`w-full h-20 flex items-center justify-center ${objet.type === 'PERDU' ? 'bg-orange-50' : 'bg-green-50'}`}>
-                  <span className="text-4xl">{objet.type === 'PERDU' ? '🔍' : '📦'}</span>
-                  <button onClick={close} aria-label="Fermer"
-                    className="absolute top-10 right-4 w-9 h-9 rounded-full bg-black/20 backdrop-blur-sm flex items-center justify-center text-gray-700 text-lg font-bold">
-                    ✕
-                  </button>
+            {(() => {
+              const allPhotos = objet.photos?.length ? objet.photos : (objet.photo_url ? [objet.photo_url] : [])
+              const hasPhotos = allPhotos.length > 0
+              return (
+                <div className="relative w-full bg-gray-100 flex-shrink-0"
+                     style={{ aspectRatio: hasPhotos ? '1/1' : 'auto', minHeight: hasPhotos ? undefined : '80px' }}>
+                  <div className="absolute top-3 left-0 right-0 z-10 flex justify-center pointer-events-none">
+                    <div className="w-10 h-1 bg-white/70 backdrop-blur-sm rounded-full shadow-sm" />
+                  </div>
+                  {hasPhotos ? (
+                    <>
+                      {allPhotos.length === 1 ? (
+                        <SmartImg url={allPhotos[0]} width={860} alt={objet.objet} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="flex overflow-x-auto snap-x snap-mandatory h-full" style={{ scrollbarWidth: 'none' }}>
+                          {allPhotos.map((url, i) => (
+                            <div key={i} className="flex-shrink-0 w-full h-full snap-start">
+                              <SmartImg url={url} width={860} alt={`${objet.objet} ${i + 1}`} className="w-full h-full object-cover" />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div className="absolute inset-0 pointer-events-none"
+                           style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.25) 0%, transparent 40%)' }} />
+                      {allPhotos.length > 1 && (
+                        <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 pointer-events-none">
+                          {allPhotos.map((_, i) => (
+                            <div key={i} className="w-1.5 h-1.5 rounded-full bg-white/80" />
+                          ))}
+                        </div>
+                      )}
+                      <button onClick={close} aria-label="Fermer"
+                        className="absolute top-10 right-4 w-9 h-9 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white text-lg font-bold active:bg-black/60 z-10">
+                        ✕
+                      </button>
+                    </>
+                  ) : (
+                    <div className={`w-full h-20 flex items-center justify-center ${objet.type === 'PERDU' ? 'bg-orange-50' : 'bg-green-50'}`}>
+                      <span className="text-4xl">{objet.type === 'PERDU' ? '🔍' : '📦'}</span>
+                      <button onClick={close} aria-label="Fermer"
+                        className="absolute top-10 right-4 w-9 h-9 rounded-full bg-black/20 backdrop-blur-sm flex items-center justify-center text-gray-700 text-lg font-bold">
+                        ✕
+                      </button>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              )
+            })()}
 
             {/* Corps */}
             <div className="px-5 py-4 space-y-4">

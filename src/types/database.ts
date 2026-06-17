@@ -108,6 +108,7 @@ export interface ObjetPerdu {
   description: string | null
   lieu: string | null
   photo_url: string | null
+  photos: string[] | null
   nom_declarant: string
   telephone: string | null
   contact: string | null
