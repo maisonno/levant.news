@@ -14,7 +14,6 @@ interface Props {
   aLaffiche:   PostWithRelations[]
   demainPosts: PostWithRelations[]
   autresPosts: PostWithRelations[]
-  expos:       PostWithRelations[]
   today:       string
   tomorrow:    string
   hasError?:   boolean
@@ -82,7 +81,7 @@ function CarouselCard({ post, accentColor = 'text-blue-600' }: { post: PostWithR
 }
 
 export default function AgendaHome({
-  todayPosts, enCeMoment, aLaffiche, demainPosts, autresPosts, expos, today, tomorrow, hasError = false,
+  todayPosts, enCeMoment, aLaffiche, demainPosts, autresPosts, today, tomorrow, hasError = false,
 }: Props) {
   const router = useRouter()
 
@@ -94,7 +93,7 @@ export default function AgendaHome({
   }
   const autresGrouped = Array.from(grouped.entries()).sort(([a], [b]) => a.localeCompare(b))
 
-  const hasAny = [todayPosts, enCeMoment, aLaffiche, demainPosts, autresPosts, expos].some(a => a.length > 0)
+  const hasAny = [todayPosts, enCeMoment, aLaffiche, demainPosts, autresPosts].some(a => a.length > 0)
 
   return (
     <div className="mt-6 px-4 mb-8">
@@ -131,22 +130,6 @@ export default function AgendaHome({
 
       <div className="space-y-6">
 
-        {/* Aujourd'hui */}
-        {todayPosts.length > 0 && (
-          <section>
-            <SectionHeader title="Aujourd'hui" subtitle={formatDateShort(today)} />
-            <PostCardList posts={todayPosts} />
-          </section>
-        )}
-
-        {/* En ce moment (multi-jours en cours) */}
-        {enCeMoment.length > 0 && (
-          <section>
-            <SectionHeader title="En ce moment" />
-            <PostCardList posts={enCeMoment} />
-          </section>
-        )}
-
         {/* À l'affiche — carrousel images carrées */}
         {aLaffiche.length > 0 && (
           <section>
@@ -174,6 +157,22 @@ export default function AgendaHome({
           </section>
         )}
 
+        {/* Aujourd'hui */}
+        {todayPosts.length > 0 && (
+          <section>
+            <SectionHeader title="Aujourd'hui" subtitle={formatDateShort(today)} />
+            <PostCardList posts={todayPosts} />
+          </section>
+        )}
+
+        {/* En ce moment (multi-jours en cours) */}
+        {enCeMoment.length > 0 && (
+          <section>
+            <SectionHeader title="En ce moment" />
+            <PostCardList posts={enCeMoment} />
+          </section>
+        )}
+
         {/* Demain */}
         {demainPosts.length > 0 && (
           <section>
@@ -189,18 +188,6 @@ export default function AgendaHome({
             <PostCardList posts={datePosts} />
           </section>
         ))}
-
-        {/* Expositions — carrousel séparé */}
-        {expos.length > 0 && (
-          <section>
-            <SectionHeader title="Expositions" />
-            <HorizontalCarouselWithDots count={expos.length} className="pb-2">
-              {expos.map(post => (
-                <CarouselCard key={post.id} post={post} accentColor="text-amber-600" />
-              ))}
-            </HorizontalCarouselWithDots>
-          </section>
-        )}
 
         {/* Lien vers agenda complet */}
         {hasAny && (
