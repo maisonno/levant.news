@@ -76,8 +76,8 @@ function AnnonceCard({ annonce, onClick }: { annonce: ObjetPerdu; onClick: () =>
     >
       <div className="flex items-stretch gap-0">
         <div className="w-20 h-20 flex-shrink-0 bg-gray-100 flex items-center justify-center overflow-hidden">
-          {annonce.photo_url
-            ? <SmartImg url={annonce.photo_url} width={160} alt={annonce.objet} className="w-full h-full object-cover" />
+          {(annonce.photos?.[0] ?? annonce.photo_url)
+            ? <SmartImg url={annonce.photos?.[0] ?? annonce.photo_url!} width={160} alt={annonce.objet} className="w-full h-full object-cover" />
             : <span className="text-3xl">{annonce.type === 'PERDU' ? '🔍' : '📦'}</span>
           }
         </div>

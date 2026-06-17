@@ -25,6 +25,9 @@ export default function NouvelleAnnoncePage() {
   const [nom,         setNom]         = useState('')
   const [telephone,   setTelephone]   = useState('')
   const [contact,     setContact]     = useState('')
+  const [photos,      setPhotos]      = useState<string[]>([])
+  const [uploading,   setUploading]   = useState(false)
+  const [uploadErr,   setUploadErr]   = useState('')
   const [saving,      setSaving]      = useState(false)
   const [error,       setError]       = useState<string | null>(null)
 
@@ -41,6 +44,24 @@ export default function NouvelleAnnoncePage() {
     if (!loading && !user) router.push('/compte/connexion?redirect=/perdu/nouveau')
   }, [loading, user, router])
 
+  async function handlePhotoFile(file: File) {
+    if (!file.type.startsWith('image/')) { setUploadErr('Format non supporté'); return }
+    setUploading(true); setUploadErr('')
+    try {
+      const ext  = file.name.split('.').pop() ?? 'jpg'
+      const path = `objets/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const { error: upErr } = await supabase.storage
+        .from('perdu-images').upload(path, file, { contentType: file.type })
+      if (upErr) throw upErr
+      const { data } = supabase.storage.from('perdu-images').getPublicUrl(path)
+      setPhotos(prev => [...prev, data.publicUrl])
+    } catch {
+      setUploadErr("Erreur lors de l'upload")
+    } finally {
+      setUploading(false)
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
@@ -52,6 +73,7 @@ export default function NouvelleAnnoncePage() {
       date_evenement: date,
       description:    description.trim() || null,
       lieu:           lieu.trim() || null,
+      photos:         photos.length > 0 ? photos : null,
       nom_declarant:  nom.trim(),
       telephone:      telephone.trim() || null,
       contact:        contact.trim() || null,
@@ -179,6 +201,43 @@ export default function NouvelleAnnoncePage() {
               placeholder="Décris l'objet, sa couleur, ses caractéristiques…"
               className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3 text-sm text-gray-800 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 resize-none"
             />
+          </div>
+
+          {/* Photos */}
+          <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
+              Photos <span className="font-normal text-gray-400 normal-case tracking-normal">(optionnel, max 4)</span>
+            </label>
+            <div className="flex gap-2 flex-wrap">
+              {photos.map((url, i) => (
+                <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
+                  <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setPhotos(prev => prev.filter((_, j) => j !== i))}
+                    className="absolute top-1 right-1 w-5 h-5 bg-black/60 text-white rounded-full text-xs flex items-center justify-center leading-none"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              {photos.length < 4 && (
+                <label className={`w-20 h-20 flex flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed transition-colors cursor-pointer ${
+                  uploading ? 'border-blue-200 bg-blue-50' : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                }`}>
+                  <input
+                    type="file" accept="image/*" capture="environment" className="hidden"
+                    disabled={uploading}
+                    onChange={e => { const f = e.target.files?.[0]; if (f) handlePhotoFile(f); e.target.value = '' }}
+                  />
+                  {uploading
+                    ? <div className="w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                    : <><span className="text-xl">📷</span><span className="text-[10px] font-semibold text-gray-400">Ajouter</span></>
+                  }
+                </label>
+              )}
+            </div>
+            {uploadErr && <p className="text-xs text-red-500 mt-1">{uploadErr}</p>}
           </div>
 
           {/* Séparateur contact */}
