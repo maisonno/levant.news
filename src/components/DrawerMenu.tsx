@@ -107,10 +107,8 @@ export default function DrawerMenu() {
             onClick={() => { router.refresh(); close() }}
             className="flex items-center gap-2.5 w-full px-0 py-2 text-gray-500 hover:text-gray-700 transition-colors"
           >
-            <span className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
-              <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                <path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35Z"/>
-              </svg>
+            <span className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 text-base">
+              ↻
             </span>
             <span className="text-sm font-medium">Rafraîchir</span>
           </button>
