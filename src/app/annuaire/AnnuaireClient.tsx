@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Etablissement, TypeEtablissement } from '@/types/database'
 import { useEtabSheet } from '@/contexts/EtabSheetContext'
 import PageHeader from '@/components/PageHeader'
-import { supabaseImg } from '@/lib/supabaseImg'
+import SmartImg from '@/components/SmartImg'
 
 // ─── Carte établissement ──────────────────────────────────────────────────────
 
@@ -22,7 +22,7 @@ function EtabCard({ etab, grouped }: { etab: Etablissement; grouped: boolean }) 
         {/* Photo ou placeholder */}
         <div className="w-20 flex-shrink-0 bg-gray-100">
           {etab.photo_url ? (
-            <img src={supabaseImg(etab.photo_url, 160)} alt={etab.nom} className="w-full h-full object-cover" />
+            <SmartImg url={etab.photo_url!} width={160} alt={etab.nom} className="w-full h-full object-cover" />
           ) : (
             <div
               className="w-full h-full flex items-center justify-center text-2xl"

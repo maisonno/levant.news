@@ -98,7 +98,7 @@ const getMagData = unstable_cache(
 const getAgendaData = unstable_cache(
   async (today: string, tomorrow: string, datePlus21: string) => {
     const supabase = staticClient()
-    const [agendaRes, agendaFutureRes, ongoingRes, afficheRes, phareRes, futureExpoRes] = await Promise.allSettled([
+    const [agendaRes, agendaFutureRes, ongoingRes, afficheRes, phareRes] = await Promise.allSettled([
       supabase
         .from('posts').select(POST_COLS)
         .eq('publie', true).eq('dans_agenda', true)
@@ -129,11 +129,6 @@ const getAgendaData = unstable_cache(
         .or(`date_fin.gte.${today},and(date_fin.is.null,date_debut.gte.${today})`)
         .lte('date_debut', datePlus21)
         .order('date_debut', { ascending: true }),
-      supabase
-        .from('posts').select(POST_COLS)
-        .eq('publie', true).eq('dans_agenda', true)
-        .gte('date_debut', today)
-        .order('date_debut', { ascending: true }),
     ])
 
     // Throw si la requête principale échoue → unstable_cache ne met pas en cache l'état vide
@@ -145,9 +140,8 @@ const getAgendaData = unstable_cache(
     const rawOngoing     = ongoingRes.status     === 'fulfilled' ? (ongoingRes.value.data     ?? []) : []
     const rawAffiche     = afficheRes.status     === 'fulfilled' ? (afficheRes.value.data     ?? []) : []
     const rawPhare       = phareRes.status       === 'fulfilled' ? (phareRes.value.data       ?? []) : []
-    const rawFutureExpo  = futureExpoRes.status  === 'fulfilled' ? (futureExpoRes.value.data  ?? []) : []
 
-    const allRaw = [...rawAgenda, ...rawAgendaFuture, ...rawOngoing, ...rawAffiche, ...rawPhare, ...rawFutureExpo]
+    const allRaw = [...rawAgenda, ...rawAgendaFuture, ...rawOngoing, ...rawAffiche, ...rawPhare]
     const etabMap = await fetchEtabMap(supabase, allRaw)
 
     return {
@@ -156,7 +150,6 @@ const getAgendaData = unstable_cache(
       rawOngoing:      rawOngoing.map((p: any) => enrich(p, etabMap)),
       rawAffiche:      rawAffiche.map((p: any) => enrich(p, etabMap)),
       rawPhare:        rawPhare.map((p: any) => enrich(p, etabMap)),
-      rawFutureExpo:   rawFutureExpo.map((p: any) => enrich(p, etabMap)),
     }
   },
   ['home-agenda'],
@@ -164,6 +157,7 @@ const getAgendaData = unstable_cache(
 )
 
 // ─── Shuffle pondéré ──────────────────────────────────────────────────────────
+
 
 function weightedShuffle(posts: PostWithRelations[], todayStr: string): PostWithRelations[] {
   const todayMs = new Date(todayStr + 'T12:00:00').getTime()
@@ -206,11 +200,10 @@ async function AgendaSection() {
   let autresLimites: PostWithRelations[] = []
   let enCeMoment:   PostWithRelations[] = []
   let aLaffiche:    PostWithRelations[] = []
-  let expos:        PostWithRelations[] = []
   let hasError = false
 
   try {
-    const { rawAgendaTD, rawAgendaFuture, rawOngoing, rawAffiche, rawPhare, rawFutureExpo } =
+    const { rawAgendaTD, rawAgendaFuture, rawOngoing, rawAffiche, rawPhare } =
       await getAgendaData(today, tomorrow, datePlus21)
 
     const rawAgenda = [...rawAgendaTD, ...rawAgendaFuture]
@@ -225,9 +218,9 @@ async function AgendaSection() {
     )
     aLaffiche = weightedShuffle(affichePooled, today).slice(0, 5)
 
+    // EXPO exclues de la home (plus de bloc Expositions)
     const agendaNonExpo  = rawAgenda.filter( p => p.categorie?.code !== 'EXPO')
     const ongoingNonExpo = rawOngoing.filter(p => p.categorie?.code !== 'EXPO')
-    const ongoingExpos   = rawOngoing.filter(p => p.categorie?.code === 'EXPO')
 
     todayPosts  = agendaNonExpo.filter(p => p.date_debut === today)
     demainPosts = agendaNonExpo.filter(p => p.date_debut === tomorrow)
@@ -235,12 +228,21 @@ async function AgendaSection() {
     enCeMoment  = ongoingNonExpo
 
     const N = todayPosts.length + demainPosts.length
-    autresLimites = autresPosts.slice(0, Math.max(0, 10 - N))
-
-    const futureExpos = rawFutureExpo.filter(p => p.categorie?.code === 'EXPO')
-    const expoMap = new Map<string, PostWithRelations>()
-    for (const p of [...ongoingExpos, ...futureExpos]) expoMap.set(p.id, p)
-    expos = Array.from(expoMap.values()).sort((a, b) => a.date_debut.localeCompare(b.date_debut))
+    const limit = Math.max(0, 15 - N)
+    // Si une date commence à être affichée, on affiche tous ses événements
+    let count = 0
+    const autresParDate = new Map<string, PostWithRelations[]>()
+    for (const p of autresPosts) {
+      if (!autresParDate.has(p.date_debut)) autresParDate.set(p.date_debut, [])
+      autresParDate.get(p.date_debut)!.push(p)
+    }
+    const result: PostWithRelations[] = []
+    for (const [, datePosts] of autresParDate) {
+      if (count >= limit) break
+      for (const p of datePosts) result.push(p)
+      count += datePosts.length
+    }
+    autresLimites = result
   } catch (err) {
     console.error('Erreur agenda homepage:', err)
     hasError = true
@@ -253,7 +255,6 @@ async function AgendaSection() {
       aLaffiche={aLaffiche}
       demainPosts={demainPosts}
       autresPosts={autresLimites}
-      expos={expos}
       today={today}
       tomorrow={tomorrow}
       hasError={hasError}

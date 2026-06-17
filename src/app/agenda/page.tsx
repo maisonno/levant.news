@@ -105,7 +105,6 @@ export default async function AgendaPage({
   let afficheCarousel: PostWithRelations[] = []
   let expos:           PostWithRelations[] = []
   let hasError = false
-
   try {
     const { rawPosts, rawAfficheTabAffiche, rawAfficheTabPhare, rawOngoingExpo } =
       await getAgendaPageData(today, datePlus21)
