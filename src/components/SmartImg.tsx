@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabaseImg } from '@/lib/supabaseImg'
 
 interface Props {
@@ -11,14 +11,13 @@ interface Props {
   className?: string
 }
 
-/**
- * <img> qui charge la version transformée (render endpoint Supabase) et, si
- * celle-ci échoue (transformations désactivées, quota dépassé…), bascule
- * automatiquement sur l'URL d'origine non transformée.
- */
 export default function SmartImg({ url, width, quality, alt, className }: Props) {
-  const transformed = supabaseImg(url, width, quality) ?? url
-  const [src, setSrc] = useState(transformed)
+  const getTransformed = () => supabaseImg(url, width, quality) ?? url
+  const [src, setSrc] = useState(getTransformed)
+
+  useEffect(() => {
+    setSrc(getTransformed())
+  }, [url]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <img
