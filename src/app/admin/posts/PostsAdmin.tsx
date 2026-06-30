@@ -627,29 +627,47 @@ export default function PostsAdmin({ etablissementIds, topOffset = 'top-[45px]',
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
     setUserId(user?.id ?? null)
-    let postsQuery = supabase.from('posts').select(`
-        *,
-        organisateur:organisateur_id(id,nom,photo_url),
-        lieu:lieu_id(id,nom),
-        categorie:categorie_code(code,nom)
-      `).order('created_at', { ascending: false }).limit(300)
+
+    const SELECT = `*, organisateur:organisateur_id(id,nom,photo_url), lieu:lieu_id(id,nom), categorie:categorie_code(code,nom)`
+
+    let postsQuery = supabase.from('posts').select(SELECT)
+      .order('created_at', { ascending: false }).limit(300)
 
     // Filtre pro : seulement les posts liés aux établissements de l'utilisateur
     if (etablissementIds !== undefined) {
       if (etablissementIds.length === 0) {
-        postsQuery = postsQuery.eq('id', 'none') // aucun résultat
+        postsQuery = postsQuery.eq('id', 'none')
       } else {
         const ids = etablissementIds.join(',')
         postsQuery = postsQuery.or(`organisateur_id.in.(${ids}),lieu_id.in.(${ids})`)
       }
     }
 
-    const [postsRes, catRes, etabRes] = await Promise.all([
+    // Pour l'admin : deuxième requête pour les événements futurs (évite de rater des posts
+    // créés il y a longtemps mais avec une date future, qui tombent hors du top 300)
+    const upcomingQuery = etablissementIds === undefined
+      ? supabase.from('posts').select(SELECT)
+          .gte('date_debut', today)
+          .order('date_debut', { ascending: true })
+      : null
+
+    const [postsRes, upcomingRes, catRes, etabRes] = await Promise.all([
       postsQuery,
+      upcomingQuery ?? Promise.resolve({ data: null }),
       supabase.from('categories').select('*').order('nom'),
       supabase.from('etablissements').select('*').order('nom'),
     ])
-    if (postsRes.data) setPosts(postsRes.data as PostWithRelations[])
+
+    if (postsRes.data) {
+      const merged = postsRes.data as PostWithRelations[]
+      if (upcomingRes.data) {
+        const seen = new Set(merged.map(p => p.id))
+        for (const p of upcomingRes.data as PostWithRelations[]) {
+          if (!seen.has(p.id)) merged.push(p)
+        }
+      }
+      setPosts(merged)
+    }
     if (catRes.data)   setCategories(catRes.data)
     if (etabRes.data)  setEtablissements(etabRes.data)
     setLoading(false)
