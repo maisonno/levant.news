@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CAPACITOR_DEBUG</key>
+	<string>$(CAPACITOR_DEBUG)</string>
+
+	<!-- Bundle -->
+	<key>CFBundleDevelopmentRegion</key>
+	<string>fr</string>
+	<key>CFBundleDisplayName</key>
+	<string>Levant.news</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>fr</string>
+	</array>
+
+	<!-- UI -->
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<true/>
+
+	<!-- Portrait uniquement sur iPhone, toutes orientations sur iPad -->
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+
+	<!-- Safe area / full screen -->
+	<key>UIRequiresFullScreen</key>
+	<true/>
+
+	<!-- Caméra — pour les photos d'objets perdus -->
+	<key>NSCameraUsageDescription</key>
+	<string>Levant.news utilise la caméra pour photographier un objet perdu ou trouvé.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Levant.news accède à ta galerie pour joindre une photo à une annonce.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Levant.news peut enregistrer des photos dans ta galerie.</string>
+
+	<!-- ATS : autorise uniquement levant.news et Supabase -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<false/>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>levant.news</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<false/>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+			</dict>
+			<key>supabase.co</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<false/>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+			</dict>
+		</dict>
+	</dict>
+
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>arm64</string>
+	</array>
+</dict>
+</plist>

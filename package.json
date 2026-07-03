@@ -9,6 +9,10 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@capacitor/core": "8.4.1",
+    "@capacitor/ios": "8.4.1",
+    "@capacitor/splash-screen": "8.0.1",
+    "@capacitor/status-bar": "8.0.2",
     "@supabase/ssr": "^0.10.0",
     "@supabase/supabase-js": "^2.101.1",
     "gtfs-realtime-bindings": "^1.1.1",
@@ -20,6 +24,7 @@
     "resend": "^6.12.2"
   },
   "devDependencies": {
+    "@capacitor/cli": "8.4.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
